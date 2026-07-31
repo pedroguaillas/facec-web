@@ -1,0 +1,13 @@
+# Binario compilado
+go-xml-signer
+signer
+
+# Binarios de Go en general
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Cache de Go
+/vendor/

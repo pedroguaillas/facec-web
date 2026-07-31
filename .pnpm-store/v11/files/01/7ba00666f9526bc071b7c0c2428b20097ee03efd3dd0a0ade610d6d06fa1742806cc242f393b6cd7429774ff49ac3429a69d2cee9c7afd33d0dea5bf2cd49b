@@ -1,0 +1,4034 @@
+import { z as z$1 } from "zod";
+//#region src/registry/schema.d.ts
+declare const registryConfigItemSchema: z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+  url: z$1.ZodEffects<z$1.ZodString, string, string>;
+  params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+}, "strip", z$1.ZodTypeAny, {
+  url: string;
+  params?: Record<string, string> | undefined;
+  headers?: Record<string, string> | undefined;
+}, {
+  url: string;
+  params?: Record<string, string> | undefined;
+  headers?: Record<string, string> | undefined;
+}>]>;
+declare const registryConfigSchema: z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+  url: z$1.ZodEffects<z$1.ZodString, string, string>;
+  params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+}, "strip", z$1.ZodTypeAny, {
+  url: string;
+  params?: Record<string, string> | undefined;
+  headers?: Record<string, string> | undefined;
+}, {
+  url: string;
+  params?: Record<string, string> | undefined;
+  headers?: Record<string, string> | undefined;
+}>]>>;
+declare const rawConfigSchema: z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  style: z$1.ZodString;
+  font: z$1.ZodOptional<z$1.ZodString>;
+  fontHeading: z$1.ZodOptional<z$1.ZodString>;
+  typescript: z$1.ZodDefault<z$1.ZodBoolean>;
+  tailwind: z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodString>;
+    css: z$1.ZodString;
+    baseColor: z$1.ZodString;
+    cssVariables: z$1.ZodDefault<z$1.ZodBoolean>;
+    prefix: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    baseColor: string;
+    css: string;
+    cssVariables: boolean;
+    config?: string | undefined;
+    prefix?: string | undefined;
+  }, {
+    baseColor: string;
+    css: string;
+    config?: string | undefined;
+    cssVariables?: boolean | undefined;
+    prefix?: string | undefined;
+  }>;
+  iconLibrary: z$1.ZodOptional<z$1.ZodString>;
+  rtl: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+  pointer: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+  menuColor: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>>>;
+  menuAccent: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["subtle", "bold"]>>>;
+  aliases: z$1.ZodObject<{
+    components: z$1.ZodString;
+    utils: z$1.ZodString;
+    ui: z$1.ZodOptional<z$1.ZodString>;
+    lib: z$1.ZodOptional<z$1.ZodString>;
+    hooks: z$1.ZodOptional<z$1.ZodString>;
+    composables: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  }, {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  }>;
+  registries: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+    url: z$1.ZodEffects<z$1.ZodString, string, string>;
+    params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }, {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }>]>>>;
+}, "strict", z$1.ZodTypeAny, {
+  style: string;
+  tailwind: {
+    baseColor: string;
+    css: string;
+    cssVariables: boolean;
+    config?: string | undefined;
+    prefix?: string | undefined;
+  };
+  typescript: boolean;
+  aliases: {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  };
+  iconLibrary?: string | undefined;
+  font?: string | undefined;
+  fontHeading?: string | undefined;
+  menuAccent?: "subtle" | "bold" | undefined;
+  menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+  $schema?: string | undefined;
+  rtl?: boolean | undefined;
+  pointer?: boolean | undefined;
+  registries?: Record<string, string | {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }> | undefined;
+}, {
+  style: string;
+  tailwind: {
+    baseColor: string;
+    css: string;
+    config?: string | undefined;
+    cssVariables?: boolean | undefined;
+    prefix?: string | undefined;
+  };
+  aliases: {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  };
+  iconLibrary?: string | undefined;
+  font?: string | undefined;
+  fontHeading?: string | undefined;
+  menuAccent?: "subtle" | "bold" | undefined;
+  menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+  $schema?: string | undefined;
+  typescript?: boolean | undefined;
+  rtl?: boolean | undefined;
+  pointer?: boolean | undefined;
+  registries?: Record<string, string | {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }> | undefined;
+}>;
+declare const configSchema: z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  style: z$1.ZodString;
+  font: z$1.ZodOptional<z$1.ZodString>;
+  fontHeading: z$1.ZodOptional<z$1.ZodString>;
+  typescript: z$1.ZodDefault<z$1.ZodBoolean>;
+  tailwind: z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodString>;
+    css: z$1.ZodString;
+    baseColor: z$1.ZodString;
+    cssVariables: z$1.ZodDefault<z$1.ZodBoolean>;
+    prefix: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    baseColor: string;
+    css: string;
+    cssVariables: boolean;
+    config?: string | undefined;
+    prefix?: string | undefined;
+  }, {
+    baseColor: string;
+    css: string;
+    config?: string | undefined;
+    cssVariables?: boolean | undefined;
+    prefix?: string | undefined;
+  }>;
+  iconLibrary: z$1.ZodOptional<z$1.ZodString>;
+  rtl: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+  pointer: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+  menuColor: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>>>;
+  menuAccent: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["subtle", "bold"]>>>;
+  aliases: z$1.ZodObject<{
+    components: z$1.ZodString;
+    utils: z$1.ZodString;
+    ui: z$1.ZodOptional<z$1.ZodString>;
+    lib: z$1.ZodOptional<z$1.ZodString>;
+    hooks: z$1.ZodOptional<z$1.ZodString>;
+    composables: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  }, {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  }>;
+  registries: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+    url: z$1.ZodEffects<z$1.ZodString, string, string>;
+    params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }, {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }>]>>>;
+} & {
+  resolvedPaths: z$1.ZodObject<{
+    cwd: z$1.ZodString;
+    tailwindConfig: z$1.ZodString;
+    tailwindCss: z$1.ZodString;
+    utils: z$1.ZodString;
+    components: z$1.ZodString;
+    lib: z$1.ZodString;
+    hooks: z$1.ZodString;
+    ui: z$1.ZodString;
+    composables: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  }, {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  }>;
+}, "strict", z$1.ZodTypeAny, {
+  style: string;
+  tailwind: {
+    baseColor: string;
+    css: string;
+    cssVariables: boolean;
+    config?: string | undefined;
+    prefix?: string | undefined;
+  };
+  typescript: boolean;
+  aliases: {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  };
+  resolvedPaths: {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  };
+  iconLibrary?: string | undefined;
+  font?: string | undefined;
+  fontHeading?: string | undefined;
+  menuAccent?: "subtle" | "bold" | undefined;
+  menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+  $schema?: string | undefined;
+  rtl?: boolean | undefined;
+  pointer?: boolean | undefined;
+  registries?: Record<string, string | {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }> | undefined;
+}, {
+  style: string;
+  tailwind: {
+    baseColor: string;
+    css: string;
+    config?: string | undefined;
+    cssVariables?: boolean | undefined;
+    prefix?: string | undefined;
+  };
+  aliases: {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  };
+  resolvedPaths: {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  };
+  iconLibrary?: string | undefined;
+  font?: string | undefined;
+  fontHeading?: string | undefined;
+  menuAccent?: "subtle" | "bold" | undefined;
+  menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+  $schema?: string | undefined;
+  typescript?: boolean | undefined;
+  rtl?: boolean | undefined;
+  pointer?: boolean | undefined;
+  registries?: Record<string, string | {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }> | undefined;
+}>;
+declare const workspaceConfigSchema: z$1.ZodRecord<z$1.ZodString, z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  style: z$1.ZodString;
+  font: z$1.ZodOptional<z$1.ZodString>;
+  fontHeading: z$1.ZodOptional<z$1.ZodString>;
+  typescript: z$1.ZodDefault<z$1.ZodBoolean>;
+  tailwind: z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodString>;
+    css: z$1.ZodString;
+    baseColor: z$1.ZodString;
+    cssVariables: z$1.ZodDefault<z$1.ZodBoolean>;
+    prefix: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    baseColor: string;
+    css: string;
+    cssVariables: boolean;
+    config?: string | undefined;
+    prefix?: string | undefined;
+  }, {
+    baseColor: string;
+    css: string;
+    config?: string | undefined;
+    cssVariables?: boolean | undefined;
+    prefix?: string | undefined;
+  }>;
+  iconLibrary: z$1.ZodOptional<z$1.ZodString>;
+  rtl: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+  pointer: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+  menuColor: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>>>;
+  menuAccent: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["subtle", "bold"]>>>;
+  aliases: z$1.ZodObject<{
+    components: z$1.ZodString;
+    utils: z$1.ZodString;
+    ui: z$1.ZodOptional<z$1.ZodString>;
+    lib: z$1.ZodOptional<z$1.ZodString>;
+    hooks: z$1.ZodOptional<z$1.ZodString>;
+    composables: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  }, {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  }>;
+  registries: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+    url: z$1.ZodEffects<z$1.ZodString, string, string>;
+    params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }, {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }>]>>>;
+} & {
+  resolvedPaths: z$1.ZodObject<{
+    cwd: z$1.ZodString;
+    tailwindConfig: z$1.ZodString;
+    tailwindCss: z$1.ZodString;
+    utils: z$1.ZodString;
+    components: z$1.ZodString;
+    lib: z$1.ZodString;
+    hooks: z$1.ZodString;
+    ui: z$1.ZodString;
+    composables: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  }, {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  }>;
+}, "strict", z$1.ZodTypeAny, {
+  style: string;
+  tailwind: {
+    baseColor: string;
+    css: string;
+    cssVariables: boolean;
+    config?: string | undefined;
+    prefix?: string | undefined;
+  };
+  typescript: boolean;
+  aliases: {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  };
+  resolvedPaths: {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  };
+  iconLibrary?: string | undefined;
+  font?: string | undefined;
+  fontHeading?: string | undefined;
+  menuAccent?: "subtle" | "bold" | undefined;
+  menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+  $schema?: string | undefined;
+  rtl?: boolean | undefined;
+  pointer?: boolean | undefined;
+  registries?: Record<string, string | {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }> | undefined;
+}, {
+  style: string;
+  tailwind: {
+    baseColor: string;
+    css: string;
+    config?: string | undefined;
+    cssVariables?: boolean | undefined;
+    prefix?: string | undefined;
+  };
+  aliases: {
+    components: string;
+    utils: string;
+    ui?: string | undefined;
+    lib?: string | undefined;
+    hooks?: string | undefined;
+    composables?: string | undefined;
+  };
+  resolvedPaths: {
+    components: string;
+    utils: string;
+    ui: string;
+    lib: string;
+    hooks: string;
+    composables: string;
+    cwd: string;
+    tailwindConfig: string;
+    tailwindCss: string;
+  };
+  iconLibrary?: string | undefined;
+  font?: string | undefined;
+  fontHeading?: string | undefined;
+  menuAccent?: "subtle" | "bold" | undefined;
+  menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+  $schema?: string | undefined;
+  typescript?: boolean | undefined;
+  rtl?: boolean | undefined;
+  pointer?: boolean | undefined;
+  registries?: Record<string, string | {
+    url: string;
+    params?: Record<string, string> | undefined;
+    headers?: Record<string, string> | undefined;
+  }> | undefined;
+}>>;
+declare const registryItemTypeSchema: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:page", "registry:file", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+declare const registryItemFileSchema: z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+  path: z$1.ZodString;
+  content: z$1.ZodOptional<z$1.ZodString>;
+  type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+  target: z$1.ZodString;
+}, "strip", z$1.ZodTypeAny, {
+  path: string;
+  type: "registry:file" | "registry:page";
+  target: string;
+  content?: string | undefined;
+}, {
+  path: string;
+  type: "registry:file" | "registry:page";
+  target: string;
+  content?: string | undefined;
+}>, z$1.ZodObject<{
+  path: z$1.ZodString;
+  content: z$1.ZodOptional<z$1.ZodString>;
+  type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+  target: z$1.ZodOptional<z$1.ZodString>;
+}, "strip", z$1.ZodTypeAny, {
+  path: string;
+  type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+  content?: string | undefined;
+  target?: string | undefined;
+}, {
+  path: string;
+  type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+  content?: string | undefined;
+  target?: string | undefined;
+}>]>;
+declare const registryItemTailwindSchema: z$1.ZodObject<{
+  config: z$1.ZodOptional<z$1.ZodObject<{
+    content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+    plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, any> | undefined;
+    content?: string[] | undefined;
+    plugins?: string[] | undefined;
+  }, {
+    theme?: Record<string, any> | undefined;
+    content?: string[] | undefined;
+    plugins?: string[] | undefined;
+  }>>;
+}, "strip", z$1.ZodTypeAny, {
+  config?: {
+    theme?: Record<string, any> | undefined;
+    content?: string[] | undefined;
+    plugins?: string[] | undefined;
+  } | undefined;
+}, {
+  config?: {
+    theme?: Record<string, any> | undefined;
+    content?: string[] | undefined;
+    plugins?: string[] | undefined;
+  } | undefined;
+}>;
+declare const registryItemCssVarsSchema: z$1.ZodObject<{
+  theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+}, "strip", z$1.ZodTypeAny, {
+  theme?: Record<string, string> | undefined;
+  light?: Record<string, string> | undefined;
+  dark?: Record<string, string> | undefined;
+}, {
+  theme?: Record<string, string> | undefined;
+  light?: Record<string, string> | undefined;
+  dark?: Record<string, string> | undefined;
+}>;
+declare const registryItemCssSchema: z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>;
+declare const registryItemEnvVarsSchema: z$1.ZodRecord<z$1.ZodString, z$1.ZodString>;
+declare const registryItemFontSchema: z$1.ZodObject<{
+  family: z$1.ZodString;
+  provider: z$1.ZodLiteral<"google">;
+  import: z$1.ZodString;
+  variable: z$1.ZodString;
+  weight: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  subsets: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+}, "strip", z$1.ZodTypeAny, {
+  family: string;
+  provider: "google";
+  import: string;
+  variable: string;
+  weight?: string[] | undefined;
+  subsets?: string[] | undefined;
+}, {
+  family: string;
+  provider: "google";
+  import: string;
+  variable: string;
+  weight?: string[] | undefined;
+  subsets?: string[] | undefined;
+}>;
+declare const registryItemCommonSchema: z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>;
+declare const registryItemSchema: z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+} & {
+  type: z$1.ZodLiteral<"registry:base">;
+  config: z$1.ZodOptional<z$1.ZodObject<{
+    $schema: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    style: z$1.ZodOptional<z$1.ZodString>;
+    font: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    fontHeading: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    typescript: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+    tailwind: z$1.ZodOptional<z$1.ZodObject<{
+      config: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      css: z$1.ZodOptional<z$1.ZodString>;
+      baseColor: z$1.ZodOptional<z$1.ZodString>;
+      cssVariables: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+      prefix: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodString>>>;
+    }, "strip", z$1.ZodTypeAny, {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    }, {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    }>>;
+    iconLibrary: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    rtl: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>>;
+    pointer: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>>;
+    menuColor: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>>>>;
+    menuAccent: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["subtle", "bold"]>>>>;
+    aliases: z$1.ZodOptional<z$1.ZodObject<{
+      components: z$1.ZodOptional<z$1.ZodString>;
+      utils: z$1.ZodOptional<z$1.ZodString>;
+      ui: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      lib: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      hooks: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      composables: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    }, {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    }>>;
+    registries: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+      url: z$1.ZodEffects<z$1.ZodString, string, string>;
+      params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }, {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }>]>>>>;
+  }, "strict", z$1.ZodTypeAny, {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  }, {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  }>>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  type: "registry:base";
+  config?: {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  } | undefined;
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  type: "registry:base";
+  config?: {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  } | undefined;
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>, z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+} & {
+  type: z$1.ZodLiteral<"registry:font">;
+  font: z$1.ZodObject<{
+    family: z$1.ZodString;
+    provider: z$1.ZodLiteral<"google">;
+    import: z$1.ZodString;
+    variable: z$1.ZodString;
+    weight: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    subsets: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  }, "strip", z$1.ZodTypeAny, {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  }, {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  }>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  font: {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  };
+  type: "registry:font";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  font: {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  };
+  type: "registry:font";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>, z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+} & {
+  type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:page", "registry:file", "registry:theme", "registry:style", "registry:item", "registry:example", "registry:internal"]>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>]>;
+type RegistryItem = z$1.infer<typeof registryItemSchema>;
+type RegistryBaseItem = Extract<RegistryItem, {
+  type: "registry:base";
+}>;
+type RegistryFontItem = Extract<RegistryItem, {
+  type: "registry:font";
+}>;
+declare const registrySchema: z$1.ZodObject<{
+  name: z$1.ZodString;
+  homepage: z$1.ZodString;
+  items: z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    $schema: z$1.ZodOptional<z$1.ZodString>;
+    extends: z$1.ZodOptional<z$1.ZodString>;
+    name: z$1.ZodString;
+    title: z$1.ZodOptional<z$1.ZodString>;
+    author: z$1.ZodOptional<z$1.ZodString>;
+    description: z$1.ZodOptional<z$1.ZodString>;
+    dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+      target: z$1.ZodString;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }>, z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+      target: z$1.ZodOptional<z$1.ZodString>;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }>]>, "many">>;
+    tailwind: z$1.ZodOptional<z$1.ZodObject<{
+      config: z$1.ZodOptional<z$1.ZodObject<{
+        content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+        theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+        plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      }, "strip", z$1.ZodTypeAny, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }>>;
+    }, "strip", z$1.ZodTypeAny, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }>>;
+    cssVars: z$1.ZodOptional<z$1.ZodObject<{
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }>>;
+    css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+    envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+    docs: z$1.ZodOptional<z$1.ZodString>;
+    categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  } & {
+    type: z$1.ZodLiteral<"registry:base">;
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      $schema: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      style: z$1.ZodOptional<z$1.ZodString>;
+      font: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      fontHeading: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      typescript: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+      tailwind: z$1.ZodOptional<z$1.ZodObject<{
+        config: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+        css: z$1.ZodOptional<z$1.ZodString>;
+        baseColor: z$1.ZodOptional<z$1.ZodString>;
+        cssVariables: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+        prefix: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodString>>>;
+      }, "strip", z$1.ZodTypeAny, {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      }, {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      }>>;
+      iconLibrary: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      rtl: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>>;
+      pointer: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>>;
+      menuColor: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>>>>;
+      menuAccent: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["subtle", "bold"]>>>>;
+      aliases: z$1.ZodOptional<z$1.ZodObject<{
+        components: z$1.ZodOptional<z$1.ZodString>;
+        utils: z$1.ZodOptional<z$1.ZodString>;
+        ui: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+        lib: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+        hooks: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+        composables: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      }, "strip", z$1.ZodTypeAny, {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      }, {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      }>>;
+      registries: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+        url: z$1.ZodEffects<z$1.ZodString, string, string>;
+        params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+        headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      }, "strip", z$1.ZodTypeAny, {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }, {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }>]>>>>;
+    }, "strict", z$1.ZodTypeAny, {
+      style?: string | undefined;
+      iconLibrary?: string | undefined;
+      font?: string | undefined;
+      fontHeading?: string | undefined;
+      menuAccent?: "subtle" | "bold" | undefined;
+      menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+      $schema?: string | undefined;
+      tailwind?: {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      } | undefined;
+      typescript?: boolean | undefined;
+      rtl?: boolean | undefined;
+      pointer?: boolean | undefined;
+      aliases?: {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      } | undefined;
+      registries?: Record<string, string | {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }> | undefined;
+    }, {
+      style?: string | undefined;
+      iconLibrary?: string | undefined;
+      font?: string | undefined;
+      fontHeading?: string | undefined;
+      menuAccent?: "subtle" | "bold" | undefined;
+      menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+      $schema?: string | undefined;
+      tailwind?: {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      } | undefined;
+      typescript?: boolean | undefined;
+      rtl?: boolean | undefined;
+      pointer?: boolean | undefined;
+      aliases?: {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      } | undefined;
+      registries?: Record<string, string | {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }> | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    name: string;
+    type: "registry:base";
+    config?: {
+      style?: string | undefined;
+      iconLibrary?: string | undefined;
+      font?: string | undefined;
+      fontHeading?: string | undefined;
+      menuAccent?: "subtle" | "bold" | undefined;
+      menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+      $schema?: string | undefined;
+      tailwind?: {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      } | undefined;
+      typescript?: boolean | undefined;
+      rtl?: boolean | undefined;
+      pointer?: boolean | undefined;
+      aliases?: {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      } | undefined;
+      registries?: Record<string, string | {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }> | undefined;
+    } | undefined;
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }, {
+    name: string;
+    type: "registry:base";
+    config?: {
+      style?: string | undefined;
+      iconLibrary?: string | undefined;
+      font?: string | undefined;
+      fontHeading?: string | undefined;
+      menuAccent?: "subtle" | "bold" | undefined;
+      menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+      $schema?: string | undefined;
+      tailwind?: {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      } | undefined;
+      typescript?: boolean | undefined;
+      rtl?: boolean | undefined;
+      pointer?: boolean | undefined;
+      aliases?: {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      } | undefined;
+      registries?: Record<string, string | {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }> | undefined;
+    } | undefined;
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }>, z$1.ZodObject<{
+    $schema: z$1.ZodOptional<z$1.ZodString>;
+    extends: z$1.ZodOptional<z$1.ZodString>;
+    name: z$1.ZodString;
+    title: z$1.ZodOptional<z$1.ZodString>;
+    author: z$1.ZodOptional<z$1.ZodString>;
+    description: z$1.ZodOptional<z$1.ZodString>;
+    dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+      target: z$1.ZodString;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }>, z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+      target: z$1.ZodOptional<z$1.ZodString>;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }>]>, "many">>;
+    tailwind: z$1.ZodOptional<z$1.ZodObject<{
+      config: z$1.ZodOptional<z$1.ZodObject<{
+        content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+        theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+        plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      }, "strip", z$1.ZodTypeAny, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }>>;
+    }, "strip", z$1.ZodTypeAny, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }>>;
+    cssVars: z$1.ZodOptional<z$1.ZodObject<{
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }>>;
+    css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+    envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+    docs: z$1.ZodOptional<z$1.ZodString>;
+    categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  } & {
+    type: z$1.ZodLiteral<"registry:font">;
+    font: z$1.ZodObject<{
+      family: z$1.ZodString;
+      provider: z$1.ZodLiteral<"google">;
+      import: z$1.ZodString;
+      variable: z$1.ZodString;
+      weight: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      subsets: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    }, {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    }>;
+  }, "strip", z$1.ZodTypeAny, {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }, {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }>, z$1.ZodObject<{
+    $schema: z$1.ZodOptional<z$1.ZodString>;
+    extends: z$1.ZodOptional<z$1.ZodString>;
+    name: z$1.ZodString;
+    title: z$1.ZodOptional<z$1.ZodString>;
+    author: z$1.ZodOptional<z$1.ZodString>;
+    description: z$1.ZodOptional<z$1.ZodString>;
+    dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+      target: z$1.ZodString;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }>, z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+      target: z$1.ZodOptional<z$1.ZodString>;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }>]>, "many">>;
+    tailwind: z$1.ZodOptional<z$1.ZodObject<{
+      config: z$1.ZodOptional<z$1.ZodObject<{
+        content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+        theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+        plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      }, "strip", z$1.ZodTypeAny, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }>>;
+    }, "strip", z$1.ZodTypeAny, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }>>;
+    cssVars: z$1.ZodOptional<z$1.ZodObject<{
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }>>;
+    css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+    envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+    docs: z$1.ZodOptional<z$1.ZodString>;
+    categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  } & {
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:page", "registry:file", "registry:theme", "registry:style", "registry:item", "registry:example", "registry:internal"]>;
+  }, "strip", z$1.ZodTypeAny, {
+    name: string;
+    type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }, {
+    name: string;
+    type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }>]>, "many">;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  homepage: string;
+  items: ({
+    name: string;
+    type: "registry:base";
+    config?: {
+      style?: string | undefined;
+      iconLibrary?: string | undefined;
+      font?: string | undefined;
+      fontHeading?: string | undefined;
+      menuAccent?: "subtle" | "bold" | undefined;
+      menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+      $schema?: string | undefined;
+      tailwind?: {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      } | undefined;
+      typescript?: boolean | undefined;
+      rtl?: boolean | undefined;
+      pointer?: boolean | undefined;
+      aliases?: {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      } | undefined;
+      registries?: Record<string, string | {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }> | undefined;
+    } | undefined;
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  } | {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  } | {
+    name: string;
+    type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  })[];
+}, {
+  name: string;
+  homepage: string;
+  items: ({
+    name: string;
+    type: "registry:base";
+    config?: {
+      style?: string | undefined;
+      iconLibrary?: string | undefined;
+      font?: string | undefined;
+      fontHeading?: string | undefined;
+      menuAccent?: "subtle" | "bold" | undefined;
+      menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+      $schema?: string | undefined;
+      tailwind?: {
+        config?: string | undefined;
+        baseColor?: string | undefined;
+        css?: string | undefined;
+        cssVariables?: boolean | undefined;
+        prefix?: string | undefined;
+      } | undefined;
+      typescript?: boolean | undefined;
+      rtl?: boolean | undefined;
+      pointer?: boolean | undefined;
+      aliases?: {
+        components?: string | undefined;
+        utils?: string | undefined;
+        ui?: string | undefined;
+        lib?: string | undefined;
+        hooks?: string | undefined;
+        composables?: string | undefined;
+      } | undefined;
+      registries?: Record<string, string | {
+        url: string;
+        params?: Record<string, string> | undefined;
+        headers?: Record<string, string> | undefined;
+      }> | undefined;
+    } | undefined;
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  } | {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  } | {
+    name: string;
+    type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  })[];
+}>;
+type Registry = z$1.infer<typeof registrySchema>;
+declare const registryIndexSchema: z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+} & {
+  type: z$1.ZodLiteral<"registry:base">;
+  config: z$1.ZodOptional<z$1.ZodObject<{
+    $schema: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    style: z$1.ZodOptional<z$1.ZodString>;
+    font: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    fontHeading: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    typescript: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+    tailwind: z$1.ZodOptional<z$1.ZodObject<{
+      config: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      css: z$1.ZodOptional<z$1.ZodString>;
+      baseColor: z$1.ZodOptional<z$1.ZodString>;
+      cssVariables: z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>;
+      prefix: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodString>>>;
+    }, "strip", z$1.ZodTypeAny, {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    }, {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    }>>;
+    iconLibrary: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    rtl: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>>;
+    pointer: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodBoolean>>>;
+    menuColor: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>>>>;
+    menuAccent: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodDefault<z$1.ZodEnum<["subtle", "bold"]>>>>;
+    aliases: z$1.ZodOptional<z$1.ZodObject<{
+      components: z$1.ZodOptional<z$1.ZodString>;
+      utils: z$1.ZodOptional<z$1.ZodString>;
+      ui: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      lib: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      hooks: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+      composables: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    }, {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    }>>;
+    registries: z$1.ZodOptional<z$1.ZodOptional<z$1.ZodRecord<z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodUnion<[z$1.ZodEffects<z$1.ZodString, string, string>, z$1.ZodObject<{
+      url: z$1.ZodEffects<z$1.ZodString, string, string>;
+      params: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      headers: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }, {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }>]>>>>;
+  }, "strict", z$1.ZodTypeAny, {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  }, {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  }>>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  type: "registry:base";
+  config?: {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  } | undefined;
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  type: "registry:base";
+  config?: {
+    style?: string | undefined;
+    iconLibrary?: string | undefined;
+    font?: string | undefined;
+    fontHeading?: string | undefined;
+    menuAccent?: "subtle" | "bold" | undefined;
+    menuColor?: "default" | "inverted" | "default-translucent" | "inverted-translucent" | undefined;
+    $schema?: string | undefined;
+    tailwind?: {
+      config?: string | undefined;
+      baseColor?: string | undefined;
+      css?: string | undefined;
+      cssVariables?: boolean | undefined;
+      prefix?: string | undefined;
+    } | undefined;
+    typescript?: boolean | undefined;
+    rtl?: boolean | undefined;
+    pointer?: boolean | undefined;
+    aliases?: {
+      components?: string | undefined;
+      utils?: string | undefined;
+      ui?: string | undefined;
+      lib?: string | undefined;
+      hooks?: string | undefined;
+      composables?: string | undefined;
+    } | undefined;
+    registries?: Record<string, string | {
+      url: string;
+      params?: Record<string, string> | undefined;
+      headers?: Record<string, string> | undefined;
+    }> | undefined;
+  } | undefined;
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>, z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+} & {
+  type: z$1.ZodLiteral<"registry:font">;
+  font: z$1.ZodObject<{
+    family: z$1.ZodString;
+    provider: z$1.ZodLiteral<"google">;
+    import: z$1.ZodString;
+    variable: z$1.ZodString;
+    weight: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    subsets: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  }, "strip", z$1.ZodTypeAny, {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  }, {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  }>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  font: {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  };
+  type: "registry:font";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  font: {
+    family: string;
+    provider: "google";
+    import: string;
+    variable: string;
+    weight?: string[] | undefined;
+    subsets?: string[] | undefined;
+  };
+  type: "registry:font";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>, z$1.ZodObject<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+} & {
+  type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:page", "registry:file", "registry:theme", "registry:style", "registry:item", "registry:example", "registry:internal"]>;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}, {
+  name: string;
+  type: "registry:file" | "registry:page" | "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:example" | "registry:internal";
+  description?: string | undefined;
+  title?: string | undefined;
+  $schema?: string | undefined;
+  extends?: string | undefined;
+  author?: string | undefined;
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  registryDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  meta?: Record<string, any> | undefined;
+  docs?: string | undefined;
+  categories?: string[] | undefined;
+}>]>, "many">;
+declare const stylesSchema: z$1.ZodArray<z$1.ZodObject<{
+  name: z$1.ZodString;
+  label: z$1.ZodString;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  label: string;
+}, {
+  name: string;
+  label: string;
+}>, "many">;
+declare const iconsSchema: z$1.ZodRecord<z$1.ZodString, z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+declare const registryBaseColorSchema: z$1.ZodObject<{
+  inlineColors: z$1.ZodObject<{
+    light: z$1.ZodRecord<z$1.ZodString, z$1.ZodString>;
+    dark: z$1.ZodRecord<z$1.ZodString, z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    light: Record<string, string>;
+    dark: Record<string, string>;
+  }, {
+    light: Record<string, string>;
+    dark: Record<string, string>;
+  }>;
+  cssVars: z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>;
+  cssVarsV4: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  inlineColorsTemplate: z$1.ZodString;
+  cssVarsTemplate: z$1.ZodString;
+}, "strip", z$1.ZodTypeAny, {
+  cssVars: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  };
+  inlineColors: {
+    light: Record<string, string>;
+    dark: Record<string, string>;
+  };
+  inlineColorsTemplate: string;
+  cssVarsTemplate: string;
+  cssVarsV4?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+}, {
+  cssVars: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  };
+  inlineColors: {
+    light: Record<string, string>;
+    dark: Record<string, string>;
+  };
+  inlineColorsTemplate: string;
+  cssVarsTemplate: string;
+  cssVarsV4?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+}>;
+declare const registryResolvedItemsTreeSchema: z$1.ZodObject<Pick<{
+  $schema: z$1.ZodOptional<z$1.ZodString>;
+  extends: z$1.ZodOptional<z$1.ZodString>;
+  name: z$1.ZodString;
+  title: z$1.ZodOptional<z$1.ZodString>;
+  author: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+    target: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  }>, z$1.ZodObject<{
+    path: z$1.ZodString;
+    content: z$1.ZodOptional<z$1.ZodString>;
+    type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+    target: z$1.ZodOptional<z$1.ZodString>;
+  }, "strip", z$1.ZodTypeAny, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }, {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  }>]>, "many">>;
+  tailwind: z$1.ZodOptional<z$1.ZodObject<{
+    config: z$1.ZodOptional<z$1.ZodObject<{
+      content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+      plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }, {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    }>>;
+  }, "strip", z$1.ZodTypeAny, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }, {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  }>>;
+  cssVars: z$1.ZodOptional<z$1.ZodObject<{
+    theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  }, "strip", z$1.ZodTypeAny, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }, {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  }>>;
+  css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+  envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+  meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+  docs: z$1.ZodOptional<z$1.ZodString>;
+  categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+}, "dependencies" | "devDependencies" | "files" | "tailwind" | "cssVars" | "css" | "envVars" | "docs"> & {
+  fonts: z$1.ZodOptional<z$1.ZodArray<z$1.ZodObject<{
+    $schema: z$1.ZodOptional<z$1.ZodString>;
+    extends: z$1.ZodOptional<z$1.ZodString>;
+    name: z$1.ZodString;
+    title: z$1.ZodOptional<z$1.ZodString>;
+    author: z$1.ZodOptional<z$1.ZodString>;
+    description: z$1.ZodOptional<z$1.ZodString>;
+    dependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    devDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    registryDependencies: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    files: z$1.ZodOptional<z$1.ZodArray<z$1.ZodDiscriminatedUnion<"type", [z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:file", "registry:page"]>;
+      target: z$1.ZodString;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    }>, z$1.ZodObject<{
+      path: z$1.ZodString;
+      content: z$1.ZodOptional<z$1.ZodString>;
+      type: z$1.ZodEnum<["registry:lib", "registry:block", "registry:component", "registry:ui", "registry:hook", "registry:composable", "registry:theme", "registry:style", "registry:item", "registry:base", "registry:font", "registry:example", "registry:internal"]>;
+      target: z$1.ZodOptional<z$1.ZodString>;
+    }, "strip", z$1.ZodTypeAny, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }, {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    }>]>, "many">>;
+    tailwind: z$1.ZodOptional<z$1.ZodObject<{
+      config: z$1.ZodOptional<z$1.ZodObject<{
+        content: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+        theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+        plugins: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      }, "strip", z$1.ZodTypeAny, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }, {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      }>>;
+    }, "strip", z$1.ZodTypeAny, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }, {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    }>>;
+    cssVars: z$1.ZodOptional<z$1.ZodObject<{
+      theme: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      light: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+      dark: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    }, "strip", z$1.ZodTypeAny, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }, {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    }>>;
+    css: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodType<any, z$1.ZodTypeDef, any>>>;
+    envVars: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodString>>;
+    meta: z$1.ZodOptional<z$1.ZodRecord<z$1.ZodString, z$1.ZodAny>>;
+    docs: z$1.ZodOptional<z$1.ZodString>;
+    categories: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+  } & {
+    type: z$1.ZodLiteral<"registry:font">;
+    font: z$1.ZodObject<{
+      family: z$1.ZodString;
+      provider: z$1.ZodLiteral<"google">;
+      import: z$1.ZodString;
+      variable: z$1.ZodString;
+      weight: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+      subsets: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString, "many">>;
+    }, "strip", z$1.ZodTypeAny, {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    }, {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    }>;
+  }, "strip", z$1.ZodTypeAny, {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }, {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }>, "many">>;
+}, "strip", z$1.ZodTypeAny, {
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  docs?: string | undefined;
+  fonts?: {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }[] | undefined;
+}, {
+  dependencies?: string[] | undefined;
+  devDependencies?: string[] | undefined;
+  files?: ({
+    path: string;
+    type: "registry:file" | "registry:page";
+    target: string;
+    content?: string | undefined;
+  } | {
+    path: string;
+    type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+    content?: string | undefined;
+    target?: string | undefined;
+  })[] | undefined;
+  tailwind?: {
+    config?: {
+      theme?: Record<string, any> | undefined;
+      content?: string[] | undefined;
+      plugins?: string[] | undefined;
+    } | undefined;
+  } | undefined;
+  cssVars?: {
+    theme?: Record<string, string> | undefined;
+    light?: Record<string, string> | undefined;
+    dark?: Record<string, string> | undefined;
+  } | undefined;
+  css?: Record<string, any> | undefined;
+  envVars?: Record<string, string> | undefined;
+  docs?: string | undefined;
+  fonts?: {
+    name: string;
+    font: {
+      family: string;
+      provider: "google";
+      import: string;
+      variable: string;
+      weight?: string[] | undefined;
+      subsets?: string[] | undefined;
+    };
+    type: "registry:font";
+    description?: string | undefined;
+    title?: string | undefined;
+    $schema?: string | undefined;
+    extends?: string | undefined;
+    author?: string | undefined;
+    dependencies?: string[] | undefined;
+    devDependencies?: string[] | undefined;
+    registryDependencies?: string[] | undefined;
+    files?: ({
+      path: string;
+      type: "registry:file" | "registry:page";
+      target: string;
+      content?: string | undefined;
+    } | {
+      path: string;
+      type: "registry:lib" | "registry:block" | "registry:component" | "registry:ui" | "registry:hook" | "registry:composable" | "registry:theme" | "registry:style" | "registry:item" | "registry:base" | "registry:font" | "registry:example" | "registry:internal";
+      content?: string | undefined;
+      target?: string | undefined;
+    })[] | undefined;
+    tailwind?: {
+      config?: {
+        theme?: Record<string, any> | undefined;
+        content?: string[] | undefined;
+        plugins?: string[] | undefined;
+      } | undefined;
+    } | undefined;
+    cssVars?: {
+      theme?: Record<string, string> | undefined;
+      light?: Record<string, string> | undefined;
+      dark?: Record<string, string> | undefined;
+    } | undefined;
+    css?: Record<string, any> | undefined;
+    envVars?: Record<string, string> | undefined;
+    meta?: Record<string, any> | undefined;
+    docs?: string | undefined;
+    categories?: string[] | undefined;
+  }[] | undefined;
+}>;
+declare const searchResultItemSchema: z$1.ZodObject<{
+  name: z$1.ZodString;
+  type: z$1.ZodOptional<z$1.ZodString>;
+  description: z$1.ZodOptional<z$1.ZodString>;
+  registry: z$1.ZodString;
+  addCommandArgument: z$1.ZodString;
+}, "strip", z$1.ZodTypeAny, {
+  name: string;
+  registry: string;
+  addCommandArgument: string;
+  description?: string | undefined;
+  type?: string | undefined;
+}, {
+  name: string;
+  registry: string;
+  addCommandArgument: string;
+  description?: string | undefined;
+  type?: string | undefined;
+}>;
+declare const searchResultsSchema: z$1.ZodObject<{
+  pagination: z$1.ZodObject<{
+    total: z$1.ZodNumber;
+    offset: z$1.ZodNumber;
+    limit: z$1.ZodNumber;
+    hasMore: z$1.ZodBoolean;
+  }, "strip", z$1.ZodTypeAny, {
+    total: number;
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+  }, {
+    total: number;
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+  }>;
+  items: z$1.ZodArray<z$1.ZodObject<{
+    name: z$1.ZodString;
+    type: z$1.ZodOptional<z$1.ZodString>;
+    description: z$1.ZodOptional<z$1.ZodString>;
+    registry: z$1.ZodString;
+    addCommandArgument: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    name: string;
+    registry: string;
+    addCommandArgument: string;
+    description?: string | undefined;
+    type?: string | undefined;
+  }, {
+    name: string;
+    registry: string;
+    addCommandArgument: string;
+    description?: string | undefined;
+    type?: string | undefined;
+  }>, "many">;
+}, "strip", z$1.ZodTypeAny, {
+  items: {
+    name: string;
+    registry: string;
+    addCommandArgument: string;
+    description?: string | undefined;
+    type?: string | undefined;
+  }[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+  };
+}, {
+  items: {
+    name: string;
+    registry: string;
+    addCommandArgument: string;
+    description?: string | undefined;
+    type?: string | undefined;
+  }[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+    hasMore: boolean;
+  };
+}>;
+declare const registriesIndexSchema: z$1.ZodRecord<z$1.ZodString, z$1.ZodString>;
+declare const presetSchema: z$1.ZodObject<{
+  name: z$1.ZodString;
+  title: z$1.ZodString;
+  description: z$1.ZodString;
+  base: z$1.ZodString;
+  style: z$1.ZodString;
+  baseColor: z$1.ZodString;
+  theme: z$1.ZodString;
+  iconLibrary: z$1.ZodString;
+  font: z$1.ZodString;
+  menuAccent: z$1.ZodEnum<["subtle", "bold"]>;
+  menuColor: z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>;
+  radius: z$1.ZodString;
+}, "strip", z$1.ZodTypeAny, {
+  description: string;
+  name: string;
+  title: string;
+  theme: string;
+  base: string;
+  style: string;
+  baseColor: string;
+  iconLibrary: string;
+  font: string;
+  radius: string;
+  menuAccent: "subtle" | "bold";
+  menuColor: "default" | "inverted" | "default-translucent" | "inverted-translucent";
+}, {
+  description: string;
+  name: string;
+  title: string;
+  theme: string;
+  base: string;
+  style: string;
+  baseColor: string;
+  iconLibrary: string;
+  font: string;
+  radius: string;
+  menuAccent: "subtle" | "bold";
+  menuColor: "default" | "inverted" | "default-translucent" | "inverted-translucent";
+}>;
+type Preset = z$1.infer<typeof presetSchema>;
+declare const configJsonSchema: z$1.ZodObject<{
+  presets: z$1.ZodArray<z$1.ZodObject<{
+    name: z$1.ZodString;
+    title: z$1.ZodString;
+    description: z$1.ZodString;
+    base: z$1.ZodString;
+    style: z$1.ZodString;
+    baseColor: z$1.ZodString;
+    theme: z$1.ZodString;
+    iconLibrary: z$1.ZodString;
+    font: z$1.ZodString;
+    menuAccent: z$1.ZodEnum<["subtle", "bold"]>;
+    menuColor: z$1.ZodEnum<["default", "inverted", "default-translucent", "inverted-translucent"]>;
+    radius: z$1.ZodString;
+  }, "strip", z$1.ZodTypeAny, {
+    description: string;
+    name: string;
+    title: string;
+    theme: string;
+    base: string;
+    style: string;
+    baseColor: string;
+    iconLibrary: string;
+    font: string;
+    radius: string;
+    menuAccent: "subtle" | "bold";
+    menuColor: "default" | "inverted" | "default-translucent" | "inverted-translucent";
+  }, {
+    description: string;
+    name: string;
+    title: string;
+    theme: string;
+    base: string;
+    style: string;
+    baseColor: string;
+    iconLibrary: string;
+    font: string;
+    radius: string;
+    menuAccent: "subtle" | "bold";
+    menuColor: "default" | "inverted" | "default-translucent" | "inverted-translucent";
+  }>, "many">;
+}, "strip", z$1.ZodTypeAny, {
+  presets: {
+    description: string;
+    name: string;
+    title: string;
+    theme: string;
+    base: string;
+    style: string;
+    baseColor: string;
+    iconLibrary: string;
+    font: string;
+    radius: string;
+    menuAccent: "subtle" | "bold";
+    menuColor: "default" | "inverted" | "default-translucent" | "inverted-translucent";
+  }[];
+}, {
+  presets: {
+    description: string;
+    name: string;
+    title: string;
+    theme: string;
+    base: string;
+    style: string;
+    baseColor: string;
+    iconLibrary: string;
+    font: string;
+    radius: string;
+    menuAccent: "subtle" | "bold";
+    menuColor: "default" | "inverted" | "default-translucent" | "inverted-translucent";
+  }[];
+}>;
+type ConfigJson = z$1.infer<typeof configJsonSchema>;
+//#endregion
+export { stylesSchema as A, registryItemSchema as C, registrySchema as D, registryResolvedItemsTreeSchema as E, searchResultItemSchema as O, registryItemFontSchema as S, registryItemTypeSchema as T, registryItemCommonSchema as _, RegistryFontItem as a, registryItemEnvVarsSchema as b, configSchema as c, rawConfigSchema as d, registriesIndexSchema as f, registryIndexSchema as g, registryConfigSchema as h, RegistryBaseItem as i, workspaceConfigSchema as j, searchResultsSchema as k, iconsSchema as l, registryConfigItemSchema as m, Preset as n, RegistryItem as o, registryBaseColorSchema as p, Registry as r, configJsonSchema as s, ConfigJson as t, presetSchema as u, registryItemCssSchema as v, registryItemTailwindSchema as w, registryItemFileSchema as x, registryItemCssVarsSchema as y };
+//# sourceMappingURL=index-BPQ49cSc.d.ts.map

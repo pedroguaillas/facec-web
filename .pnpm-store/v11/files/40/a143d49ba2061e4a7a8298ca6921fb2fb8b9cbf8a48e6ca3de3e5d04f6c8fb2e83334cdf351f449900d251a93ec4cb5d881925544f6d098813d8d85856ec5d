@@ -1,0 +1,7 @@
+import { c as configSchema } from "./index-BPQ49cSc.js";
+import { z as z$1 } from "zod";
+//#region src/utils/get-config.d.ts
+type Config = z$1.infer<typeof configSchema>;
+//#endregion
+export { Config as t };
+//# sourceMappingURL=get-config-DxVMMGMu.d.ts.map

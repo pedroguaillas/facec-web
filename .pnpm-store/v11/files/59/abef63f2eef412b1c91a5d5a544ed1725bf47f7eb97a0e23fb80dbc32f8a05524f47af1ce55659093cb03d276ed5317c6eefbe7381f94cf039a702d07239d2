@@ -1,0 +1,37 @@
+import { p as registryBaseColorSchema } from "../index-BPQ49cSc.js";
+import { t as Config } from "../get-config-DxVMMGMu.js";
+import { z as z$1 } from "zod";
+import { SourceFile } from "ts-morph";
+import { CodemodPlugin } from "vue-metamorph";
+//#region src/styles/create-style-map.d.ts
+declare const styleMapSchema: z$1.ZodRecord<z$1.ZodString, z$1.ZodString>;
+type StyleMap = z$1.infer<typeof styleMapSchema>;
+declare function createStyleMap(input: string): Record<string, string>;
+//#endregion
+//#region src/styles/transform.d.ts
+type TransformerStyle<Output = SourceFile> = (opts: {
+  sourceFile: SourceFile;
+  styleMap: StyleMap;
+}) => Promise<Output>;
+declare function transformStyle(source: string, { styleMap, transformers }: {
+  styleMap: StyleMap;
+  transformers?: TransformerStyle<SourceFile>[];
+}): Promise<string>;
+//#endregion
+//#region src/utils/transformers/index.d.ts
+interface TransformOpts {
+  filename: string;
+  raw: string;
+  config: Config;
+  baseColor?: z$1.infer<typeof registryBaseColorSchema>;
+  isRemote?: boolean;
+}
+//#endregion
+//#region src/utils/transformers/transform-icons.d.ts
+declare function transformIcons(opts: TransformOpts, registryIcons: Record<string, Record<string, string>>): CodemodPlugin;
+//#endregion
+//#region src/utils/transformers/transform-menu.d.ts
+declare function transformMenu(opts: TransformOpts): CodemodPlugin;
+//#endregion
+export { createStyleMap, transformIcons, transformMenu, transformStyle };
+//# sourceMappingURL=index.d.ts.map

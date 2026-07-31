@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Http\Controllers\Order;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\OrderStoreRequest;
+use App\Http\Requests\Order\OrderUpdateRequest;
+use App\Models\Branch;
+use App\Models\MethodOfPayment;
+use App\Models\Order\Order;
+use App\Models\Product\IvaTax;
+use App\Services\Order\OrderPdfService;
+use App\Services\Order\OrderShowService;
+use App\Services\Order\OrderStoreService;
+use App\Services\Order\OrderUpdateService;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class OrderController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $search = $request->input('search', '');
+
+        $orders = Order::join('customers AS c', 'c.id', 'orders.customer_id')
+            ->select('orders.*', 'c.id AS customer_pk', 'c.name AS customer_name', 'c.email AS customer_email')
+            ->latest('orders.created_at')
+            ->when($search, function ($query) use ($search) {
+                $escaped = str_replace(['%', '_'], ['\%', '\_'], $search);
+
+                $query->where(function ($q) use ($escaped) {
+                    $q->where('orders.serie', 'LIKE', "%{$escaped}%")
+                        ->orWhere('c.name', 'LIKE', "%{$escaped}%");
+                });
+            })
+            ->when($request->filled('date'), function ($query) use ($request) {
+                $query->whereDate('orders.date', $request->input('date'));
+            })
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (Order $order) => [
+                'id' => $order->id,
+                'serie' => $order->serie,
+                'voucher_type' => $order->voucher_type,
+                'date' => $order->date,
+                'total' => $order->total,
+                'state' => $order->state,
+                'extra_detail' => $order->extra_detail,
+                'send_mail' => $order->send_mail,
+                'customer' => [
+                    'id' => $order->customer_pk,
+                    'name' => $order->customer_name,
+                    'email' => $order->customer_email,
+                ],
+            ]);
+
+        return Inertia::render('orders/Index', [
+            'orders' => [
+                'data' => $orders->items(),
+                'links' => $orders->linkCollection(),
+                'meta' => [
+                    'current_page' => $orders->currentPage(),
+                    'last_page' => $orders->lastPage(),
+                    'per_page' => $orders->perPage(),
+                    'total' => $orders->total(),
+                    'from' => $orders->firstItem(),
+                    'to' => $orders->lastItem(),
+                ],
+            ],
+            'filters' => [
+                'search' => $search,
+                'date' => $request->input('date'),
+            ],
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('orders/Create', $this->emisionData());
+    }
+
+    public function store(OrderStoreRequest $request, OrderStoreService $service): RedirectResponse
+    {
+        $order = $service->createOrder($request->validated());
+
+        return redirect()
+            ->route('orders.edit', $order)
+            ->with('success', 'Venta creada con éxito.');
+    }
+
+    public function edit(Order $order, OrderShowService $service): Response
+    {
+        return Inertia::render('orders/Edit', [
+            ...$service->getOrderDetail($order),
+            ...$this->emisionData(),
+        ]);
+    }
+
+    public function update(OrderUpdateRequest $request, Order $order, OrderUpdateService $service): RedirectResponse
+    {
+        $service->updateOrder($order, $request->validated());
+
+        return redirect()
+            ->route('orders.edit', $order)
+            ->with('success', 'Venta actualizada con éxito.');
+    }
+
+    public function pdf(Order $order, OrderPdfService $service)
+    {
+        [$pdf] = $service->buildPdf($order->id);
+
+        return $pdf->stream("{$order->serie}.pdf");
+    }
+
+    public function printf(Order $order, OrderPdfService $service)
+    {
+        return $service->buildPrintPdf($order->id)->stream("{$order->serie}.pdf");
+    }
+
+    /**
+     * @return array{points: Collection, methodOfPayments: Collection, tourism: bool, ivaTaxes: Collection}
+     */
+    private function emisionData(): array
+    {
+        $company = Auth::user()->company;
+
+        return [
+            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, ep.invoice, ep.creditnote, recognition")
+                ->leftJoin('emision_points AS ep', 'branches.id', 'ep.branch_id')
+                ->where('branches.company_id', $company->id)
+                ->get(),
+            'methodOfPayments' => MethodOfPayment::query()
+                ->whereNotIn('code', [15, 17, 18, 21])
+                ->get(),
+            'tourism' => $this->isTourism($company),
+            'ivaTaxes' => IvaTax::query()
+                ->where('state', 'active')
+                ->get(['code', 'percentage']),
+        ];
+    }
+
+    private function isTourism($company): bool
+    {
+        if (! $company->base8 || $company->tourism_from === null || $company->tourism_to === null) {
+            return false;
+        }
+
+        $now = Carbon::now();
+
+        return $now->isAfter($company->tourism_from) && $now->isBefore($company->tourism_to);
+    }
+}

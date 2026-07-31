@@ -1,0 +1,2 @@
+import { t as server } from "../mcp-C4LGMHOi.js";
+export { server };

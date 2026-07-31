@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Company;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +17,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Varios services (OrderPdfService, ShopLcPdfService, RetentionPdfService, XML builders)
+        // type-hintean Company en su constructor esperando la company del usuario autenticado.
+        $this->app->bind(Company::class, fn () => Auth::user()?->company);
     }
 
     /**
