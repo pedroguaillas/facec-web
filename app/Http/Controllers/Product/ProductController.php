@@ -5,22 +5,23 @@ namespace App\Http\Controllers\Product;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\ProductStoreRequest;
 use App\Http\Requests\Product\ProductUpdateRequest;
+use App\Http\Resources\ProductResources;
 use App\Models\Product\IceCataloge;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): AnonymousResourceCollection
     {
         $search = $request->input('search', '');
+        $paginate = (int) $request->input('paginate', 15);
 
         $products = Product::join('iva_taxes', 'iva_taxes.code', 'products.iva')
             ->when($search, function ($query) use ($search) {
@@ -31,49 +32,39 @@ class ProductController extends Controller
                         ->orWhere('products.name', 'LIKE', "%{$escaped}%");
                 });
             })
-            ->selectRaw('products.id, products.code, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.stock')
+            ->selectRaw('products.id, products.code, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.tourism')
             ->latest('products.created_at')
-            ->paginate(15)
+            ->paginate($paginate)
             ->withQueryString();
 
-        return Inertia::render('products/Index', [
-            'products' => [
-                'data' => $products->items(),
-                'links' => $products->linkCollection(),
-                'meta' => [
-                    'current_page' => $products->currentPage(),
-                    'last_page' => $products->lastPage(),
-                    'per_page' => $products->perPage(),
-                    'total' => $products->total(),
-                    'from' => $products->firstItem(),
-                    'to' => $products->lastItem(),
-                ],
-            ],
-            'filters' => [
-                'search' => $search,
-            ],
-        ]);
+        return ProductResources::collection($products)->additional(['succes' => true]);
     }
 
-    public function create(): Response
+    public function create(): JsonResponse
     {
-        return Inertia::render('products/Create', $this->createEditData());
+        return response()->json([
+            'succes' => true,
+            ...$this->createEditData(),
+        ], 200);
     }
 
-    public function store(ProductStoreRequest $request): RedirectResponse
+    public function store(ProductStoreRequest $request): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
 
         $product = $branch->products()->create($request->validated());
 
-        return redirect()
-            ->route('products.edit', $product)
-            ->with('success', 'Producto creado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Producto creado con éxito.',
+            'data' => $product,
+        ], 201);
     }
 
-    public function edit(Product $product): Response
+    public function edit(Product $product): JsonResponse
     {
-        return Inertia::render('products/Edit', [
+        return response()->json([
+            'succes' => true,
             'product' => [
                 'id' => $product->id,
                 'code' => $product->code,
@@ -86,31 +77,35 @@ class ProductController extends Controller
                 'stock' => $product->stock,
             ],
             ...$this->createEditData(),
-        ]);
+        ], 200);
     }
 
-    public function update(ProductUpdateRequest $request, Product $product): RedirectResponse
+    public function update(ProductUpdateRequest $request, Product $product): JsonResponse
     {
         $product->update($request->validated());
 
-        return redirect()
-            ->route('products.edit', $product)
-            ->with('success', 'Producto actualizado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Producto actualizado con éxito.',
+            'data' => $product,
+        ], 200);
     }
 
-    public function destroy(Product $product): RedirectResponse
+    public function destroy(Product $product): JsonResponse
     {
         try {
             $product->delete();
         } catch (\Throwable $e) {
-            return redirect()
-                ->route('products.index')
-                ->with('error', 'No se pudo eliminar el producto: '.$e->getMessage());
+            return response()->json([
+                'succes' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
-        return redirect()
-            ->route('products.index')
-            ->with('success', 'Producto eliminado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Producto eliminado con éxito.',
+        ]);
     }
 
     /**

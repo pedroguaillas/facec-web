@@ -9,6 +9,13 @@ class Company extends Model
 {
     use HasFactory;
 
+    /**
+     * Nunca serializar la contraseña del certificado de firma electrónica.
+     */
+    protected $hidden = [
+        'pass_cert',
+    ];
+
     protected $fillable = [
         'ruc',
         'company',

@@ -5,18 +5,19 @@ namespace App\Http\Controllers\Provider;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Provider\ProviderStoreRequest;
 use App\Http\Requests\Provider\ProviderUpdateRequest;
+use App\Http\Resources\ProviderResources;
 use App\Models\Provider;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class ProviderController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): AnonymousResourceCollection
     {
         $search = $request->input('search', '');
+        $paginate = (int) $request->input('paginate', 15);
 
         $providers = Provider::query()
             ->when($search, function ($query) use ($search) {
@@ -29,47 +30,34 @@ class ProviderController extends Controller
             })
             ->select('id', 'type_identification', 'identication', 'name', 'address', 'phone', 'email')
             ->latest('created_at')
-            ->paginate(15)
+            ->paginate($paginate)
             ->withQueryString();
 
-        return Inertia::render('providers/Index', [
-            'providers' => [
-                'data' => $providers->items(),
-                'links' => $providers->linkCollection(),
-                'meta' => [
-                    'current_page' => $providers->currentPage(),
-                    'last_page' => $providers->lastPage(),
-                    'per_page' => $providers->perPage(),
-                    'total' => $providers->total(),
-                    'from' => $providers->firstItem(),
-                    'to' => $providers->lastItem(),
-                ],
-            ],
-            'filters' => [
-                'search' => $search,
-            ],
-        ]);
+        return ProviderResources::collection($providers)->additional(['succes' => true]);
     }
 
-    public function create(): Response
+    public function create(): JsonResponse
     {
-        return Inertia::render('providers/Create');
+        return response()->json(['succes' => true], 200);
     }
 
-    public function store(ProviderStoreRequest $request): RedirectResponse
+    public function store(ProviderStoreRequest $request): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
 
         $provider = $branch->providers()->create($request->validated());
 
-        return redirect()
-            ->route('providers.edit', $provider)
-            ->with('success', 'Proveedor creado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Proveedor creado con éxito.',
+            'data' => $provider,
+        ], 201);
     }
 
-    public function edit(Provider $provider): Response
+    public function edit(Provider $provider): JsonResponse
     {
-        return Inertia::render('providers/Edit', [
+        return response()->json([
+            'succes' => true,
             'provider' => [
                 'id' => $provider->id,
                 'type_identification' => $provider->type_identification,
@@ -79,15 +67,17 @@ class ProviderController extends Controller
                 'phone' => $provider->phone,
                 'email' => $provider->email,
             ],
-        ]);
+        ], 200);
     }
 
-    public function update(ProviderUpdateRequest $request, Provider $provider): RedirectResponse
+    public function update(ProviderUpdateRequest $request, Provider $provider): JsonResponse
     {
         $provider->update($request->validated());
 
-        return redirect()
-            ->route('providers.edit', $provider)
-            ->with('success', 'Proveedor actualizado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Proveedor actualizado con éxito.',
+            'data' => $provider,
+        ], 200);
     }
 }

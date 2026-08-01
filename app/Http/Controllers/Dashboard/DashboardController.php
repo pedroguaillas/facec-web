@@ -9,13 +9,12 @@ use App\Models\Order\Order;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(): Response
+    public function index(): JsonResponse
     {
         $user = Auth::user();
         $company = $user->company;
@@ -89,7 +88,8 @@ class DashboardController extends Controller
                 ]);
         }
 
-        return Inertia::render('Dashboard', [
+        return response()->json([
+            'succes' => true,
             'active' => $active,
             'expired' => $expired,
             'certExpiration' => $certExpiration,
@@ -106,6 +106,6 @@ class DashboardController extends Controller
                 'providers' => $newProvidersThisMonth,
             ],
             'recentOrders' => $recentOrders,
-        ]);
+        ], 200);
     }
 }

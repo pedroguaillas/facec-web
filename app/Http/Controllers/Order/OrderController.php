@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\OrderStoreRequest;
 use App\Http\Requests\Order\OrderUpdateRequest;
+use App\Http\Resources\OrderResources;
 use App\Models\Branch;
 use App\Models\MethodOfPayment;
 use App\Models\Order\Order;
@@ -14,21 +15,21 @@ use App\Services\Order\OrderShowService;
 use App\Services\Order\OrderStoreService;
 use App\Services\Order\OrderUpdateService;
 use Carbon\Carbon;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class OrderController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): AnonymousResourceCollection
     {
         $search = $request->input('search', '');
+        $paginate = (int) $request->input('paginate', 15);
 
         $orders = Order::join('customers AS c', 'c.id', 'orders.customer_id')
-            ->select('orders.*', 'c.id AS customer_pk', 'c.name AS customer_name', 'c.email AS customer_email')
+            ->select('orders.*', 'c.name', 'c.email')
             ->latest('orders.created_at')
             ->when($search, function ($query) use ($search) {
                 $escaped = str_replace(['%', '_'], ['\%', '\_'], $search);
@@ -41,73 +42,49 @@ class OrderController extends Controller
             ->when($request->filled('date'), function ($query) use ($request) {
                 $query->whereDate('orders.date', $request->input('date'));
             })
-            ->paginate(15)
-            ->withQueryString()
-            ->through(fn (Order $order) => [
-                'id' => $order->id,
-                'serie' => $order->serie,
-                'voucher_type' => $order->voucher_type,
-                'date' => $order->date,
-                'total' => $order->total,
-                'state' => $order->state,
-                'extra_detail' => $order->extra_detail,
-                'send_mail' => $order->send_mail,
-                'customer' => [
-                    'id' => $order->customer_pk,
-                    'name' => $order->customer_name,
-                    'email' => $order->customer_email,
-                ],
-            ]);
+            ->paginate($paginate)
+            ->withQueryString();
 
-        return Inertia::render('orders/Index', [
-            'orders' => [
-                'data' => $orders->items(),
-                'links' => $orders->linkCollection(),
-                'meta' => [
-                    'current_page' => $orders->currentPage(),
-                    'last_page' => $orders->lastPage(),
-                    'per_page' => $orders->perPage(),
-                    'total' => $orders->total(),
-                    'from' => $orders->firstItem(),
-                    'to' => $orders->lastItem(),
-                ],
-            ],
-            'filters' => [
-                'search' => $search,
-                'date' => $request->input('date'),
-            ],
+        return OrderResources::collection($orders)->additional(['succes' => true]);
+    }
+
+    public function create(): JsonResponse
+    {
+        return response()->json([
+            'succes' => true,
+            ...$this->emisionData(),
         ]);
     }
 
-    public function create(): Response
-    {
-        return Inertia::render('orders/Create', $this->emisionData());
-    }
-
-    public function store(OrderStoreRequest $request, OrderStoreService $service): RedirectResponse
+    public function store(OrderStoreRequest $request, OrderStoreService $service): JsonResponse
     {
         $order = $service->createOrder($request->validated());
 
-        return redirect()
-            ->route('orders.edit', $order)
-            ->with('success', 'Venta creada con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Venta creada con éxito.',
+            'order' => $order,
+        ], 201);
     }
 
-    public function edit(Order $order, OrderShowService $service): Response
+    public function edit(Order $order, OrderShowService $service): JsonResponse
     {
-        return Inertia::render('orders/Edit', [
+        return response()->json([
+            'succes' => true,
             ...$service->getOrderDetail($order),
             ...$this->emisionData(),
         ]);
     }
 
-    public function update(OrderUpdateRequest $request, Order $order, OrderUpdateService $service): RedirectResponse
+    public function update(OrderUpdateRequest $request, Order $order, OrderUpdateService $service): JsonResponse
     {
         $service->updateOrder($order, $request->validated());
 
-        return redirect()
-            ->route('orders.edit', $order)
-            ->with('success', 'Venta actualizada con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Venta actualizada con éxito.',
+            'order' => $order->fresh(),
+        ]);
     }
 
     public function pdf(Order $order, OrderPdfService $service)

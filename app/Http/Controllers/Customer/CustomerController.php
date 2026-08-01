@@ -5,18 +5,19 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\CustomerStoreRequest;
 use App\Http\Requests\Customer\CustomerUpdateRequest;
+use App\Http\Resources\CustomerResources;
 use App\Models\Customer;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class CustomerController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): AnonymousResourceCollection
     {
         $search = $request->input('search', '');
+        $paginate = (int) $request->input('paginate', 15);
 
         $customers = Customer::query()
             ->when($search, function ($query) use ($search) {
@@ -29,47 +30,34 @@ class CustomerController extends Controller
             })
             ->select('id', 'type_identification', 'identication', 'name', 'address', 'phone', 'email')
             ->latest('created_at')
-            ->paginate(15)
+            ->paginate($paginate)
             ->withQueryString();
 
-        return Inertia::render('customers/Index', [
-            'customers' => [
-                'data' => $customers->items(),
-                'links' => $customers->linkCollection(),
-                'meta' => [
-                    'current_page' => $customers->currentPage(),
-                    'last_page' => $customers->lastPage(),
-                    'per_page' => $customers->perPage(),
-                    'total' => $customers->total(),
-                    'from' => $customers->firstItem(),
-                    'to' => $customers->lastItem(),
-                ],
-            ],
-            'filters' => [
-                'search' => $search,
-            ],
-        ]);
+        return CustomerResources::collection($customers)->additional(['succes' => true]);
     }
 
-    public function create(): Response
+    public function create(): JsonResponse
     {
-        return Inertia::render('customers/Create');
+        return response()->json(['succes' => true], 200);
     }
 
-    public function store(CustomerStoreRequest $request): RedirectResponse
+    public function store(CustomerStoreRequest $request): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
 
         $customer = $branch->customers()->create($request->validated());
 
-        return redirect()
-            ->route('customers.edit', $customer)
-            ->with('success', 'Cliente creado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Cliente creado con éxito.',
+            'data' => $customer,
+        ], 201);
     }
 
-    public function edit(Customer $customer): Response
+    public function edit(Customer $customer): JsonResponse
     {
-        return Inertia::render('customers/Edit', [
+        return response()->json([
+            'succes' => true,
             'customer' => [
                 'id' => $customer->id,
                 'type_identification' => $customer->type_identification,
@@ -79,15 +67,17 @@ class CustomerController extends Controller
                 'phone' => $customer->phone,
                 'email' => $customer->email,
             ],
-        ]);
+        ], 200);
     }
 
-    public function update(CustomerUpdateRequest $request, Customer $customer): RedirectResponse
+    public function update(CustomerUpdateRequest $request, Customer $customer): JsonResponse
     {
         $customer->update($request->validated());
 
-        return redirect()
-            ->route('customers.edit', $customer)
-            ->with('success', 'Cliente actualizado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Cliente actualizado con éxito.',
+            'data' => $customer,
+        ], 200);
     }
 }

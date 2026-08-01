@@ -5,18 +5,19 @@ namespace App\Http\Controllers\Carrier;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Carrier\CarrierStoreRequest;
 use App\Http\Requests\Carrier\CarrierUpdateRequest;
+use App\Http\Resources\CarrierResources;
 use App\Models\Carrier;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class CarrierController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): AnonymousResourceCollection
     {
         $search = $request->input('search', '');
+        $paginate = (int) $request->input('paginate', 15);
 
         $carriers = Carrier::when($search, function ($query) use ($search) {
             $escaped = str_replace(['%', '_'], ['\%', '\_'], $search);
@@ -27,47 +28,34 @@ class CarrierController extends Controller
             });
         })
             ->latest()
-            ->paginate(15)
+            ->paginate($paginate)
             ->withQueryString();
 
-        return Inertia::render('carriers/Index', [
-            'carriers' => [
-                'data' => $carriers->items(),
-                'links' => $carriers->linkCollection(),
-                'meta' => [
-                    'current_page' => $carriers->currentPage(),
-                    'last_page' => $carriers->lastPage(),
-                    'per_page' => $carriers->perPage(),
-                    'total' => $carriers->total(),
-                    'from' => $carriers->firstItem(),
-                    'to' => $carriers->lastItem(),
-                ],
-            ],
-            'filters' => [
-                'search' => $search,
-            ],
-        ]);
+        return CarrierResources::collection($carriers)->additional(['succes' => true]);
     }
 
-    public function create(): Response
+    public function create(): JsonResponse
     {
-        return Inertia::render('carriers/Create');
+        return response()->json(['succes' => true], 200);
     }
 
-    public function store(CarrierStoreRequest $request): RedirectResponse
+    public function store(CarrierStoreRequest $request): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
 
         $carrier = $branch->carriers()->create($request->validated());
 
-        return redirect()
-            ->route('carriers.edit', $carrier)
-            ->with('success', 'Transportista creado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Transportista creado con éxito.',
+            'data' => $carrier,
+        ], 201);
     }
 
-    public function edit(Carrier $carrier): Response
+    public function edit(Carrier $carrier): JsonResponse
     {
-        return Inertia::render('carriers/Edit', [
+        return response()->json([
+            'succes' => true,
             'carrier' => [
                 'id' => $carrier->id,
                 'type_identification' => $carrier->type_identification,
@@ -76,15 +64,17 @@ class CarrierController extends Controller
                 'license_plate' => $carrier->license_plate,
                 'email' => $carrier->email,
             ],
-        ]);
+        ], 200);
     }
 
-    public function update(CarrierUpdateRequest $request, Carrier $carrier): RedirectResponse
+    public function update(CarrierUpdateRequest $request, Carrier $carrier): JsonResponse
     {
         $carrier->update($request->validated());
 
-        return redirect()
-            ->route('carriers.edit', $carrier)
-            ->with('success', 'Transportista actualizado con éxito.');
+        return response()->json([
+            'succes' => true,
+            'message' => 'Transportista actualizado con éxito.',
+            'data' => $carrier,
+        ], 200);
     }
 }

@@ -20,7 +20,7 @@ class CarrierStoreRequest extends FormRequest
             'identication' => ['required', 'string', new UniqueBranchScoped('carriers', 'identication')],
             'name' => ['required', 'string', 'max:300'],
             'email' => ['nullable', 'email', 'max:300'],
-            'license_plate' => ['nullable', 'string', 'max:20'],
+            'license_plate' => ['required', 'string', 'max:20'],
         ];
     }
 }

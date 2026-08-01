@@ -5,32 +5,32 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Models\Order\Order;
 use App\Services\Order\OrderLifecycleService;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderLifecycleController extends Controller
 {
-    public function process(Order $order, OrderLifecycleService $service): RedirectResponse
+    public function process(Order $order, OrderLifecycleService $service): JsonResponse
     {
         try {
             $service->process($order);
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return redirect()->back()->with('success', 'Comprobante procesado con éxito.');
+        return response()->json(['succes' => true, 'message' => 'Comprobante procesado con éxito.', 'order' => $order->fresh()]);
     }
 
-    public function cancel(Order $order, OrderLifecycleService $service): RedirectResponse
+    public function cancel(Order $order, OrderLifecycleService $service): JsonResponse
     {
         try {
             $service->cancel($order);
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return redirect()->back()->with('success', 'Comprobante anulado con éxito.');
+        return response()->json(['succes' => true, 'message' => 'Comprobante anulado con éxito.', 'order' => $order->fresh()]);
     }
 
     public function download(Order $order): StreamedResponse
