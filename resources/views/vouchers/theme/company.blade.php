@@ -1,7 +1,9 @@
 <div style="width: 400px;">
-    <div class="parent-img">
-        <img src="{{ storage_path('app/logos/' .$company->logo_dir) }}" alt="Logo" style="width: auto; height: 125px;" />
-    </div>
+    @if($company->logo_dir)
+        <div class="parent-img">
+            <img src="{{ storage_path('app/public/logos/'.$company->logo_dir) }}" alt="Logo" style="width: auto; height: 125px;" />
+        </div>
+    @endif
     <table style="margin-top: .5em;" class="table-bordered">
         <tbody>
             <tr>

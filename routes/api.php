@@ -11,9 +11,12 @@ use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductLookupController;
 use App\Http\Controllers\Provider\ProviderController;
 use App\Http\Controllers\Provider\ProviderLookupController;
+use App\Http\Controllers\ReferralGuide\ReferralGuideController;
+use App\Http\Controllers\ReferralGuide\ReferralGuideLifecycleController;
 use App\Http\Controllers\Settings\BranchController as SettingsBranchController;
 use App\Http\Controllers\Settings\CompanyController as SettingsCompanyController;
 use App\Http\Controllers\Settings\EmisionPointController as SettingsEmisionPointController;
+use App\Http\Controllers\Shop\RetentionController;
 use App\Http\Controllers\Shop\ShopController;
 use App\Http\Controllers\Shop\ShopLifecycleController;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +72,19 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process');
     Route::post('shops/{shop}/cancel', [ShopLifecycleController::class, 'cancel'])->name('shops.cancel');
     Route::get('shops/{shop}/xml', [ShopLifecycleController::class, 'download'])->name('shops.xml');
+    Route::get('retentions/{id}/pdf', [RetentionController::class, 'pdf'])->name('retentions.pdf');
+    Route::post('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
+    Route::post('retentions/{shop}/cancel', [RetentionController::class, 'cancel'])->name('retentions.cancel');
+    Route::get('retentions/{shop}/xml', [RetentionController::class, 'download'])->name('retentions.xml');
+
+    Route::get('referralguides', [ReferralGuideController::class, 'index'])->name('referralguides.index');
+    Route::get('referralguides/create', [ReferralGuideController::class, 'create'])->name('referralguides.create');
+    Route::post('referralguides', [ReferralGuideController::class, 'store'])->name('referralguides.store');
+    Route::get('referralguides/{referralguide}', [ReferralGuideController::class, 'show'])->name('referralguides.show');
+    Route::put('referralguides/{referralguide}', [ReferralGuideController::class, 'update'])->name('referralguides.update');
+    Route::get('referralguides/{id}/pdf', [ReferralGuideController::class, 'pdf'])->name('referralguides.pdf');
+    Route::post('referralguides/{referralguide}/process', [ReferralGuideLifecycleController::class, 'process'])->name('referralguides.process');
+    Route::get('referralguides/{referralguide}/xml', [ReferralGuideLifecycleController::class, 'download'])->name('referralguides.xml');
 
     Route::get('carriers', [CarrierController::class, 'index'])->name('carriers.index');
     Route::get('carriers/create', [CarrierController::class, 'create'])->name('carriers.create');

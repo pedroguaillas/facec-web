@@ -23,7 +23,7 @@
     </tr>
     <tr>
         <td colspan="2">
-            <table style="margin-top: .5em;" class="table-rounded-full">
+            <table style="margin-top: .5em; border-radius: 0;" class="table-rounded-full">
                 <thead>
                     <tr>
                         <th style="width: 5em;">Cod. Principal</th>

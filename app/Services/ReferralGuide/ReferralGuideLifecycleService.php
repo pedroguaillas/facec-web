@@ -6,6 +6,7 @@ use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\ReferralGuide\ReferralGuideItem;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
+use App\StaticClasses\VoucherStates;
 use App\Xml\ReferralGuideBuilder;
 use Illuminate\Support\Facades\Auth;
 
@@ -26,10 +27,10 @@ class ReferralGuideLifecycleService
 
         $state = $referralguide->state;
 
-        if (in_array($state, [VoucherStates::SAVED, VoucherStates::RETURNED, VoucherStates::REJECTED])) {
+        if (! $state || in_array($state, [VoucherStates::SAVED, VoucherStates::RETURNED, VoucherStates::REJECTED])) {
 
             if ($state === VoucherStates::RETURNED && $referralguide->extra_detail === 'CLAVE ACCESO REGISTRADA.') {
-                $this->sri->authorize($referralguide);
+                $this->authorize($referralguide);
 
                 return;
             }

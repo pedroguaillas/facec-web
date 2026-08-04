@@ -11,12 +11,17 @@
             box-sizing: border-box;
             padding: 0;
             margin: 0;
+            color: #000;
         }
 
         body {
             font-size: .6em;
             font-family: Arial, Helvetica, sans-serif;
             text-align: center;
+        }
+
+        thead th {
+            background-color: #e6e6e6;
         }
 
         /* Este estable el margen de la hoja */

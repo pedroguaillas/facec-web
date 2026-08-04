@@ -39,6 +39,7 @@
             box-sizing: border-box;
             padding: 0;
             margin: 0;
+            color: #000;
         }
 
         @page {
@@ -50,6 +51,11 @@
         /* Este estable el margen de la hoja */
         html {
             margin: 1.5em;
+        }
+
+        /* Fondo gris para encabezados de tabla reales (<thead>), sin esquinas redondeadas */
+        thead th {
+            background-color: #e6e6e6;
         }
 
         .widthboder {

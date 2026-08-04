@@ -29,7 +29,7 @@ class RetentionXmlService
 
         if (! $state || in_array($state, [VoucherStates::SAVED, VoucherStates::RETURNED, VoucherStates::REJECTED])) {
             if ($shop->state_retencion === VoucherStates::RETURNED && $shop->extra_detail_retention === 'CLAVE ACCESO REGISTRADA.') {
-                $this->sri->authorize($id);
+                $this->authorize($shop);
 
                 return;
             }
@@ -51,6 +51,11 @@ class RetentionXmlService
         } elseif (in_array($state, [VoucherStates::SENDED, VoucherStates::RECEIVED, VoucherStates::IN_PROCESS])) {
             $this->authorize($shop);
         }
+    }
+
+    public function cancel(Shop $shop): mixed
+    {
+        return $this->sriSoapService->cancel($shop, 'xml_retention', 'state_retencion');
     }
 
     private function buildXml(Company $company, $shopId)

@@ -42,17 +42,17 @@
     </tr>
     <tr>
         <td colspan="2">
-            <table style="margin-top: .5em; border-radius: 10px 10px 0 0;" class="table-rounded">
+            <table style="margin-top: .5em; border-radius: 0;" class="table-rounded">
                 <tbody>
-                    <tr>
-                        <th style="width: 5em;">Cod. Principal</th>
-                        <th style="width: 4em;">Cant.</th>
-                        <th>Descripción</th>
-                        <th style="width: 5em;">Precio Unitario</th>
+                    <tr style="background-color: #e6e6e6;">
+                        <th style="width: 5em; background-color: #e6e6e6;">Cod. Principal</th>
+                        <th style="width: 4em; background-color: #e6e6e6;">Cant.</th>
+                        <th style="background-color: #e6e6e6;">Descripción</th>
+                        <th style="width: 5em; background-color: #e6e6e6;">Precio Unitario</th>
                         @if($enabledDiscount)
-                            <th style="width: 5em;">Descuento</th>
+                            <th style="width: 5em; background-color: #e6e6e6;">Descuento</th>
                         @endif
-                        <th style="width: 5em;">Subtotal</th>
+                        <th style="width: 5em; background-color: #e6e6e6;">Subtotal</th>
                     </tr>
                 </tbody>
             </table>

@@ -1,8 +1,8 @@
     @if(count($orderaditionals) > 0)
-    <table style="padding-bottom: .7em;" class="table-rounded">
+    <table style="padding-bottom: .7em; border-radius: 0;" class="table-rounded">
         <tbody>
-            <tr>
-                <th style="padding: .5em 0em;" class="align-middle" colspan="2">INFORMACIÓN ADICIONAL</th>
+            <tr style="background-color: #e6e6e6;">
+                <th style="padding: .5em 0em; background-color: #e6e6e6;" class="align-middle" colspan="2">INFORMACIÓN ADICIONAL</th>
             </tr>
             @foreach($orderaditionals as $orderaditional)
             <tr>
@@ -14,11 +14,11 @@
     </table>
     @endif
 
-    <table class="table-rounded">
+    <table style="margin-top: .5em; border-radius: 0;" class="table-rounded">
         <tbody>
-            <tr>
-                <th style="width: 375px;">Forma de pago</th>
-                <th style="width: 70px;">Valor</th>
+            <tr style="background-color: #e6e6e6;">
+                <th style="width: 375px; background-color: #e6e6e6;">Forma de pago</th>
+                <th style="width: 70px; background-color: #e6e6e6;">Valor</th>
             </tr>
             <tr>
                 <td>{{ $payMethod }}</td>
