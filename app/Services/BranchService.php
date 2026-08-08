@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Branch;
+use Illuminate\Support\Facades\DB;
 
 class BranchService
 {
@@ -15,9 +16,38 @@ class BranchService
         ]);
     }
 
-    public function create(array $attributes)
+    public function create(array $attributes): Branch
     {
-        return Branch::create($attributes);
+        return DB::transaction(function () use ($attributes) {
+            $branch = Branch::create($attributes);
+
+            if ($attributes['type'] === 'matriz') {
+                $this->demoteOtherMatrices($branch);
+            }
+
+            return $branch;
+        });
+    }
+
+    public function update(Branch $branch, array $attributes): Branch
+    {
+        return DB::transaction(function () use ($branch, $attributes) {
+            $branch->update($attributes);
+
+            if (($attributes['type'] ?? null) === 'matriz') {
+                $this->demoteOtherMatrices($branch);
+            }
+
+            return $branch;
+        });
+    }
+
+    private function demoteOtherMatrices(Branch $branch): void
+    {
+        Branch::where('company_id', $branch->company_id)
+            ->where('type', 'matriz')
+            ->where('id', '<>', $branch->id)
+            ->update(['type' => 'sucursal']);
     }
 
     public function getByAttributes(array $attributes, array $with = [], array $columns = ['*'])

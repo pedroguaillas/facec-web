@@ -18,8 +18,8 @@ class EmisionPointStoreRequest extends FormRequest
             'branch_id' => 'required|exists:branches,id',
             'point' => [
                 'required',
-                'numeric',
-                'digits:3',
+                'integer',
+                'between:1,999',
                 Rule::unique('emision_points')->where(function ($query) {
                     return $query->where('branch_id', $this->branch_id);
                 }),
@@ -39,7 +39,7 @@ class EmisionPointStoreRequest extends FormRequest
             'branch_id.required' => 'La sucursal es obligatoria.',
             'branch_id.exists' => 'La sucursal seleccionada no existe.',
             'point.unique' => 'Este punto de emisión (point) ya está registrado para la sucursal seleccionada.',
-            'point.digits' => 'El punto de emisión debe tener 3 dígitos (ej: 001).',
+            'point.between' => 'El punto de emisión debe estar entre 1 y 999.',
             'required' => 'Este campo es obligatorio.',
             'numeric' => 'Debe ser un valor numérico.',
             'invoice.required' => ' El secuencial de facturas es obligatorio.',

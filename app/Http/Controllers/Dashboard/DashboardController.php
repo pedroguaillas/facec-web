@@ -89,7 +89,6 @@ class DashboardController extends Controller
         }
 
         return response()->json([
-            'succes' => true,
             'active' => $active,
             'expired' => $expired,
             'certExpiration' => $certExpiration,

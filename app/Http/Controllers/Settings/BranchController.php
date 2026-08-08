@@ -18,7 +18,6 @@ class BranchController extends Controller
             ->get(['id', 'company_id', 'store', 'address', 'name', 'type']);
 
         return response()->json([
-            'succes' => true,
             'branches' => $branches,
         ], 200);
     }
@@ -32,18 +31,16 @@ class BranchController extends Controller
         }
 
         return response()->json([
-            'succes' => true,
             'message' => 'Establecimiento creado con éxito.',
             'branch' => $branch,
         ], 201);
     }
 
-    public function update(BranchUpdateRequest $request, Branch $branch): JsonResponse
+    public function update(BranchUpdateRequest $request, Branch $branch, BranchService $service): JsonResponse
     {
-        $branch->update($request->validated());
+        $branch = $service->update($branch, $request->validated());
 
         return response()->json([
-            'succes' => true,
             'message' => 'Establecimiento actualizado con éxito.',
             'branch' => $branch,
         ], 200);

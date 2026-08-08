@@ -23,7 +23,6 @@ class EmisionPointController extends Controller
         ]);
 
         return response()->json([
-            'succes' => true,
             'branch' => $branch->only(['id', 'store', 'name']),
             'points' => $points,
         ], 200);
@@ -34,7 +33,6 @@ class EmisionPointController extends Controller
         $emisionPoint = $service->create($request->validated());
 
         return response()->json([
-            'succes' => true,
             'message' => 'Punto de emisión creado con éxito.',
             'data' => $emisionPoint,
         ], 201);
@@ -45,7 +43,6 @@ class EmisionPointController extends Controller
         $emisionPoint->update($request->validated());
 
         return response()->json([
-            'succes' => true,
             'message' => 'Punto de emisión actualizado con éxito.',
             'data' => $emisionPoint,
         ], 200);

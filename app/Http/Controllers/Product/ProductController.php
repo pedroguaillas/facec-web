@@ -37,13 +37,12 @@ class ProductController extends Controller
             ->paginate($paginate)
             ->withQueryString();
 
-        return ProductResources::collection($products)->additional(['succes' => true]);
+        return ProductResources::collection($products);
     }
 
     public function create(): JsonResponse
     {
         return response()->json([
-            'succes' => true,
             ...$this->createEditData(),
         ], 200);
     }
@@ -54,28 +53,13 @@ class ProductController extends Controller
 
         $product = $branch->products()->create($request->validated());
 
-        return response()->json([
-            'succes' => true,
-            'message' => 'Producto creado con éxito.',
-            'data' => $product,
-        ], 201);
+        return response()->json($product, 201);
     }
 
     public function edit(Product $product): JsonResponse
     {
         return response()->json([
-            'succes' => true,
-            'product' => [
-                'id' => $product->id,
-                'code' => $product->code,
-                'type_product' => $product->type_product,
-                'name' => $product->name,
-                'price1' => $product->price1,
-                'iva' => $product->iva,
-                'ice' => $product->ice,
-                'aux_cod' => $product->aux_cod,
-                'stock' => $product->stock,
-            ],
+            'product' => $product,
             ...$this->createEditData(),
         ], 200);
     }
@@ -84,17 +68,18 @@ class ProductController extends Controller
     {
         $product->update($request->validated());
 
-        return response()->json([
-            'succes' => true,
-            'message' => 'Producto actualizado con éxito.',
-            'data' => $product,
-        ], 200);
+        return response()->json($product);
     }
 
     public function destroy(Product $product): JsonResponse
     {
+        $isUsed = $product->orderItems()->exists()
+            || $product->shopItems()->exists()
+            || $product->referralGuideItems()->exists()
+            || $product->inventories()->exists();
+
         try {
-            $product->delete();
+            $isUsed ? $product->delete() : $product->forceDelete();
         } catch (\Throwable $e) {
             return response()->json([
                 'succes' => false,
@@ -119,7 +104,8 @@ class ProductController extends Controller
             'ivaTaxes' => IvaTax::query()
                 ->where('state', 'active')
                 ->when(! $company->base5, fn ($q) => $q->where('code', '<>', 5))
-                ->get(['code', 'percentage']),
+                ->selectRaw("code AS value, CONCAT(percentage, '%') AS label")
+                ->get(),
             'iceCataloges' => $company->ice ? IceCataloge::get(['code', 'description']) : [],
             'sriCategories' => ($company->transport || $company->base5)
                 ? SriCategory::get(['code', 'description', 'type'])

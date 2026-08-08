@@ -23,7 +23,6 @@ class AuthenticationController extends Controller
         $user = Auth::user();
 
         $response = [
-            'succes' => true,
             'token' => $user->createToken('AUTH_TOKEN')->plainTextToken,
             'token_type' => 'bearer',
             'user' => $user,
@@ -57,7 +56,6 @@ class AuthenticationController extends Controller
         }
 
         return response()->json([
-            'succes' => true,
             'message' => 'Sesión cerrada con éxito.',
         ], Response::HTTP_OK);
     }

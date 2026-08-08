@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Shop\Shop;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Provider extends BaseModel
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'branch_id',
@@ -20,4 +22,9 @@ class Provider extends BaseModel
         'accounting',
         'discount',
     ];
+
+    public function shops()
+    {
+        return $this->hasMany(Shop::class);
+    }
 }

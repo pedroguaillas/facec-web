@@ -58,7 +58,7 @@ class ProductUpdateRequest extends FormRequest
     {
         return [
             'code.required' => 'El código es obligatorio',
-            'code.unique' => 'Ya existe un producto con el código :value',
+            'code.unique' => 'Ya existe un producto con el código :input',
             'type_product.required' => 'El tipo de producto es obligatorio',
             'type_product.in' => 'El tipo de producto no es válido',
             'name.required' => 'El nombre es obligatorio',

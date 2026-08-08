@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'sri' => [
+        'url' => env('SRI_CATASTRO_URL'),
+    ],
+
     'xml_signer' => [
         'url' => env('XML_SIGNER_URL', 'http://xml-signer:8080'),
     ],

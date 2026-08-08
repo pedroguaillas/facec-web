@@ -45,13 +45,12 @@ class OrderController extends Controller
             ->paginate($paginate)
             ->withQueryString();
 
-        return OrderResources::collection($orders)->additional(['succes' => true]);
+        return OrderResources::collection($orders);
     }
 
     public function create(): JsonResponse
     {
         return response()->json([
-            'succes' => true,
             ...$this->emisionData(),
         ]);
     }
@@ -60,17 +59,12 @@ class OrderController extends Controller
     {
         $order = $service->createOrder($request->validated());
 
-        return response()->json([
-            'succes' => true,
-            'message' => 'Venta creada con éxito.',
-            'order' => $order,
-        ], 201);
+        return response()->json($order, 201);
     }
 
     public function edit(Order $order, OrderShowService $service): JsonResponse
     {
         return response()->json([
-            'succes' => true,
             ...$service->getOrderDetail($order),
             ...$this->emisionData(),
         ]);
@@ -81,9 +75,8 @@ class OrderController extends Controller
         $service->updateOrder($order, $request->validated());
 
         return response()->json([
-            'succes' => true,
             'message' => 'Venta actualizada con éxito.',
-            'order' => $order->fresh(),
+            'data' => $order->fresh(),
         ]);
     }
 

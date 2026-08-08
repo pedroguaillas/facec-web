@@ -17,9 +17,23 @@ class CompanyController extends Controller
         $company = Auth::user()->company;
 
         return response()->json([
-            'succes' => true,
             'company' => $this->present($company),
         ], 200);
+    }
+
+    public function downloadCert(): JsonResponse
+    {
+        $company = Auth::user()->company;
+
+        if (! $company->cert_dir) {
+            return response()->json([
+                'message' => 'Certificado no encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'cert' => base64_encode(Storage::get('cert/'.$company->cert_dir)),
+        ]);
     }
 
     public function update(CompanyUpdateRequest $request): JsonResponse
@@ -40,7 +54,6 @@ class CompanyController extends Controller
 
             if (! openssl_pkcs12_read($certContent, $parsed, $request->input('pass_cert'))) {
                 return response()->json([
-                    'succes' => false,
                     'message' => 'No se pudo leer el certificado. Verificá el archivo y la contraseña.',
                 ], 422);
             }
@@ -59,7 +72,6 @@ class CompanyController extends Controller
         $company->update($data);
 
         return response()->json([
-            'succes' => true,
             'message' => 'Empresa actualizada exitosamente.',
             'company' => $this->present($company->fresh()),
         ], 200);

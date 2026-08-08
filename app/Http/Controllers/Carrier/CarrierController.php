@@ -7,6 +7,7 @@ use App\Http\Requests\Carrier\CarrierStoreRequest;
 use App\Http\Requests\Carrier\CarrierUpdateRequest;
 use App\Http\Resources\CarrierResources;
 use App\Models\Carrier;
+use App\Services\SriResolveNameService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,12 +32,38 @@ class CarrierController extends Controller
             ->paginate($paginate)
             ->withQueryString();
 
-        return CarrierResources::collection($carriers)->additional(['succes' => true]);
+        return CarrierResources::collection($carriers);
     }
 
     public function create(): JsonResponse
     {
         return response()->json(['succes' => true], 200);
+    }
+
+    public function resolve(string $identification, SriResolveNameService $sriService): JsonResponse
+    {
+        $carrier = Carrier::where('identication', $identification)->first();
+
+        if (! $carrier) {
+            $carrierModel = Carrier::withoutGlobalScope('branch')
+                ->where('identication', $identification)
+                ->latest()
+                ->first();
+
+            $sriData = strlen($identification) === 13
+                ? $sriService->searchByIdentificationSRI($identification)
+                : [];
+
+            $modelAttributes = $carrierModel ? $carrierModel->toArray() : [];
+
+            $carrier = array_merge(
+                $modelAttributes,
+                $sriData,
+                ['branch_id' => 0]
+            );
+        }
+
+        return response()->json($carrier);
     }
 
     public function store(CarrierStoreRequest $request): JsonResponse
@@ -45,36 +72,37 @@ class CarrierController extends Controller
 
         $carrier = $branch->carriers()->create($request->validated());
 
-        return response()->json([
-            'succes' => true,
-            'message' => 'Transportista creado con éxito.',
-            'data' => $carrier,
-        ], 201);
+        return response()->json($carrier);
     }
 
     public function edit(Carrier $carrier): JsonResponse
     {
-        return response()->json([
-            'succes' => true,
-            'carrier' => [
-                'id' => $carrier->id,
-                'type_identification' => $carrier->type_identification,
-                'identication' => $carrier->identication,
-                'name' => $carrier->name,
-                'license_plate' => $carrier->license_plate,
-                'email' => $carrier->email,
-            ],
-        ], 200);
+        return response()->json($carrier);
     }
 
     public function update(CarrierUpdateRequest $request, Carrier $carrier): JsonResponse
     {
         $carrier->update($request->validated());
 
+        return response()->json($carrier);
+    }
+
+    public function destroy(Carrier $carrier): JsonResponse
+    {
+        $isUsed = $carrier->referralGuides()->exists();
+
+        try {
+            $isUsed ? $carrier->delete() : $carrier->forceDelete();
+        } catch (\Throwable $e) {
+            return response()->json([
+                'succes' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
         return response()->json([
             'succes' => true,
-            'message' => 'Transportista actualizado con éxito.',
-            'data' => $carrier,
-        ], 200);
+            'message' => 'Transportista eliminado con éxito.',
+        ]);
     }
 }

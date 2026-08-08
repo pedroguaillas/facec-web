@@ -11,6 +11,8 @@ use App\Models\Product\Product;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
+use App\Models\Shop\ShopRetentionItem;
+use App\Models\Tax;
 use App\Services\Shop\ShopLcPdfService;
 use App\Services\Shop\ShopStoreService;
 use App\Services\Shop\ShopUpdateService;
@@ -44,13 +46,13 @@ class ShopController extends Controller
             ->paginate($paginate)
             ->withQueryString();
 
-        return ShopResources::collection($shops)->additional(['succes' => true]);
+        return ShopResources::collection($shops);
     }
 
     public function create(): JsonResponse
     {
         return response()->json([
-            'succes' => true,
+            'taxes' => Tax::all(),
             ...$this->emisionData(),
         ]);
     }
@@ -59,11 +61,7 @@ class ShopController extends Controller
     {
         $shop = $service->createShop($request->validated());
 
-        return response()->json([
-            'succes' => true,
-            'message' => 'Compra creada con éxito.',
-            'shop' => $shop,
-        ], 201);
+        return response()->json($shop, 201);
     }
 
     public function edit(Shop $shop): JsonResponse
@@ -71,12 +69,13 @@ class ShopController extends Controller
         $isSettlement = (int) $shop->voucher_type === 3;
 
         return response()->json([
-            'succes' => true,
             'shop' => collect($shop->toArray())
                 ->filter(fn ($value) => $value !== null)
                 ->all(),
             'shop_items' => $isSettlement ? $this->getShopItems($shop->id) : [],
             'products' => $isSettlement ? $this->getProducts($shop->id) : [],
+            'shopretentionitems' => $this->getShopRetentionItems($shop->id),
+            'taxes' => Tax::all(),
             'provider' => Provider::where('id', $shop->provider_id)->first(['id', 'name', 'identication']),
             ...$this->emisionData(),
         ]);
@@ -87,9 +86,8 @@ class ShopController extends Controller
         (new ShopUpdateService($shop))->updateShop($request->validated());
 
         return response()->json([
-            'succes' => true,
             'message' => 'Compra actualizada con éxito.',
-            'shop' => $shop->fresh(),
+            'data' => $shop->fresh(),
         ]);
     }
 
@@ -118,6 +116,14 @@ class ShopController extends Controller
             ->get();
     }
 
+    private function getShopRetentionItems(int $shopId)
+    {
+        return ShopRetentionItem::select('shop_retention_items.*', 'taxes.conception AS tax_name')
+            ->join('taxes', 'taxes.code', 'shop_retention_items.tax_code')
+            ->where('shop_id', $shopId)
+            ->get();
+    }
+
     /**
      * @return array{points: Collection}
      */
@@ -126,7 +132,7 @@ class ShopController extends Controller
         $company = Auth::user()->company;
 
         return [
-            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, ep.settlementonpurchase, recognition")
+            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, ep.retention, ep.settlementonpurchase, recognition")
                 ->leftJoin('emision_points AS ep', 'branches.id', 'ep.branch_id')
                 ->where('branches.company_id', $company->id)
                 ->get(),

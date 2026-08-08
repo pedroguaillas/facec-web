@@ -42,15 +42,12 @@ class ReferralGuideController extends Controller
             ->paginate($paginate)
             ->withQueryString();
 
-        return ReferralGuideResources::collection($referralguides)->additional(['succes' => true]);
+        return ReferralGuideResources::collection($referralguides);
     }
 
     public function create(): JsonResponse
     {
-        return response()->json([
-            'succes' => true,
-            ...$this->emisionData(),
-        ]);
+        return response()->json($this->emisionData()['points']);
     }
 
     public function store(ReferralGuideStoreRequest $request, ReferralGuideStoreService $service): JsonResponse
@@ -70,7 +67,6 @@ class ReferralGuideController extends Controller
         $carriers = Carrier::where('id', $referralguide->carrier_id)->get();
 
         return response()->json([
-            'succes' => true,
             'referralguide' => collect($referralguide->toArray())
                 ->filter(fn ($value) => $value !== null)
                 ->all(),

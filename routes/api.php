@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticationController;
 use App\Http\Controllers\Carrier\CarrierController;
+use App\Http\Controllers\Company\AdminCompanyController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerLookupController;
 use App\Http\Controllers\Dashboard\DashboardController;
@@ -53,15 +54,19 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 
     Route::get('providers', [ProviderController::class, 'index'])->name('providers.index');
     Route::get('providers/create', [ProviderController::class, 'create'])->name('providers.create');
+    Route::get('providers/resolve/{identification}', [ProviderController::class, 'resolve'])->name('providers.resolve');
     Route::post('providers', [ProviderController::class, 'store'])->name('providers.store');
     Route::get('providers/{provider}', [ProviderController::class, 'edit'])->name('providers.edit');
     Route::put('providers/{provider}', [ProviderController::class, 'update'])->name('providers.update');
+    Route::delete('providers/{provider}', [ProviderController::class, 'destroy'])->name('providers.destroy');
 
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
+    Route::get('customers/resolve/{identification}', [CustomerController::class, 'resolve'])->name('customers.resolve');
     Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
     Route::get('customers/{customer}', [CustomerController::class, 'edit'])->name('customers.edit');
     Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+    Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
 
     Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
     Route::get('shops/create', [ShopController::class, 'create'])->name('shops.create');
@@ -88,12 +93,29 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 
     Route::get('carriers', [CarrierController::class, 'index'])->name('carriers.index');
     Route::get('carriers/create', [CarrierController::class, 'create'])->name('carriers.create');
+    Route::get('carriers/resolve/{identification}', [CarrierController::class, 'resolve'])->name('carriers.resolve');
     Route::post('carriers', [CarrierController::class, 'store'])->name('carriers.store');
     Route::get('carriers/{carrier}', [CarrierController::class, 'edit'])->name('carriers.edit');
     Route::put('carriers/{carrier}', [CarrierController::class, 'update'])->name('carriers.update');
+    Route::delete('carriers/{carrier}', [CarrierController::class, 'destroy'])->name('carriers.destroy');
+
+    Route::get('companies', [SettingsCompanyController::class, 'edit'])->name('companies.edit');
+    Route::put('companies', [SettingsCompanyController::class, 'update'])->name('companies.update');
+    Route::get('companies/download-cert', [SettingsCompanyController::class, 'downloadCert'])->name('companies.download-cert');
 
     Route::get('settings', [SettingsCompanyController::class, 'edit'])->name('settings.company.edit');
     Route::put('settings', [SettingsCompanyController::class, 'update'])->name('settings.company.update');
+
+    Route::get('branches', [SettingsBranchController::class, 'index'])->name('branches.index');
+    Route::post('branches', [SettingsBranchController::class, 'store'])->name('branches.store');
+    Route::put('branches/{branch}', [SettingsBranchController::class, 'update'])->name('branches.update');
+    Route::get('branches/{branch}/points', [SettingsEmisionPointController::class, 'index'])->name('branches.points.index');
+
+    Route::get('points/branch/{branch}', [SettingsEmisionPointController::class, 'index'])->name('points.branch');
+    Route::post('points', [SettingsEmisionPointController::class, 'store'])->name('points.store');
+    Route::post('points/store', [SettingsEmisionPointController::class, 'store'])->name('points.store.alias');
+    Route::put('points/{emisionPoint}', [SettingsEmisionPointController::class, 'update'])->name('points.update');
+    Route::put('points/update/{emisionPoint}', [SettingsEmisionPointController::class, 'update'])->name('points.update.alias');
 
     Route::get('settings/branches', [SettingsBranchController::class, 'index'])->name('settings.branches.index');
     Route::post('settings/branches', [SettingsBranchController::class, 'store'])->name('settings.branches.store');
@@ -102,4 +124,13 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('settings/branches/{branch}/points', [SettingsEmisionPointController::class, 'index'])->name('settings.points.index');
     Route::post('settings/points', [SettingsEmisionPointController::class, 'store'])->name('settings.points.store');
     Route::put('settings/points/{emisionPoint}', [SettingsEmisionPointController::class, 'update'])->name('settings.points.update');
+});
+
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('companies', [AdminCompanyController::class, 'index'])->name('admin.companies.index');
+    Route::post('companies', [AdminCompanyController::class, 'store'])->name('admin.companies.store');
+    Route::get('companies/sri/{identification}', [AdminCompanyController::class, 'resolve'])->name('admin.companies.resolve');
+    Route::get('users/check-availability', [AdminCompanyController::class, 'checkAvailability'])->name('admin.users.check-availability');
+    Route::get('companies/{id}/edit', [AdminCompanyController::class, 'edit'])->name('admin.companies.edit');
+    Route::put('companies/{company}', [AdminCompanyController::class, 'update'])->name('admin.companies.update');
 });
