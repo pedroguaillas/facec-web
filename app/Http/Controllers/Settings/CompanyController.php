@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Company\CompanyUpdateRequest;
 use App\Models\Company;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,9 +15,7 @@ class CompanyController extends Controller
     {
         $company = Auth::user()->company;
 
-        return response()->json([
-            'company' => $this->present($company),
-        ], 200);
+        return response()->json($this->present($company), 200);
     }
 
     public function downloadCert(): JsonResponse
@@ -40,7 +37,7 @@ class CompanyController extends Controller
     {
         $company = Auth::user()->company;
 
-        $data = $request->safe()->except(['logo', 'cert', 'pass_cert', 'sign_valid_from', 'sign_valid_to']);
+        $data = $request->safe()->only(['accounting', 'rimpe', 'retention_agent']);
 
         if ($request->hasFile('logo')) {
             $filename = $company->ruc.'.'.$request->file('logo')->getClientOriginalExtension();
@@ -49,32 +46,22 @@ class CompanyController extends Controller
         }
 
         if ($request->hasFile('cert')) {
-            $certContent = file_get_contents($request->file('cert')->getRealPath());
-            $parsed = [];
-
-            if (! openssl_pkcs12_read($certContent, $parsed, $request->input('pass_cert'))) {
-                return response()->json([
-                    'message' => 'No se pudo leer el certificado. Verificá el archivo y la contraseña.',
-                ], 422);
-            }
-
-            $certData = openssl_x509_parse($parsed['cert']);
-
             $filename = $company->ruc.'.p12';
             $request->file('cert')->storeAs('cert', $filename);
 
             $data['cert_dir'] = $filename;
             $data['pass_cert'] = $request->input('pass_cert');
-            $data['sign_valid_from'] = Carbon::createFromTimestamp($certData['validFrom_time_t']);
-            $data['sign_valid_to'] = Carbon::createFromTimestamp($certData['validTo_time_t']);
+            $data['sign_valid_from'] = $request->input('sign_valid_from');
+            $data['sign_valid_to'] = $request->input('sign_valid_to');
+        }
+
+        if ($request->has('accounting')) {
+            $data['accounting'] = filter_var($request->input('accounting'), FILTER_VALIDATE_BOOLEAN);
         }
 
         $company->update($data);
 
-        return response()->json([
-            'message' => 'Empresa actualizada exitosamente.',
-            'company' => $this->present($company->fresh()),
-        ], 200);
+        return response()->json($this->present($company->fresh()), 200);
     }
 
     /**
@@ -83,6 +70,7 @@ class CompanyController extends Controller
     private function present(Company $company): array
     {
         $data = $company->toArray();
+        unset($data['laravel_through_key']);
 
         $data['logo_url'] = $company->logo_dir
             ? Storage::disk('public')->url('logos/'.$company->logo_dir)

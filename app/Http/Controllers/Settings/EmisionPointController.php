@@ -22,29 +22,20 @@ class EmisionPointController extends Controller
             'referralguide', 'settlementonpurchase', 'recognition',
         ]);
 
-        return response()->json([
-            'branch' => $branch->only(['id', 'store', 'name']),
-            'points' => $points,
-        ], 200);
+        return response()->json($points, 200);
     }
 
     public function store(EmisionPointStoreRequest $request, EmisionPointService $service): JsonResponse
     {
         $emisionPoint = $service->create($request->validated());
 
-        return response()->json([
-            'message' => 'Punto de emisión creado con éxito.',
-            'data' => $emisionPoint,
-        ], 201);
+        return response()->json($emisionPoint, 201);
     }
 
     public function update(EmisionPointUpdateRequest $request, EmisionPoint $emisionPoint): JsonResponse
     {
         $emisionPoint->update($request->validated());
 
-        return response()->json([
-            'message' => 'Punto de emisión actualizado con éxito.',
-            'data' => $emisionPoint,
-        ], 200);
+        return response()->json($emisionPoint, 200);
     }
 }

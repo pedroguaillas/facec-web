@@ -37,7 +37,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
     Route::get('orders/{order}/pdf', [OrderController::class, 'pdf'])->name('orders.pdf');
     Route::get('orders/{order}/printf', [OrderController::class, 'printf'])->name('orders.printf');
-    Route::post('orders/{order}/process', [OrderLifecycleController::class, 'process'])->name('orders.process');
+    Route::get('orders/{order}/process', [OrderLifecycleController::class, 'process'])->name('orders.process');
     Route::post('orders/{order}/cancel', [OrderLifecycleController::class, 'cancel'])->name('orders.cancel');
     Route::get('orders/{order}/xml', [OrderLifecycleController::class, 'download'])->name('orders.xml');
 
@@ -74,11 +74,11 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('shops/{shop}', [ShopController::class, 'edit'])->name('shops.edit');
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
     Route::get('shops/{shop}/pdf', [ShopController::class, 'pdf'])->name('shops.pdf');
-    Route::post('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process');
+    Route::get('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process');
     Route::post('shops/{shop}/cancel', [ShopLifecycleController::class, 'cancel'])->name('shops.cancel');
     Route::get('shops/{shop}/xml', [ShopLifecycleController::class, 'download'])->name('shops.xml');
     Route::get('retentions/{id}/pdf', [RetentionController::class, 'pdf'])->name('retentions.pdf');
-    Route::post('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
+    Route::get('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
     Route::post('retentions/{shop}/cancel', [RetentionController::class, 'cancel'])->name('retentions.cancel');
     Route::get('retentions/{shop}/xml', [RetentionController::class, 'download'])->name('retentions.xml');
 
@@ -88,7 +88,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('referralguides/{referralguide}', [ReferralGuideController::class, 'show'])->name('referralguides.show');
     Route::put('referralguides/{referralguide}', [ReferralGuideController::class, 'update'])->name('referralguides.update');
     Route::get('referralguides/{id}/pdf', [ReferralGuideController::class, 'pdf'])->name('referralguides.pdf');
-    Route::post('referralguides/{referralguide}/process', [ReferralGuideLifecycleController::class, 'process'])->name('referralguides.process');
+    Route::get('referralguides/{referralguide}/process', [ReferralGuideLifecycleController::class, 'process'])->name('referralguides.process');
     Route::get('referralguides/{referralguide}/xml', [ReferralGuideLifecycleController::class, 'download'])->name('referralguides.xml');
 
     Route::get('carriers', [CarrierController::class, 'index'])->name('carriers.index');

@@ -17,9 +17,7 @@ class BranchController extends Controller
         $branches = Branch::where('company_id', Auth::user()->company->id)
             ->get(['id', 'company_id', 'store', 'address', 'name', 'type']);
 
-        return response()->json([
-            'branches' => $branches,
-        ], 200);
+        return response()->json($branches, 200);
     }
 
     public function store(BranchStoreRequest $request, BranchService $service): JsonResponse
@@ -30,19 +28,13 @@ class BranchController extends Controller
             $service->createFinalConsumer($branch);
         }
 
-        return response()->json([
-            'message' => 'Establecimiento creado con éxito.',
-            'branch' => $branch,
-        ], 201);
+        return response()->json($branch, 201);
     }
 
     public function update(BranchUpdateRequest $request, Branch $branch, BranchService $service): JsonResponse
     {
         $branch = $service->update($branch, $request->validated());
 
-        return response()->json([
-            'message' => 'Establecimiento actualizado con éxito.',
-            'branch' => $branch,
-        ], 200);
+        return response()->json($branch, 200);
     }
 }

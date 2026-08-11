@@ -74,10 +74,7 @@ class OrderController extends Controller
     {
         $service->updateOrder($order, $request->validated());
 
-        return response()->json([
-            'message' => 'Venta actualizada con éxito.',
-            'data' => $order->fresh(),
-        ]);
+        return response()->json($order->fresh());
     }
 
     public function pdf(Order $order, OrderPdfService $service)
