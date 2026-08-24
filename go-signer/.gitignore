@@ -8,6 +8,3 @@ signer
 *.dll
 *.so
 *.dylib
-
-# Cache de Go
-/vendor/

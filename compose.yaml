@@ -23,8 +23,8 @@ services:
         depends_on:
             - mysql
             - redis
-            - xml-signer
-    xml-signer:
+            - go-signer
+    go-signer:
         build:
             context: './go-signer'
             dockerfile: Dockerfile

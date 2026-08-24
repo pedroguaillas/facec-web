@@ -10,11 +10,24 @@ use Illuminate\Support\Facades\DB;
 
 class OrderUpdateService
 {
+    public function __construct(
+        private OrderTotalsCalculator $totalsCalculator,
+    ) {}
+
     public function updateOrder(Order $order, array $data): Order
     {
         DB::transaction(function () use ($order, $data) {
+            $input = collect($data)->except(['id', 'products', 'send', 'aditionals', 'serie'])->toArray();
+
+            $input = array_merge($input, $this->totalsCalculator->calculate(
+                $data['products'] ?? [],
+                (float) ($input['discount'] ?? 0),
+                $input,
+                $order->id,
+            ));
+
             $order->update([
-                ...collect($data)->except(['id', 'products', 'send', 'aditionals', 'serie'])->toArray(),
+                ...$input,
                 'state' => VoucherStates::SAVED,
             ]);
 

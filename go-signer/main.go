@@ -13,7 +13,7 @@ import (
 	"github.com/beevik/etree"
 	xades "github.com/digitalautonomy/goxades_sri"
 	dsig "github.com/russellhaering/goxmldsig"
-	"golang.org/x/crypto/pkcs12"
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 type SignRequest struct {
@@ -56,7 +56,7 @@ func signHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	privateKey, cert, err := pkcs12.Decode(certData, req.Password)
+	privateKey, cert, _, err := pkcs12.DecodeChain(certData, req.Password)
 	if err != nil {
 		jsonError(w, "Failed to decode certificate: "+err.Error(), http.StatusBadRequest)
 		return

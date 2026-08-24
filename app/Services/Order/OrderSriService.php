@@ -2,12 +2,15 @@
 
 namespace App\Services\Order;
 
-use App\Http\Controllers\MailController;
+use App\Mail\OrderShipped;
+use App\Models\Customer;
 use App\Models\Order\Lot;
 use App\Models\Order\Order;
 use App\Services\SriSoapService;
 use App\StaticClasses\VoucherStates;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class OrderSriService
@@ -59,13 +62,41 @@ class OrderSriService
         $this->soap->authorize(
             model: $order,
             // authorization ya fue guardada por VoucherLifecycleService::saveAndSign()
-            onAuthorized: fn () => (new MailController)->orderMail($order->id),
+            onAuthorized: fn () => $this->sendOrderMail($order),
         );
     }
 
     public function cancel(Order $order): mixed
     {
         return $this->soap->cancel($order);
+    }
+
+    /**
+     * Envía copia del comprobante autorizado por correo al cliente, si el
+     * usuario marcó `send_mail` al guardar y el cliente tiene email registrado.
+     * Un fallo de correo se loggea pero nunca revierte ni reporta como error
+     * la autorización del SRI, que ya quedó guardada antes de este callback.
+     */
+    private function sendOrderMail(Order $order): void
+    {
+        if (! $order->send_mail) {
+            return;
+        }
+
+        $email = Customer::find($order->customer_id)?->email;
+
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new OrderShipped($order));
+        } catch (\Throwable $e) {
+            Log::error('OrderShipped mail failed', [
+                'order_id' => $order->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     // ─── Lotes ───────────────────────────────────────────────────────────────
@@ -138,7 +169,7 @@ class OrderSriService
                 $this->soap->saveAuthorizationResult(
                     model: $order,
                     autorizacion: $autorizacion,
-                    onAuthorized: fn () => (new MailController)->orderMail($order->id),
+                    onAuthorized: fn () => $this->sendOrderMail($order),
                 );
             }
         } catch (\Exception $e) {

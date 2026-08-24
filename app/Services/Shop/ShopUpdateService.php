@@ -4,6 +4,7 @@ namespace App\Services\Shop;
 
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopRetentionItem;
+use App\Services\Shop\Retention\RetentionTotalsCalculator;
 
 class ShopUpdateService
 {
@@ -35,6 +36,8 @@ class ShopUpdateService
             'porcentage' => $t['porcentage'],
             'value' => $t['value'],
         ], $taxes);
+
+        $items = (new RetentionTotalsCalculator)->recalculate($items, $this->shop->id);
 
         ShopRetentionItem::where('shop_id', $this->shop->id)->delete();
         $this->shop->shopretentionitems()->createMany($items);

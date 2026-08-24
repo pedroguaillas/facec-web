@@ -54,11 +54,7 @@ class ReferralGuideController extends Controller
     {
         $referralguide = $service->createReferralGuide($request->validated());
 
-        return response()->json([
-            'succes' => true,
-            'message' => 'Guía de remisión creada con éxito.',
-            'referralguide' => $referralguide,
-        ], 201);
+        return response()->json($referralguide, 201);
     }
 
     public function show(ReferralGuide $referralguide): JsonResponse

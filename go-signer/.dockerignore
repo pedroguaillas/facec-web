@@ -1,0 +1,7 @@
+go-xml-signer
+signer
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib

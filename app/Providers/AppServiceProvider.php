@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Company;
+use App\Services\Order\OrderPdfService;
+use App\Services\Shop\Retention\RetentionPdfService;
+use App\Services\Shop\ShopLcPdfService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
@@ -17,9 +20,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Varios services (OrderPdfService, ShopLcPdfService, RetentionPdfService, XML builders)
-        // type-hintean Company en su constructor esperando la company del usuario autenticado.
-        $this->app->bind(Company::class, fn () => Auth::user()?->company);
+        // OrderPdfService, RetentionPdfService y ShopLcPdfService type-hintean Company
+        // esperando la company del usuario autenticado. Binding contextual: no debe
+        // afectar el route-model-binding de Company (rompía admin.companies.update).
+        foreach ([OrderPdfService::class, RetentionPdfService::class, ShopLcPdfService::class] as $service) {
+            $this->app->when($service)
+                ->needs(Company::class)
+                ->give(fn () => Auth::user()?->company);
+        }
     }
 
     /**

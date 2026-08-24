@@ -40,7 +40,7 @@ return [
     ],
 
     'xml_signer' => [
-        'url' => env('XML_SIGNER_URL', 'http://xml-signer:8080'),
+        'url' => env('XML_SIGNER_URL', 'http://go-signer:8080'),
     ],
 
 ];

@@ -19,6 +19,7 @@ class OrderStoreService
 
     public function __construct(
         private OrderLifecycleService $xmlService,
+        private OrderTotalsCalculator $totalsCalculator,
     ) {
         $this->company = Auth::user()->company;
         $this->branch = $this->company->branches()->orderBy('created_at')->first();
@@ -56,6 +57,12 @@ class OrderStoreService
         }
 
         $input['serie'] = $this->generateSerie($data['serie'], $emisionPoint, $data['voucher_type']);
+
+        $input = array_merge($input, $this->totalsCalculator->calculate(
+            $data['products'] ?? [],
+            (float) ($input['discount'] ?? 0),
+            $input,
+        ));
 
         return $input;
     }

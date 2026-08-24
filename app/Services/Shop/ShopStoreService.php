@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Shop\Shop;
+use App\Services\Shop\Retention\RetentionTotalsCalculator;
 use App\Services\Shop\Retention\RetentionXmlService;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
@@ -101,6 +102,8 @@ class ShopStoreService
             'porcentage' => $t['porcentage'],
             'value' => $t['value'],
         ], $taxes);
+
+        $items = (new RetentionTotalsCalculator)->recalculate($items, $shop->id);
 
         $shop->shopretentionitems()->createMany($items);
     }
