@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Models\Order\Order;
 use App\Services\Order\OrderLifecycleService;
+use App\Services\Order\OrderSriService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -31,6 +32,17 @@ class OrderLifecycleController extends Controller
         }
 
         return response()->json(['succes' => true, 'message' => 'Comprobante anulado con éxito.', 'order' => $order->fresh()]);
+    }
+
+    public function mail(Order $order, OrderSriService $service): JsonResponse
+    {
+        try {
+            $service->resendMail($order);
+        } catch (\Throwable $e) {
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['succes' => true, 'message' => 'Correo enviado con éxito.', 'order' => $order->fresh()]);
     }
 
     public function download(Order $order): StreamedResponse

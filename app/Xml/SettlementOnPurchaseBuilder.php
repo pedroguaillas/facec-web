@@ -83,7 +83,8 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
 
         $string .= '<detalles>';
         foreach ($this->items as $detail) {
-            $total = round($detail->quantity * $detail->price, 2);
+            $subTotal = $detail->quantity * $detail->price;
+            $total = round($subTotal, 2);
             $percentage = $detail->iva === 4 ? 15 : 0;
 
             $string .= '<detalle>';
@@ -99,7 +100,7 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
             $string .= "<codigoPorcentaje>{$detail->iva}</codigoPorcentaje>";
             $string .= "<tarifa>{$percentage}</tarifa>";
             $string .= "<baseImponible>{$total}</baseImponible>";
-            $string .= '<valor>'.round($percentage * $total * .01, 2).'</valor>';
+            $string .= '<valor>'.round($percentage * $subTotal * .01, 2).'</valor>';
             $string .= '</impuesto>';
             $string .= '</impuestos>';
             $string .= '</detalle>';
@@ -121,7 +122,7 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
         $taxes = [];
 
         foreach ($this->items as $item) {
-            $base = (float) number_format($item->quantity * $item->price, 2, '.', '');
+            $base = $item->quantity * $item->price;
             $percentage = $item->iva === 4 ? 15 : 0;
 
             $found = false;

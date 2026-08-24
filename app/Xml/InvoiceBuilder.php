@@ -128,7 +128,7 @@ class InvoiceBuilder extends BaseVoucherBuilder
             $string .= '<precioUnitario>'.round($detail->price, $company->decimal).'</precioUnitario>';
             $string .= "<descuento>{$detail->discount}</descuento>";
             $string .= '<precioTotalSinImpuesto>'.round($total, 2).'</precioTotalSinImpuesto>';
-            $string .= $this->itemImpuestos($detail, $total, $subTotal);
+            $string .= $this->itemImpuestos($detail, $subTotal);
             $string .= '</detalle>';
         }
         $string .= '</detalles>';

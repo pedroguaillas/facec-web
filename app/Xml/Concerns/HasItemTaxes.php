@@ -20,7 +20,7 @@ trait HasItemTaxes
         $taxes = [];
 
         foreach ($items as $item) {
-            $subTotal = number_format($item->quantity * $item->price, 2, '.', '');
+            $subTotal = $item->quantity * $item->price;
             $total = $subTotal + $item->valice - $item->discount;
 
             // IVA
@@ -61,17 +61,20 @@ trait HasItemTaxes
     /**
      * Renderiza el bloque <impuestos> de un ítem de detalle (IVA + ICE opcional).
      */
-    protected function itemImpuestos($detail, float $total, float $subTotal): string
+    protected function itemImpuestos($detail, float $subTotal): string
     {
         $string = '<impuestos>';
 
-        // IVA (siempre presente)
+        // IVA (siempre presente): el impuesto se calcula sobre la base sin
+        // redondear para evitar el doble redondeo; baseImponible solo se
+        // redondea al mostrarse como valor monetario.
+        $ivaBase = $subTotal + $detail->valice - $detail->discount;
         $string .= '<impuesto>';
         $string .= '<codigo>2</codigo>';
         $string .= "<codigoPorcentaje>{$detail->iva}</codigoPorcentaje>";
         $string .= "<tarifa>{$detail->percentage}</tarifa>";
-        $string .= '<baseImponible>'.round($total, 2).'</baseImponible>';
-        $string .= '<valor>'.round($detail->percentage * $total * .01, 2).'</valor>';
+        $string .= '<baseImponible>'.round($ivaBase, 2).'</baseImponible>';
+        $string .= '<valor>'.round($detail->percentage * $ivaBase * .01, 2).'</valor>';
         $string .= '</impuesto>';
 
         // ICE (opcional)

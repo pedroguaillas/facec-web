@@ -46,7 +46,8 @@ class OrderShipped extends Mailable
         // (new OrderController())->generatePdf($this->order->id);
         app(OrderPdfService::class)->savePdf($this->order->id);
 
-        return $this->from($auth->email)
+        return $this->from(config('mail.from.address'), config('mail.from.name'))
+            ->replyTo($auth->email)
             ->subject(($this->order->voucher_type == 1 ? 'FACTURA ' : 'NOTA DE CRÉDITO ').$this->order->serie.' de '.$company->company)
             ->view('mail', ['title' => 'FACTURA '.$this->order->serie, 'customer' => Customer::find($this->order->customer_id)->name])
             ->attachFromStorage(

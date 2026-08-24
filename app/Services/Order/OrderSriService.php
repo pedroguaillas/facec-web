@@ -41,23 +41,26 @@ class OrderSriService
 
     public function authorize(Order $order): void
     {
-        if (! is_null($order->lot_id)) {
-            $lot = Lot::find($order->lot_id);
+        // Si el Lote nunca se preparó (processLot() no corrió, sin authorization/xml
+        // propios), no lo tratamos como lote aunque la Order tenga lot_id: cae a
+        // autorización individual normal más abajo.
+        // $lot = $order->lot_id ? Lot::find($order->lot_id) : null;
 
-            if (in_array($lot->state, [VoucherStates::AUTHORIZED, VoucherStates::CANCELED])) {
-                return;
-            }
-            if ($lot->state === VoucherStates::SAVED) {
-                $this->sendLot($order->lot_id);
+        // if ($lot && $lot->authorization !== '') {
+        //     if (in_array($lot->state, [VoucherStates::AUTHORIZED, VoucherStates::CANCELED])) {
+        //         return;
+        //     }
+        //     if ($lot->state === VoucherStates::SAVED) {
+        //         $this->sendLot($order->lot_id);
 
-                return;
-            }
-            if (in_array($lot->state, [VoucherStates::SENDED, VoucherStates::RECEIVED])) {
-                $this->authorizeLot($lot);
+        //         return;
+        //     }
+        //     if (in_array($lot->state, [VoucherStates::SENDED, VoucherStates::RECEIVED])) {
+        //         $this->authorizeLot($lot);
 
-                return;
-            }
-        }
+        //         return;
+        //     }
+        // }
 
         $this->soap->authorize(
             model: $order,
@@ -72,31 +75,44 @@ class OrderSriService
     }
 
     /**
-     * Envía copia del comprobante autorizado por correo al cliente, si el
-     * usuario marcó `send_mail` al guardar y el cliente tiene email registrado.
+     * Envía copia del comprobante autorizado por correo al cliente si tiene
+     * email registrado. `send_mail` es un flag de estado ("¿ya se envió?"),
+     * no una opción del usuario — lo pone en true resendMail() tras enviar.
      * Un fallo de correo se loggea pero nunca revierte ni reporta como error
      * la autorización del SRI, que ya quedó guardada antes de este callback.
      */
     private function sendOrderMail(Order $order): void
     {
-        if (! $order->send_mail) {
-            return;
-        }
-
-        $email = Customer::find($order->customer_id)?->email;
-
-        if (! $email) {
-            return;
-        }
-
         try {
-            Mail::to($email)->send(new OrderShipped($order));
+            $this->resendMail($order);
         } catch (\Throwable $e) {
             Log::error('OrderShipped mail failed', [
                 'order_id' => $order->id,
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Envía (o reenvía) el correo del comprobante. Usado tanto automáticamente
+     * al autorizar como manualmente desde el botón "reenviar" del frontend.
+     * Propaga cualquier error para que el llamador decida cómo manejarlo.
+     */
+    public function resendMail(Order $order): void
+    {
+        if ($order->state !== VoucherStates::AUTHORIZED) {
+            throw new \RuntimeException('El comprobante debe estar autorizado para poder enviar el correo.');
+        }
+
+        $email = Customer::find($order->customer_id)?->email;
+
+        if (! $email) {
+            throw new \RuntimeException('El cliente no tiene correo electrónico registrado.');
+        }
+
+        Mail::to($email)->send(new OrderShipped($order));
+
+        $order->update(['send_mail' => true]);
     }
 
     // ─── Lotes ───────────────────────────────────────────────────────────────
@@ -131,7 +147,12 @@ class OrderSriService
                     $this->authorizeLot($lot);
                     break;
                 case VoucherStates::RETURNED:
-                    $lot->extra_detail = $this->soap->parseReturnedMessage($result->comprobantes->comprobante->mensajes);
+                    $extraDetail = $this->soap->parseReturnedMessage($result->comprobantes->comprobante->mensajes);
+                    Order::where('lot_id', $lot->id)->update([
+                        'state' => VoucherStates::RETURNED,
+                        'extra_detail' => $extraDetail,
+                    ]);
+                    $lot->extra_detail = $extraDetail;
                     $lot->state = VoucherStates::RETURNED;
                     $lot->save();
                     break;
@@ -163,7 +184,16 @@ class OrderSriService
                 return;
             }
 
-            foreach ($response->RespuestaAutorizacionLote->autorizaciones->autorizacion as $autorizacion) {
+            $autorizaciones = $response->RespuestaAutorizacionLote->autorizaciones->autorizacion;
+
+            // Con un solo comprobante en el lote, el SOAP client decodifica
+            // `autorizacion` como objeto único en vez de array (maxOccurs=unbounded
+            // en el WSDL solo se manifiesta como array con 2+ elementos).
+            if (! is_array($autorizaciones)) {
+                $autorizaciones = [$autorizaciones];
+            }
+
+            foreach ($autorizaciones as $autorizacion) {
                 $order = Order::where('authorization', $autorizacion->numeroAutorizacion)->first();
 
                 $this->soap->saveAuthorizationResult(
