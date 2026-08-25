@@ -65,14 +65,12 @@ class CreditNoteBuilder extends BaseVoucherBuilder
         $string .= '<moneda>DOLAR</moneda>';
 
         $string .= '<totalConImpuestos>';
-        foreach ($this->groupTaxes($this->items) as $tax) {
+        foreach ($this->groupTaxes($this->items, $order) as $tax) {
             $string .= '<totalImpuesto>';
             $string .= "<codigo>{$tax->code}</codigo>";
             $string .= "<codigoPorcentaje>{$tax->percentageCode}</codigoPorcentaje>";
             $string .= '<baseImponible>'.number_format($tax->base, 2, '.', '').'</baseImponible>';
-            $string .= '<valor>'.($tax->code === 2
-                    ? round($tax->base * $tax->percentage / 100, 2)
-                    : $order->ice).'</valor>';
+            $string .= '<valor>'.$tax->valor.'</valor>';
             $string .= '</totalImpuesto>';
         }
         $string .= '</totalConImpuestos>';
@@ -80,22 +78,7 @@ class CreditNoteBuilder extends BaseVoucherBuilder
         $string .= "<motivo>{$order->reason}</motivo>";
         $string .= '</infoNotaCredito>';
 
-        $string .= '<detalles>';
-        foreach ($this->items as $detail) {
-            $subTotal = $detail->quantity * $detail->price;
-            $total = round($subTotal + $detail->valice - $detail->discount, 2);
-
-            $string .= '<detalle>';
-            $string .= "<codigoInterno>{$detail->codeproduct}</codigoInterno>";
-            $string .= "<descripcion>{$detail->name}</descripcion>";
-            $string .= '<cantidad>'.round($detail->quantity, $company->decimal).'</cantidad>';
-            $string .= '<precioUnitario>'.round($detail->price, $company->decimal).'</precioUnitario>';
-            $string .= "<descuento>{$detail->discount}</descuento>";
-            $string .= '<precioTotalSinImpuesto>'.round($total, 2).'</precioTotalSinImpuesto>';
-            $string .= $this->itemImpuestos($detail, $subTotal);
-            $string .= '</detalle>';
-        }
-        $string .= '</detalles>';
+        $string .= $this->renderDetalles($this->items, $company->decimal, 'codigoInterno', includeAuxCode: false);
 
         $string .= '</notaCredito>';
 

@@ -11,36 +11,56 @@ use stdClass;
 trait HasItemTaxes
 {
     /**
-     * Agrupa los ítems por código de impuesto y porcentaje,
-     * sumando sus bases imponibles. Devuelve un array de stdClass
-     * con: code, percentageCode, percentage, base.
+     * Mapa código IVA (iva_taxes.code) => columnas ya calculadas y
+     * persistidas en la Orden por OrderTotalsCalculator. `iva` field es
+     * null cuando la tarifa es 0% (no objeto de IVA incluido): el valor
+     * siempre es 0, no hace falta columna.
+     *
+     * @var array<int, array{base: string, iva: string|null}>
      */
-    protected function groupTaxes(iterable $items): array
+    private const ORDER_IVA_FIELD_MAP = [
+        0 => ['base' => 'base0', 'iva' => null],
+        5 => ['base' => 'base5', 'iva' => 'iva5'],
+        8 => ['base' => 'base8', 'iva' => 'iva8'],
+        4 => ['base' => 'base15', 'iva' => 'iva15'],
+        6 => ['base' => 'no_iva', 'iva' => null],
+    ];
+
+    /**
+     * Agrupa los ítems por código de impuesto y porcentaje para saber qué
+     * bloques <totalImpuesto> corresponden. Los valores de base/valor NO se
+     * recalculan sumando ítems: se toman tal cual de la Orden, que ya los
+     * dejó calculados y persistidos (OrderTotalsCalculator) como fuente de
+     * verdad. Solo el grupo ICE (sin columna de base persistida) sigue
+     * sumando desde los ítems; su valor ya venía de $order->ice.
+     * Devuelve un array de stdClass con: code, percentageCode, percentage, base, valor.
+     */
+    protected function groupTaxes(iterable $items, $order): array
     {
         $taxes = [];
 
         foreach ($items as $item) {
-            $subTotal = $item->quantity * $item->price;
-            $total = $subTotal + $item->valice - $item->discount;
-
             // IVA
             $item->code = 2;
             $item->percentageCode = $item->iva;
 
-            $index = $this->findTaxGroup($taxes, $item);
-            if ($index !== -1) {
-                $taxes[$index]->base += $total;
-            } else {
+            if ($this->findTaxGroup($taxes, $item) === -1) {
+                $map = self::ORDER_IVA_FIELD_MAP[$item->iva] ?? null;
+
                 $taxIva = new stdClass;
                 $taxIva->code = 2;
                 $taxIva->percentageCode = $item->iva;
                 $taxIva->percentage = $item->percentage;
-                $taxIva->base = $total;
+                $taxIva->base = $map ? (float) $order->{$map['base']} : 0.0;
+                $taxIva->valor = $map && $map['iva'] ? (float) $order->{$map['iva']} : 0.0;
                 $taxes[] = $taxIva;
             }
 
-            // ICE (opcional)
+            // ICE (opcional): sin columna de base persistida en la Orden,
+            // se sigue sumando desde los ítems.
             if ($item->codice !== null && $item->valice > 0) {
+                $subTotal = $item->quantity * $item->price;
+
                 $taxIce = new stdClass;
                 $taxIce->code = 3;
                 $taxIce->percentageCode = $item->codice;
@@ -50,6 +70,7 @@ trait HasItemTaxes
                     $taxes[$index]->base += $subTotal;
                 } else {
                     $taxIce->base = $subTotal;
+                    $taxIce->valor = (float) $order->ice;
                     $taxes[] = $taxIce;
                 }
             }
@@ -89,6 +110,36 @@ trait HasItemTaxes
         }
 
         $string .= '</impuestos>';
+
+        return $string;
+    }
+
+    /**
+     * Renderiza el bloque <detalles> completo (factura y nota de crédito
+     * comparten esta estructura, solo cambia el tag del código de producto
+     * y si incluye código auxiliar).
+     */
+    protected function renderDetalles(iterable $items, int $decimal, string $codeTag, bool $includeAuxCode): string
+    {
+        $string = '<detalles>';
+
+        foreach ($items as $detail) {
+            $subTotal = $detail->quantity * $detail->price;
+            $total = round($subTotal + $detail->valice - $detail->discount, 2);
+
+            $string .= '<detalle>';
+            $string .= "<{$codeTag}>{$detail->codeproduct}</{$codeTag}>";
+            $string .= $includeAuxCode && $detail->aux_cod ? "<codigoAuxiliar>{$detail->aux_cod}</codigoAuxiliar>" : null;
+            $string .= "<descripcion>{$detail->name}</descripcion>";
+            $string .= '<cantidad>'.round($detail->quantity, $decimal).'</cantidad>';
+            $string .= '<precioUnitario>'.round($detail->price, $decimal).'</precioUnitario>';
+            $string .= "<descuento>{$detail->discount}</descuento>";
+            $string .= "<precioTotalSinImpuesto>{$total}</precioTotalSinImpuesto>";
+            $string .= $this->itemImpuestos($detail, $subTotal);
+            $string .= '</detalle>';
+        }
+
+        $string .= '</detalles>';
 
         return $string;
     }

@@ -55,7 +55,9 @@ class OrderTotalsCalculator
 
         foreach ($products as $product) {
             $ice = (float) ($product['ice'] ?? 0);
-            $itemBase = round((float) $product['quantity'] * (float) $product['price'], 2)
+            // Sin redondear aquí: el redondeo prematuro de la base por ítem
+            // (p.ej. 0.434783 -> 0.43) desalinea el IVA acumulado del real.
+            $itemBase = (float) $product['quantity'] * (float) $product['price']
                 - (float) ($product['discount'] ?? 0)
                 + $ice;
 
@@ -73,17 +75,20 @@ class OrderTotalsCalculator
             $iceTotal += $ice;
         }
 
+        // El IVA se calcula sobre la base sin redondear para evitar doble
+        // redondeo (mismo criterio que HasItemTaxes::itemImpuestos); las
+        // bases solo se redondean al final, para mostrar/persistir.
+        $iva5 = round($bases[5] * (float) ($percentages[5] ?? 0) / 100, 2);
+        $iva8 = round($bases[8] * (float) ($percentages[8] ?? 0) / 100, 2);
+        $iva = 0.0;
+        $iva15 = round($bases[4] * (float) ($percentages[4] ?? 0) / 100, 2);
+
         $base0 = round($bases[0], 2);
         $base5 = round($bases[5], 2);
         $base8 = round($bases[8], 2);
         $base12 = 0.0;
         $base15 = round($bases[4], 2);
         $noIva = round($bases[self::NO_IVA_CODE], 2);
-
-        $iva5 = round($base5 * (float) ($percentages[5] ?? 0) / 100, 2);
-        $iva8 = round($base8 * (float) ($percentages[8] ?? 0) / 100, 2);
-        $iva = 0.0;
-        $iva15 = round($base15 * (float) ($percentages[4] ?? 0) / 100, 2);
 
         $iceTotal = round($iceTotal, 2);
         $subTotal = round($noIva + $base0 + $base5 + $base8 + $base12 + $base15, 2);

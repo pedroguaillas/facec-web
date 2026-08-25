@@ -99,6 +99,20 @@ test('suma el ICE a la base imponible y al total', function () {
         ->and($result['total'])->toBe(158.0);
 });
 
+test('el iva se calcula sobre la base sin redondear para evitar doble redondeo', function () {
+    $result = (new OrderTotalsCalculator)->calculate(
+        products: [
+            ['quantity' => 1, 'price' => 0.434783, 'discount' => 0, 'iva' => 4],
+        ],
+        discount: 0,
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['base15'])->toBe(0.43)
+        ->and($result['iva15'])->toBe(0.07)
+        ->and($result['total'])->toBe(0.5);
+});
+
 test('no loggea cuando la diferencia esta dentro de la tolerancia', function () {
     Log::spy();
 
