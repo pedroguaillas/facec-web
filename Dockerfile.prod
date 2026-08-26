@@ -11,6 +11,7 @@ RUN apk add --no-cache \
         libzip \
         libpng \
         libjpeg-turbo \
+        libwebp \
         freetype \
         icu-libs \
         libxml2 \
@@ -20,11 +21,12 @@ RUN apk add --no-cache \
         libzip-dev \
         libpng-dev \
         libjpeg-turbo-dev \
+        libwebp-dev \
         freetype-dev \
         icu-dev \
         libxml2-dev \
         oniguruma-dev \
-    && docker-php-ext-configure gd --with-jpeg --with-freetype \
+    && docker-php-ext-configure gd --with-jpeg --with-freetype --with-webp \
     && docker-php-ext-install pdo_mysql mbstring bcmath soap zip gd intl \
     && pecl install redis \
     && docker-php-ext-enable redis \
