@@ -25,4 +25,6 @@ class VoucherStates
     const IN_PROCESS = 'EN_PROCESO';
 
     const CANCELED = 'ANULADO';
+
+    const PENDING_CANCELATION = 'PENDIENTE DE ANULAR';
 }

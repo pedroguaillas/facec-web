@@ -27,7 +27,8 @@ class ShopResources extends JsonResource
                 'xml_retention' => $this->xml_retention,
                 'send_mail_retention' => $this->send_mail_retention,
                 'extra_detail_retention' => $this->extra_detail_retention,
-                'retention' => $this->retention,
+                // Suma de shop_retention_items.value — iva_retention/rent_retention en `shops` nunca se pueblan.
+                'retention' => (float) ($this->retention_sum ?? 0),
                 // Liquidación en compra
                 'state' => $this->state,
                 'xml' => $this->xml,

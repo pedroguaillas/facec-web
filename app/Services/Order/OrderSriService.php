@@ -83,6 +83,10 @@ class OrderSriService
      */
     private function sendOrderMail(Order $order): void
     {
+        if (! Customer::find($order->customer_id)?->email) {
+            return;
+        }
+
         try {
             $this->resendMail($order);
         } catch (\Throwable $e) {

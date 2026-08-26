@@ -80,3 +80,54 @@ Si el dump es de un esquema viejo (Lumen/API anterior), corré las migraciones n
 | `redis` | 6379 | Cache/queue |
 | `xml-signer` | — (interno) | Microservicio Go que firma XML (facturación electrónica SRI) |
 | `phpmyadmin` | 8080 | UI de administración de MySQL |
+
+## Producción (VPS)
+
+Acceso: `ssh facec-do` (alias en `~/.ssh/config`, user `root`, key `~/.ssh/facec-do`).
+
+Todo comando de producción usa `compose.prod.yaml` + `.env.production` (nunca el `.env` de dev):
+
+```bash
+docker compose -f compose.prod.yaml --env-file .env.production ps
+docker compose -f compose.prod.yaml --env-file .env.production up -d --build
+```
+
+### Ver logs
+
+```bash
+# Logs de Laravel (storage/logs/laravel.log) — NO persiste en volume, se pierde si se recrea el contenedor
+docker compose -f compose.prod.yaml --env-file .env.production exec app tail -f storage/logs/laravel.log
+
+# Logs de docker (stdout del contenedor)
+docker compose -f compose.prod.yaml --env-file .env.production logs -f app
+```
+
+### Facturas atascadas en estado `CREADO`
+
+Causas conocidas (sin scheduler/retry automático — ver `app/Services/Order/OrderLifecycleService.php`, `app/Services/VoucherLifecycleService.php`):
+
+- **Certificado `.p12` con encoding BER en vez de DER estricto** — el firmador Go (`go-signer`) exige DER estricto; error en logs: `"Failed to decode certificate: pkcs12: error reading P12 data: asn1: syntax error: indefinite length found (not DER)"`. Fix (reencodear con openssl, requiere el password guardado en `companies.pass_cert`):
+
+  ```bash
+  docker compose -f compose.prod.yaml --env-file .env.production exec app \
+    cat storage/app/private/cert/<cert_dir> > /tmp/cert.p12
+
+  openssl pkcs12 -in /tmp/cert.p12 -out /tmp/cert.pem -nodes -legacy   # OpenSSL 3.x necesita -legacy para leer p12 viejos
+  openssl pkcs12 -export -in /tmp/cert.pem -out /tmp/cert_fixed.p12 -name "cert"
+
+  docker compose -f compose.prod.yaml --env-file .env.production exec -T app \
+    tee storage/app/private/cert/<cert_dir> < /tmp/cert_fixed.p12 > /dev/null
+
+  rm /tmp/cert.p12 /tmp/cert.pem /tmp/cert_fixed.p12   # cert.pem tiene la clave privada sin cifrar, borrar siempre
+  ```
+
+  Verificar `cert_dir` y `pass_cert` de la company:
+  ```bash
+  docker compose -f compose.prod.yaml --env-file .env.production exec app php artisan tinker --execute='dump(App\Models\Company::whereNotNull("cert_dir")->get(["id","cert_dir"])->toArray());'
+  ```
+
+- **Falta variable de entorno en `.env.production`** — p. ej. `SRI_CATASTRO_URL` (usada por `App\Services\SriResolveNameService` para buscar RUC en el SRI; si falta, `Http::get(null, ...)` explota con `TypeError`). Revisar que `.env.production` tenga todas las keys de `.env.production.example`.
+
+### Notas sobre `tinker --execute`
+
+`--execute` es una flag del comando (`php artisan tinker --execute='...'`), no algo que se pega dentro del shell interactivo. Y a diferencia del REPL, no auto-imprime el valor de retorno — envolver en `dump()` o `echo`.

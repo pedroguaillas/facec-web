@@ -26,9 +26,21 @@ class OrderLifecycleController extends Controller
     public function cancel(Order $order, OrderLifecycleService $service): JsonResponse
     {
         try {
-            $service->cancel($order);
+            $result = $service->cancel($order);
         } catch (\Throwable $e) {
             return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        if (! $result['canceled']) {
+            return response()->json([
+                'succes' => false,
+                'message' => match ($result['status']) {
+                    'PENDIENTE DE ANULAR' => 'La anulación fue solicitada y está pendiente de confirmación por el SRI.',
+                    null => 'No se pudo confirmar el estado de la anulación con el SRI. Intenta nuevamente en unos minutos.',
+                    default => "El comprobante no está anulado en el SRI (estado actual: {$result['status']}).",
+                },
+                'order' => $order->fresh(),
+            ], 422);
         }
 
         return response()->json(['succes' => true, 'message' => 'Comprobante anulado con éxito.', 'order' => $order->fresh()]);

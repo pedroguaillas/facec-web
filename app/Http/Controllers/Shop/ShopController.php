@@ -31,6 +31,7 @@ class ShopController extends Controller
 
         $shops = Shop::join('providers AS p', 'p.id', 'shops.provider_id')
             ->select('shops.*', 'p.name', 'p.email')
+            ->withSum('shopretentionitems as retention_sum', 'value')
             ->latest('shops.created_at')
             ->when($search, function ($query) use ($search) {
                 $escaped = str_replace(['%', '_'], ['\%', '\_'], $search);

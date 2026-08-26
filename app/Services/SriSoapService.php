@@ -16,6 +16,10 @@ class SriSoapService
 
     private const AUTH_PROD = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
 
+    private const CONSULTA_CERT = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
+
+    private const CONSULTA_PROD = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
+
     // ─── WSDL resolution ──────────────────────────────────────────────────────
 
     public function receiptWsdl(int $environment): string
@@ -26,6 +30,11 @@ class SriSoapService
     public function authorizationWsdl(int $environment): string
     {
         return $environment === 1 ? self::AUTH_CERT : self::AUTH_PROD;
+    }
+
+    public function consultaWsdl(int $environment): string
+    {
+        return $environment === 1 ? self::CONSULTA_CERT : self::CONSULTA_PROD;
     }
 
     // ─── Path helpers ─────────────────────────────────────────────────────────
@@ -56,6 +65,14 @@ class SriSoapService
     {
         return new \SoapClient(
             $this->authorizationWsdl($this->extractEnvironmentFromXml($xmlPath)),
+            ['soap_version' => SOAP_1_1, 'trace' => 1, 'connection_timeout' => 3, 'exceptions' => 0]
+        );
+    }
+
+    public function consultaClient(string $xmlPath): \SoapClient
+    {
+        return new \SoapClient(
+            $this->consultaWsdl($this->extractEnvironmentFromXml($xmlPath)),
             ['soap_version' => SOAP_1_1, 'trace' => 1, 'connection_timeout' => 3, 'exceptions' => 0]
         );
     }
@@ -249,30 +266,54 @@ class SriSoapService
     }
 
     /**
-     * Anula un comprobante autorizado consultando al SRI.
+     * Consulta el estado de anulación de un comprobante autorizado en el SRI
+     * (WS ConsultaComprobante, distinto del usado para autorizar) y persiste
+     * el resultado si corresponde.
+     *
+     * @return array{status: string|null, canceled: bool} `status` es el valor crudo de
+     *                                                    `estadoAutorizacion` (AUTORIZADO, NO AUTORIZADO,
+     *                                                    PENDIENTE DE ANULAR, ANULADO) o null si no se pudo
+     *                                                    determinar (error de conexión o consulta RECHAZADA).
      */
-    public function cancel(Model $model, string $xmlField = 'xml', string $stateField = 'state'): mixed
+    public function cancel(Model $model, string $xmlField = 'xml', string $stateField = 'state'): array
     {
         if ($model->{$stateField} !== VoucherStates::AUTHORIZED) {
-            return null;
+            return ['status' => $model->{$stateField}, 'canceled' => false];
         }
 
         $xmlPath = $model->{$xmlField};
-        $client = $this->authorizationClient($xmlPath);
-        $params = ['claveAccesoComprobante' => $this->extractAccessKey($xmlPath)];
-        $response = $client->autorizacionComprobante($params);
+        $client = $this->consultaClient($xmlPath);
+        $params = ['claveAcceso' => $this->extractAccessKey($xmlPath)];
 
-        if (! property_exists($response, 'RespuestaAutorizacionComprobante')) {
-            return null;
+        try {
+            $response = $client->consultarEstadoAutorizacionComprobante($params);
+        } catch (\Throwable $e) {
+            info('SRI cancel error: '.$e->getMessage());
+
+            return ['status' => null, 'canceled' => false];
         }
 
-        if ((int) $response->RespuestaAutorizacionComprobante->numeroComprobantes === 0) {
-            $model->{$stateField} = VoucherStates::CANCELED;
+        if (! property_exists($response, 'EstadoAutorizacionComprobante')) {
+            return ['status' => null, 'canceled' => false];
+        }
+
+        $estado = $response->EstadoAutorizacionComprobante;
+
+        // 'RECHAZADA' es un error de la consulta en sí (clave inexistente, fecha fuera de rango),
+        // no un estado del comprobante — no se persiste como tal.
+        if (($estado->estadoConsulta ?? null) === 'RECHAZADA') {
+            info('SRI cancel query rejected: '.($estado->mensajes->mensaje->informacionAdicional ?? $estado->mensajes->mensaje->mensaje ?? 'sin detalle'));
+
+            return ['status' => null, 'canceled' => false];
+        }
+
+        $status = $estado->estadoAutorizacion ?? null;
+
+        if (in_array($status, [VoucherStates::CANCELED, VoucherStates::PENDING_CANCELATION], true)) {
+            $model->{$stateField} = $status;
             $model->save();
-
-            return response()->json(['state' => 'OK']);
         }
 
-        return response()->json(['state' => 'KO']);
+        return ['status' => $status, 'canceled' => $status === VoucherStates::CANCELED];
     }
 }

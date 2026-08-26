@@ -35,9 +35,21 @@ class RetentionController extends Controller
         abort_unless($shop->serie_retencion !== null, 404);
 
         try {
-            $service->cancel($shop);
+            $result = $service->cancel($shop);
         } catch (\Throwable $e) {
             return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        if (! $result['canceled']) {
+            return response()->json([
+                'succes' => false,
+                'message' => match ($result['status']) {
+                    'PENDIENTE DE ANULAR' => 'La anulación fue solicitada y está pendiente de confirmación por el SRI.',
+                    null => 'No se pudo confirmar el estado de la anulación con el SRI. Intenta nuevamente en unos minutos.',
+                    default => "El comprobante no está anulado en el SRI (estado actual: {$result['status']}).",
+                },
+                'shop' => $shop->fresh(),
+            ], 422);
         }
 
         return response()->json(['succes' => true, 'message' => 'Retención anulada con éxito.', 'shop' => $shop->fresh()]);
