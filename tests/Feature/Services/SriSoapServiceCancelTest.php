@@ -5,15 +5,15 @@ use App\Services\SriSoapService;
 use App\StaticClasses\VoucherStates;
 
 /**
- * SoapClient real usa __call mágico; para simular respuestas del WS
- * AutorizacionComprobantesOffline sin pegarle a la red, se subclasea sin
- * llamar al constructor real y se sobreescribe el método esperado directamente.
+ * SoapClient real usa __call mágico; para simular respuestas del WS de ConsultaComprobante
+ * sin pegarle a la red, se subclasea sin llamar al constructor real y se sobreescribe
+ * el método esperado directamente.
  */
-class FakeAuthorizationSoapClient extends SoapClient
+class FakeConsultaSoapClient extends SoapClient
 {
     public function __construct(private mixed $response) {}
 
-    public function autorizacionComprobante($params)
+    public function consultarEstadoAutorizacionComprobante($params)
     {
         if ($this->response instanceof Throwable) {
             throw $this->response;
@@ -31,48 +31,55 @@ function makeAuthorizedOrder(): Order
     ]);
 }
 
-function serviceWithFakeAuthorization(mixed $response): SriSoapService
+function serviceWithFakeConsulta(mixed $response): SriSoapService
 {
-    $service = Mockery::mock(SriSoapService::class.'[authorizationClient]')->makePartial();
-    $service->shouldReceive('authorizationClient')->andReturn(new FakeAuthorizationSoapClient($response));
+    $service = Mockery::mock(SriSoapService::class.'[consultaClient]')->makePartial();
+    $service->shouldReceive('consultaClient')->andReturn(new FakeConsultaSoapClient($response));
 
     return $service;
 }
 
-test('cancel persiste ANULADO cuando el SRI ya no devuelve el comprobante', function () {
+test('cancel persiste ANULADO cuando el SRI confirma la anulación', function () {
     $order = makeAuthorizedOrder();
 
-    $service = serviceWithFakeAuthorization((object) [
-        'RespuestaAutorizacionComprobante' => (object) [
-            'numeroComprobantes' => '0',
+    $service = serviceWithFakeConsulta((object) [
+        'EstadoAutorizacionComprobante' => (object) [
+            'estadoAutorizacion' => 'ANULADO',
         ],
     ]);
 
     $result = $service->cancel($order);
 
-    expect($result)->toBe(['status' => VoucherStates::CANCELED, 'canceled' => true]);
+    expect($result)->toBe(['status' => 'ANULADO', 'canceled' => true]);
     expect($order->fresh()->state)->toBe(VoucherStates::CANCELED);
 });
 
-test('cancel no persiste nada si el comprobante sigue vigente en el SRI', function () {
+test('cancel persiste PENDIENTE DE ANULAR sin marcarlo como cancelado', function () {
     $order = makeAuthorizedOrder();
 
-    $service = serviceWithFakeAuthorization((object) [
-        'RespuestaAutorizacionComprobante' => (object) [
-            'numeroComprobantes' => '1',
+    $service = serviceWithFakeConsulta((object) [
+        'EstadoAutorizacionComprobante' => (object) [
+            'estadoAutorizacion' => 'PENDIENTE DE ANULAR',
         ],
     ]);
 
     $result = $service->cancel($order);
 
-    expect($result)->toBe(['status' => VoucherStates::AUTHORIZED, 'canceled' => false]);
-    expect($order->fresh()->state)->toBe(VoucherStates::AUTHORIZED);
+    expect($result)->toBe(['status' => 'PENDIENTE DE ANULAR', 'canceled' => false]);
+    expect($order->fresh()->state)->toBe(VoucherStates::PENDING_CANCELATION);
 });
 
-test('cancel devuelve status null si la respuesta no trae RespuestaAutorizacionComprobante', function () {
+test('cancel no persiste nada cuando el SRI responde RECHAZADA (error de consulta, no del comprobante)', function () {
     $order = makeAuthorizedOrder();
 
-    $service = serviceWithFakeAuthorization((object) []);
+    $service = serviceWithFakeConsulta((object) [
+        'EstadoAutorizacionComprobante' => (object) [
+            'estadoConsulta' => 'RECHAZADA',
+            'mensajes' => (object) [
+                'mensaje' => (object) ['mensaje' => 'ERROR AL CONSULTAR DATOS DEL SERVICIO WEB'],
+            ],
+        ],
+    ]);
 
     $result = $service->cancel($order);
 
@@ -80,10 +87,25 @@ test('cancel devuelve status null si la respuesta no trae RespuestaAutorizacionC
     expect($order->fresh()->state)->toBe(VoucherStates::AUTHORIZED);
 });
 
+test('cancel no toca el modelo si el comprobante sigue AUTORIZADO', function () {
+    $order = makeAuthorizedOrder();
+
+    $service = serviceWithFakeConsulta((object) [
+        'EstadoAutorizacionComprobante' => (object) [
+            'estadoAutorizacion' => 'AUTORIZADO',
+        ],
+    ]);
+
+    $result = $service->cancel($order);
+
+    expect($result)->toBe(['status' => 'AUTORIZADO', 'canceled' => false]);
+    expect($order->fresh()->state)->toBe(VoucherStates::AUTHORIZED);
+});
+
 test('cancel devuelve status null si el SOAP client lanza una excepción', function () {
     $order = makeAuthorizedOrder();
 
-    $service = serviceWithFakeAuthorization(new SoapFault('Client', 'timeout'));
+    $service = serviceWithFakeConsulta(new SoapFault('Client', 'timeout'));
 
     $result = $service->cancel($order);
 
@@ -94,8 +116,8 @@ test('cancel devuelve status null si el SOAP client lanza una excepción', funct
 test('cancel no consulta al SRI si el comprobante no está AUTORIZADO', function () {
     $order = Order::factory()->create(['state' => VoucherStates::SAVED]);
 
-    $service = Mockery::mock(SriSoapService::class.'[authorizationClient]')->makePartial();
-    $service->shouldNotReceive('authorizationClient');
+    $service = Mockery::mock(SriSoapService::class.'[consultaClient]')->makePartial();
+    $service->shouldNotReceive('consultaClient');
 
     $result = $service->cancel($order);
 
