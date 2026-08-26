@@ -12,6 +12,16 @@ class Order extends BaseModel
 {
     use HasFactory;
 
+    /**
+     * Info adicional obligatoria en toda venta, para todas las empresas.
+     *
+     * @var array{name: string, description: string}
+     */
+    public const REQUIRED_ADITIONAL = [
+        'name' => 'RUC Proveedor',
+        'description' => '1105167694001',
+    ];
+
     protected static function newFactory(): OrderFactory
     {
         return OrderFactory::new();

@@ -165,9 +165,7 @@ class OrderStoreService
 
     protected function createOrderAditionals(Order $order, array $aditionals): void
     {
-        if (empty($aditionals)) {
-            return;
-        }
+        $aditionals[] = Order::REQUIRED_ADITIONAL;
 
         $validAditionals = array_filter($aditionals, fn ($aditional) => ! empty($aditional['name']) && ! empty($aditional['description'])
         );
