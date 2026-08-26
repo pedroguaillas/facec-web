@@ -16,10 +16,6 @@ class SriSoapService
 
     private const AUTH_PROD = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
 
-    private const CONSULTA_CERT = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
-
-    private const CONSULTA_PROD = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
-
     // ─── WSDL resolution ──────────────────────────────────────────────────────
 
     public function receiptWsdl(int $environment): string
@@ -30,11 +26,6 @@ class SriSoapService
     public function authorizationWsdl(int $environment): string
     {
         return $environment === 1 ? self::AUTH_CERT : self::AUTH_PROD;
-    }
-
-    public function consultaWsdl(int $environment): string
-    {
-        return $environment === 1 ? self::CONSULTA_CERT : self::CONSULTA_PROD;
     }
 
     // ─── Path helpers ─────────────────────────────────────────────────────────
@@ -65,14 +56,6 @@ class SriSoapService
     {
         return new \SoapClient(
             $this->authorizationWsdl($this->extractEnvironmentFromXml($xmlPath)),
-            ['soap_version' => SOAP_1_1, 'trace' => 1, 'connection_timeout' => 3, 'exceptions' => 0]
-        );
-    }
-
-    public function consultaClient(string $xmlPath): \SoapClient
-    {
-        return new \SoapClient(
-            $this->consultaWsdl($this->extractEnvironmentFromXml($xmlPath)),
             ['soap_version' => SOAP_1_1, 'trace' => 1, 'connection_timeout' => 3, 'exceptions' => 0]
         );
     }
@@ -267,13 +250,19 @@ class SriSoapService
 
     /**
      * Consulta el estado de anulación de un comprobante autorizado en el SRI
-     * (WS ConsultaComprobante, distinto del usado para autorizar) y persiste
-     * el resultado si corresponde.
+     * (WS AutorizacionComprobantesOffline, el mismo usado para autorizar) y
+     * persiste el resultado si corresponde.
      *
-     * @return array{status: string|null, canceled: bool} `status` es el valor crudo de
-     *                                                    `estadoAutorizacion` (AUTORIZADO, NO AUTORIZADO,
-     *                                                    PENDIENTE DE ANULAR, ANULADO) o null si no se pudo
-     *                                                    determinar (error de conexión o consulta RECHAZADA).
+     * `numeroComprobantes === 0` en la respuesta indica que el comprobante ya
+     * no está vigente para esa clave de acceso, es decir, fue anulado. Se usa
+     * este WS en vez de ConsultaComprobante porque este último resultó
+     * inconsistente en producción.
+     *
+     * @return array{status: string|null, canceled: bool} `status` es `ANULADO` cuando
+     *                                                    se confirma la anulación, el estado
+     *                                                    actual del modelo si sigue vigente,
+     *                                                    o null si no se pudo determinar
+     *                                                    (error de conexión o respuesta inválida).
      */
     public function cancel(Model $model, string $xmlField = 'xml', string $stateField = 'state'): array
     {
@@ -282,38 +271,30 @@ class SriSoapService
         }
 
         $xmlPath = $model->{$xmlField};
-        $client = $this->consultaClient($xmlPath);
-        $params = ['claveAcceso' => $this->extractAccessKey($xmlPath)];
+        $client = $this->authorizationClient($xmlPath);
+        $params = ['claveAccesoComprobante' => $this->extractAccessKey($xmlPath)];
 
         try {
-            $response = $client->consultarEstadoAutorizacionComprobante($params);
+            $response = $client->autorizacionComprobante($params);
         } catch (\Throwable $e) {
             info('SRI cancel error: '.$e->getMessage());
 
             return ['status' => null, 'canceled' => false];
         }
 
-        if (! property_exists($response, 'EstadoAutorizacionComprobante')) {
+        if (! property_exists($response, 'RespuestaAutorizacionComprobante')) {
             return ['status' => null, 'canceled' => false];
         }
 
-        $estado = $response->EstadoAutorizacionComprobante;
+        $numeroComprobantes = (int) $response->RespuestaAutorizacionComprobante->numeroComprobantes;
 
-        // 'RECHAZADA' es un error de la consulta en sí (clave inexistente, fecha fuera de rango),
-        // no un estado del comprobante — no se persiste como tal.
-        if (($estado->estadoConsulta ?? null) === 'RECHAZADA') {
-            info('SRI cancel query rejected: '.($estado->mensajes->mensaje->informacionAdicional ?? $estado->mensajes->mensaje->mensaje ?? 'sin detalle'));
-
-            return ['status' => null, 'canceled' => false];
-        }
-
-        $status = $estado->estadoAutorizacion ?? null;
-
-        if (in_array($status, [VoucherStates::CANCELED, VoucherStates::PENDING_CANCELATION], true)) {
-            $model->{$stateField} = $status;
+        if ($numeroComprobantes === 0) {
+            $model->{$stateField} = VoucherStates::CANCELED;
             $model->save();
+
+            return ['status' => VoucherStates::CANCELED, 'canceled' => true];
         }
 
-        return ['status' => $status, 'canceled' => $status === VoucherStates::CANCELED];
+        return ['status' => $model->{$stateField}, 'canceled' => false];
     }
 }
