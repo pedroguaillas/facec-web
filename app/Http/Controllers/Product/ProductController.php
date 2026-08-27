@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -89,7 +90,16 @@ class ProductController extends Controller
         $branch = $company->branches()->orderBy('created_at')->first();
 
         $import = new ProductsImport($branch->id, (bool) $company->transport);
-        Excel::import($import, $request->file('file'));
+
+        // El navegador puede subir el archivo con una extensión de filename
+        // engañosa (p. ej. .csv) aunque el contenido real sea xlsx; el
+        // detector de maatwebsite confía en esa extensión, así que forzamos
+        // el tipo según el contenido real del archivo (MIME sniffing).
+        $readerType = strtolower($request->file('file')->guessExtension() ?? '') === 'xls'
+            ? ExcelFormat::XLS
+            : ExcelFormat::XLSX;
+
+        Excel::import($import, $request->file('file'), null, $readerType);
 
         return response()->json([
             'success' => $import->failures()->isEmpty(),
