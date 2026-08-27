@@ -43,7 +43,7 @@ class CompanyUpdateRequest extends FormRequest
             'sign_valid_from' => ['nullable', 'date'],
             'sign_valid_to' => ['nullable', 'required_with:cert', 'date', 'after:sign_valid_from'],
             'logo' => ['sometimes', 'file', 'image', 'max:2048'],
-            'cert' => ['sometimes', 'file', 'mimes:p12,pfx', 'max:2048'],
+            'cert' => ['sometimes', 'file', 'extensions:p12,pfx', 'max:2048'],
             'pass_cert' => ['nullable', 'required_with:cert', 'string', 'max:50'],
         ];
     }
