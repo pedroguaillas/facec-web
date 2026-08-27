@@ -28,6 +28,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRoleMiddleware::class,
         ]);
+
+        // Caddy termina TLS y reenvía a `app` por HTTP dentro de la red de
+        // docker (ver compose.prod.yaml / docker/production/Caddyfile). Sin
+        // confiar en el proxy, Request::isSecure() da false y Laravel genera
+        // URLs http:// (paginación, etc.) que el navegador bloquea como
+        // mixed content en una página https. `app` no tiene puerto publicado,
+        // solo Caddy le llega, así que confiar en '*' es seguro acá.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request) {
