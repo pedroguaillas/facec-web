@@ -13,7 +13,7 @@ catálogo y su relación con esos módulos.
 
 El modelo principal es `App\Models\Product\Product`
 (`app/Models/Product/Product.php:14`), que extiende `BaseModel` y por tanto
-arrastra el **global scope de sucursal** (ver §6.3) y `SoftDeletes`.
+arrastra el **global scope de sucursal** (ver §7.3) y `SoftDeletes`.
 
 ### Campos clave (`products`)
 
@@ -67,7 +67,7 @@ Hay **dos mecanismos distintos** y conviene no confundirlos:
 1. **`products.stock`** — un entero editable en el formulario del producto.
    Se acepta en `store`/`update` y se muestra en `index`/`lookup`, pero
    **no se descuenta al vender ni se incrementa al comprar** en ningún punto
-   del código (ver §6.1). Es, en la práctica, un dato informativo estático.
+   del código (ver §7.1). Es, en la práctica, un dato informativo estático.
 
 2. **Tabla `inventories`** (`App\Models\Inventory`,
    `app/Models/Inventory.php`) — el libro de movimientos real (kardex).
@@ -139,7 +139,81 @@ vacío si viene en blanco, y como máximo **20** productos que coincidan por
 `id, code, name, price (= price1), stock, iva, ice`. No pagina ni usa
 `ProductResources` — es un contrato aparte pensado para el autocompletar.
 
-## 4. Validaciones y reglas de negocio
+## 4. Importación y exportación (Excel)
+
+Usa `maatwebsite/excel` (v4). Cada responsabilidad vive en su propia clase
+(SRP): `App\Exports\ProductExport` genera el archivo, `App\Imports\ProductsImport`
+lo parsea/valida/inserta, y `ProductController::export`/`import` solo
+orquestan (resuelven la sucursal y delegan).
+
+### Endpoints
+
+| Método | Ruta | Acción |
+|---|---|---|
+| GET | `products/export` | `ProductController@export` — descarga `productos.xlsx` |
+| POST | `products/import` | `ProductController@import` — sube `file` (multipart) |
+
+Ambas rutas están registradas **antes** de `products/{product}` en
+`routes/api.php` para que `export`/`import` no se interpreten como un `{product}`.
+
+### Columnas (mismo layout en export e import, para poder reimportar el export)
+
+| Columna | slug (heading row) | Campo `Product` |
+|---|---|---|
+| Código | `codigo` | `code` |
+| Código Auxiliar | `codigo_auxiliar` | `aux_cod` |
+| Tipo | `tipo` | `type_product` (1 = bien, 2 = servicio) |
+| Nombre | `nombre` | `name` |
+| Precio | `precio` | `price1` |
+| IVA | `iva` | `iva` (código SRI, no el porcentaje — ver §1) |
+| ICE | `ice` | `ice` |
+| Stock | `stock` | `stock` |
+
+> Decisión: el export escribe el **código SRI** de IVA (p. ej. `2`), no el
+> porcentaje formateado (`12%`), para que el mismo archivo se pueda
+> reimportar sin transformación. `WithHeadingRow` normaliza los encabezados
+> con `Str::slug(.., '_')`, de ahí los slugs de la tabla.
+
+### `ProductExport` (`app/Exports/ProductExport.php`)
+
+`FromQuery` + `WithHeadings` + `WithMapping` + `WithColumnFormatting`, filtra
+por `branch_id` (recibido por constructor, no depende del `BranchScope`
+global). Formatea `code`/`aux_cod` como texto (`NumberFormat::FORMAT_TEXT`)
+para no perder ceros a la izquierda, igual que `CustomerExport`.
+
+### `ProductsImport` (`app/Imports/ProductsImport.php`)
+
+`ToModel` + `WithHeadingRow` + `WithValidation` + `SkipsOnFailure` +
+`WithBatchInserts`/`WithChunkReading` (chunks de 200 filas). Fila inválida →
+se omite y se acumula en `failures()`, **no aborta el resto del archivo**.
+
+Reglas por fila (`rules()`):
+
+- `codigo`: `required` + `App\Rules\UniqueBranchScoped` (misma regla que ya
+  usan Provider/Carrier/Customer) contra `(branch_id, code)`.
+- `codigo_auxiliar`: `nullable` + `App\Rules\RequiredAuxCodRule`, que
+  replica la regla de negocio de `ProductStoreRequest::after()` (obligatorio
+  si `iva == 5` o `company->transport`). Marca `public $implicit = true`
+  para que corra aunque el valor venga vacío — sin eso, Laravel salta las
+  reglas de un campo `nullable` cuando el valor es `null` y la validación
+  nunca se ejecutaría.
+- `tipo`, `nombre`, `precio`, `iva`, `ice`, `stock`: mismas reglas que
+  `ProductStoreRequest`.
+
+`ProductController::import` responde con `success` (bool) y `failures`
+(array de `{row, attribute, errors}` por fila rechazada); no aborta si hay
+errores parciales — inserta las filas válidas y reporta el resto.
+
+### Límite conocido
+
+No se valida "código duplicado dentro del mismo archivo" (dos filas con el
+mismo `codigo` en un solo Excel); `UniqueBranchScoped` solo consulta contra
+lo que ya existe en BD. Si el archivo trae códigos repetidos, la segunda
+fila fallaría en el `insert` por la constraint `product_unique`, no por la
+validación. No se resolvió por alcance/tiempo — si se vuelve un problema
+real, agregar una regla `distinct` a nivel de todo el import (no por fila).
+
+## 5. Validaciones y reglas de negocio
 
 `ProductStoreRequest` (`app/Http/Requests/Product/ProductStoreRequest.php`)
 y `ProductUpdateRequest` comparten reglas casi idénticas:
@@ -170,9 +244,9 @@ hace **soft delete** (preserva integridad referencial); si no lo usa nadie,
 
 > `authorize()` devuelve `true` en ambos requests
 > (`ProductStoreRequest.php:12`): no hay autorización por política, solo el
-> aislamiento por sucursal del global scope (§6.3).
+> aislamiento por sucursal del global scope (§7.3).
 
-## 5. Relación con Ventas / Compras
+## 6. Relación con Ventas / Compras
 
 Un producto se referencia como línea en tres tablas hijas, todas vía
 `hasMany` (`Product.php:65-78`): `OrderItem` (ventas), `ShopItem` (compras)
@@ -191,9 +265,9 @@ del producto**, se envían por payload por línea:
 `OrderStoreRequest` solo valida el **tipo** de estos campos, no que
 coincidan con el producto guardado (`OrderStoreRequest.php:27-31`). El
 producto aporta los valores por defecto en el formulario (vía `lookup`),
-pero el backend confía en lo que llega. Ver §6.2.
+pero el backend confía en lo que llega. Ver §7.2.
 
-## 6. Puntos de mejora
+## 7. Puntos de mejora
 
 Hallazgos concretos con evidencia:
 

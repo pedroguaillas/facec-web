@@ -8,12 +8,18 @@ use App\Models\Inventory;
 use App\Models\Order\OrderItem;
 use App\Models\ReferralGuide\ReferralGuideItem;
 use App\Models\Shop\ShopItem;
+use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends BaseModel
 {
     use HasFactory, SoftDeletes;
+
+    protected static function newFactory(): ProductFactory
+    {
+        return ProductFactory::new();
+    }
 
     protected $fillable = [
         'branch_id',

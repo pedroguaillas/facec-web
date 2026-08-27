@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Product;
 
+use App\Exports\ProductExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\ProductImportRequest;
 use App\Http\Requests\Product\ProductStoreRequest;
 use App\Http\Requests\Product\ProductUpdateRequest;
 use App\Http\Resources\ProductResources;
+use App\Imports\ProductsImport;
 use App\Models\Product\IceCataloge;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
@@ -15,6 +18,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends Controller
 {
@@ -69,6 +74,31 @@ class ProductController extends Controller
         $product->update($request->validated());
 
         return response()->json($product);
+    }
+
+    public function export(): BinaryFileResponse
+    {
+        $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
+
+        return Excel::download(new ProductExport($branch->id), 'productos.xlsx');
+    }
+
+    public function import(ProductImportRequest $request): JsonResponse
+    {
+        $company = Auth::user()->company;
+        $branch = $company->branches()->orderBy('created_at')->first();
+
+        $import = new ProductsImport($branch->id, (bool) $company->transport);
+        Excel::import($import, $request->file('file'));
+
+        return response()->json([
+            'success' => $import->failures()->isEmpty(),
+            'failures' => $import->failures()->map(fn ($failure) => [
+                'row' => $failure->row(),
+                'attribute' => $failure->attribute(),
+                'errors' => $failure->errors(),
+            ])->values(),
+        ]);
     }
 
     public function destroy(Product $product): JsonResponse
