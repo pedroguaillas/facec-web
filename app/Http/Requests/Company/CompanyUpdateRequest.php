@@ -40,7 +40,7 @@ class CompanyUpdateRequest extends FormRequest
             'active' => ['sometimes', 'boolean'],
             'active_voucher' => ['sometimes', 'boolean'],
             'decimal' => ['sometimes', 'integer', 'min:0', 'max:6'],
-            'sign_valid_from' => ['nullable', 'required_with:cert', 'date'],
+            'sign_valid_from' => ['nullable', 'date'],
             'sign_valid_to' => ['nullable', 'required_with:cert', 'date', 'after:sign_valid_from'],
             'logo' => ['sometimes', 'file', 'image', 'max:2048'],
             'cert' => ['sometimes', 'file', 'mimes:p12,pfx', 'max:2048'],

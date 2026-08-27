@@ -51,7 +51,7 @@ class CompanyController extends Controller
 
             $data['cert_dir'] = $filename;
             $data['pass_cert'] = $request->input('pass_cert');
-            $data['sign_valid_from'] = $request->input('sign_valid_from');
+            // $data['sign_valid_from'] = $request->input('sign_valid_from');
             $data['sign_valid_to'] = $request->input('sign_valid_to');
         }
 
