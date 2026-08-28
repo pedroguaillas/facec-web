@@ -155,6 +155,17 @@ horneada (sin bind mount) — cada `deployment/deploy.sh` (que hace `build
 app` + `up -d`) recrea el container `queue` automáticamente con el código
 nuevo, no requiere este paso manual.
 
+### 2.5 — Dos workers en paralelo (producción)
+
+Un solo worker procesa 100% serial: un lote grande de un cliente deja en fila
+a los comprobantes de todos los demás hasta que termina. `compose.prod.yaml`
+define `queue` **y** `queue2`, dos containers idénticos (`php artisan
+queue:work --sleep=3`) consumiendo la misma cola `default`. El driver
+`database` reserva cada job con `SELECT ... FOR UPDATE` antes de procesarlo,
+así que dos workers nunca toman el mismo job — es seguro escalar así sin
+tocar código. Si hace falta más throughput, agregar un tercer servicio
+`queue3` con el mismo patrón (copiar/pegar el bloque de `queue2`).
+
 ## 3. Errores/mejoras compartidos (no específicos de Ventas o Compras)
 
 ### 3.1 — Excepciones SOAP silenciadas

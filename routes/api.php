@@ -43,7 +43,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders/{order}/pdf', [OrderController::class, 'pdf'])->name('orders.pdf');
     Route::get('orders/{order}/printf', [OrderController::class, 'printf'])->name('orders.printf');
     Route::get('orders/{order}/process', [OrderLifecycleController::class, 'process'])->name('orders.process');
-    Route::post('orders/{order}/cancel', [OrderLifecycleController::class, 'cancel'])->name('orders.cancel');
+    Route::get('orders/{order}/cancel', [OrderLifecycleController::class, 'cancel'])->name('orders.cancel');
     Route::get('orders/{order}/mail', [OrderLifecycleController::class, 'mail'])->name('orders.mail');
     Route::get('orders/{order}/xml', [OrderLifecycleController::class, 'download'])->name('orders.xml');
 
@@ -83,11 +83,11 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
     Route::get('shops/{shop}/pdf', [ShopController::class, 'pdf'])->name('shops.pdf');
     Route::get('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process');
-    Route::post('shops/{shop}/cancel', [ShopLifecycleController::class, 'cancel'])->name('shops.cancel');
+    Route::get('shops/{shop}/cancel', [ShopLifecycleController::class, 'cancel'])->name('shops.cancel');
     Route::get('shops/{shop}/xml', [ShopLifecycleController::class, 'download'])->name('shops.xml');
     Route::get('retentions/{id}/pdf', [RetentionController::class, 'pdf'])->name('retentions.pdf');
     Route::get('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
-    Route::post('retentions/{shop}/cancel', [RetentionController::class, 'cancel'])->name('retentions.cancel');
+    Route::get('retentions/{shop}/cancel', [RetentionController::class, 'cancel'])->name('retentions.cancel');
     Route::get('retentions/{shop}/xml', [RetentionController::class, 'download'])->name('retentions.xml');
 
     Route::get('referralguides', [ReferralGuideController::class, 'index'])->name('referralguides.index');

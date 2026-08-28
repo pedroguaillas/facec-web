@@ -47,6 +47,30 @@ services:
         healthcheck:
             disable: true
 
+    queue2:
+        image: facec-web-app:latest
+        restart: unless-stopped
+        env_file:
+            - .env.production
+        volumes:
+            - storage-app:/var/www/html/storage/app
+        networks:
+            - app
+        depends_on:
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            go-signer:
+                condition: service_healthy
+        # Segundo worker en paralelo sobre la misma cola `default` — el driver
+        # `database` reserva cada job con SELECT ... FOR UPDATE, así que dos workers
+        # no toman el mismo job. Sin esto, un lote grande de un cliente bloquea en fila
+        # a los comprobantes de todos los demás clientes (un solo worker = 100% serial).
+        command: php artisan queue:work --sleep=3
+        healthcheck:
+            disable: true
+
     go-signer:
         build:
             context: ./go-signer
