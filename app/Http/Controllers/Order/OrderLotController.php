@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\EmisionPoint;
 use App\Models\Order\Lot;
+use App\Models\Order\OrderItem;
 use App\Models\Product\Product;
 use App\Services\Order\OrderLifecycleService;
 use App\Services\Order\OrderSriService;
@@ -149,10 +150,20 @@ class OrderLotController extends BaseController
         $orders = $branch->orders()->createMany($orders)->fresh();
         $emisionPoint->save();
 
-        $i = 0;
-        foreach ($orders as $item) {
-            $item->orderitems()->create($orderItems[$i++]);
+        // Insert en batch en vez de un create() por fila: con lotes de hasta 500
+        // filas, 500 inserts uno por uno acá (sumado a los 500 dispatch() de abajo)
+        // podían superar max_execution_time en producción y cortar el request a la
+        // mitad (502), dejando datos parcialmente creados/encolados.
+        $now = now();
+        $orderItemRows = [];
+        foreach ($orders as $i => $item) {
+            $orderItemRows[] = array_merge($orderItems[$i], [
+                'order_id' => $item->id,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
         }
+        OrderItem::insert($orderItemRows);
 
         // Cada comprobante se encola por separado (mismo mecanismo que el resto del
         // módulo): firmar+enviar+autorizar 50 órdenes síncronas en el request bloquearía

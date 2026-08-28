@@ -76,6 +76,16 @@ test('orders.lot.store encola un ProcessVoucherJob por cada comprobante del lote
         return (new ReflectionProperty($job, 'voucherType'))->getValue($job) === 'order'
             && (new ReflectionProperty($job, 'companyId'))->getValue($job) === $company->id;
     });
+
+    // order_items se insertan en batch (no uno por uno) — confirma que cada fila
+    // quedó mapeada al order_id correcto, no cruzada con la otra fila del lote.
+    $orderA = Order::where('customer_id', $customerA->id)->first();
+    $orderB = Order::where('customer_id', $customerB->id)->first();
+
+    expect($orderA->orderitems)->toHaveCount(1)
+        ->and($orderA->orderitems->first()->quantity)->toBe(2.0)
+        ->and($orderB->orderitems)->toHaveCount(1)
+        ->and($orderB->orderitems->first()->quantity)->toBe(1.0);
 });
 
 test('orders.lot.store usa forma de pago 01 para consumidor final, y la de la empresa para el resto', function () {
