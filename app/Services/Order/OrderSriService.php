@@ -66,6 +66,7 @@ class OrderSriService
             model: $order,
             // authorization ya fue guardada por VoucherLifecycleService::saveAndSign()
             onAuthorized: fn () => $this->sendOrderMail($order),
+            inProcessAttemptsField: 'in_process_attempts',
         );
     }
 

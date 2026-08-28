@@ -2,14 +2,14 @@
 
 namespace App\Mail;
 
-use App\Models\Company;
+use App\Models\Branch;
+use App\Models\CompanyUser;
 use App\Models\Customer;
 use App\Models\Order\Order;
 use App\Services\Order\OrderPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Auth;
 
 class OrderShipped extends Mailable
 {
@@ -39,15 +39,23 @@ class OrderShipped extends Mailable
      */
     public function build()
     {
-        $auth = Auth::user();
-        $level = $auth->companyusers->first();
-        $company = Company::find($level->level_id);
+        // No se usa Auth::user() aquí: este mail se dispara tanto desde el request HTTP
+        // (reenvío manual) como desde el Job de colas (sin usuario autenticado) — la
+        // compañía y el remitente para "responder a" se resuelven desde el propio Order.
+        $company = Branch::find($this->order->branch_id)?->company;
+        $companyUser = $company
+            ? CompanyUser::where('level_id', $company->id)->first()
+            : null;
+        $replyTo = $companyUser?->user?->email ?? config('mail.from.address');
 
-        // (new OrderController())->generatePdf($this->order->id);
-        app(OrderPdfService::class)->savePdf($this->order->id);
+        // Se instancia OrderPdfService directamente (en vez de app(OrderPdfService::class))
+        // porque su binding contextual en AppServiceProvider resuelve Company vía
+        // Auth::user()?->company — null en contexto de Job (sin usuario autenticado),
+        // lo que rompería el constructor con Company no-nullable.
+        (new OrderPdfService($company))->savePdf($this->order->id);
 
         return $this->from(config('mail.from.address'), config('mail.from.name'))
-            ->replyTo($auth->email)
+            ->replyTo($replyTo)
             ->subject(($this->order->voucher_type == 1 ? 'FACTURA ' : 'NOTA DE CRÉDITO ').$this->order->serie.' de '.$company->company)
             ->view('mail', ['title' => 'FACTURA '.$this->order->serie, 'customer' => Customer::find($this->order->customer_id)->name])
             ->attachFromStorage(

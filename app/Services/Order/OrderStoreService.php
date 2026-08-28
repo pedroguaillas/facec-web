@@ -2,6 +2,7 @@
 
 namespace App\Services\Order;
 
+use App\Jobs\ProcessVoucherJob;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
@@ -18,7 +19,6 @@ class OrderStoreService
     private Branch $branch;
 
     public function __construct(
-        private OrderLifecycleService $xmlService,
         private OrderTotalsCalculator $totalsCalculator,
     ) {
         $this->company = Auth::user()->company;
@@ -184,6 +184,6 @@ class OrderStoreService
     {
         // Recargar el order porque los atributos por defecto no cargan directamente.
         $order->refresh();
-        $this->xmlService->process($order);
+        ProcessVoucherJob::dispatch('order', $order->id, $this->company->id)->afterCommit();
     }
 }

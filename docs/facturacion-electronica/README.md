@@ -49,9 +49,115 @@ de `VoucherLifecycleService`.
 > y se detiene ahí (nunca llega a `SIGNED`) — es el comportamiento esperado
 > para empresas sin certificado configurado aún, no es un bug.
 
-## 2. Errores/mejoras compartidos (no específicos de Ventas o Compras)
+## 2. Procesamiento asíncrono (colas)
 
-### 2.1 — Excepciones SOAP silenciadas
+Los 4 tipos de comprobante (Ventas, Compras, Guía de Remisión, Retención)
+procesan vía cola en vez de bloquear el request HTTP: firmar (HTTP a
+`go-signer`) + enviar + autorizar (2 llamadas SOAP al SRI) puede tardar
+varios segundos y el SRI es notoriamente lento/inestable.
+
+### 2.1 — `ProcessVoucherJob` + `VoucherJobRegistry`
+
+Un solo Job genérico (`app/Jobs/ProcessVoucherJob.php`) reutilizado por los
+4 tipos, en vez de un Job por tipo o por etapa. `app/StaticClasses/
+VoucherJobRegistry.php` mapea un `voucherType` string a `[model, service,
+state]`:
+
+| `voucherType` | Modelo | Service | Campo de estado |
+|---|---|---|---|
+| `order` | `Order` | `OrderLifecycleService` | `state` |
+| `shop` | `Shop` | `ShopLcXmlService` | `state` |
+| `referral_guide` | `ReferralGuide` | `ReferralGuideLifecycleService` | `state` |
+| `shop_retention` | `Shop` | `RetentionXmlService` | `state_retencion` |
+
+Cada uno de los 4 services recibe `Company` como parámetro explícito en
+`process(Model $model, Company $company)` — **no se resuelve vía
+`Auth::user()->company`**, porque el Job corre sin usuario autenticado (fuera
+del ciclo de request HTTP). El modelo se busca con
+`$model::withoutGlobalScope('branch')->find($id)`: `App\BranchScope`
+depende de `Auth::user()` para filtrar por sucursal, y sin usuario
+autenticado no tiene de dónde resolver la compañía.
+
+**Dispatch** (`ProcessVoucherJob::dispatch($voucherType, $modelId,
+$companyId)->afterCommit()`) ocurre en:
+- Los 4 endpoints `process()` (`OrderLifecycleController`,
+  `ShopLifecycleController`, `RetentionController`,
+  `ReferralGuideLifecycleController`) — responden `succes:true` de inmediato,
+  **no** con el resultado final del SRI. El frontend debe hacer *polling*
+  del estado (`GET` del recurso) en vez de leer el resultado del POST/GET de
+  `process()`.
+- Los 3 disparadores automáticos al crear el comprobante
+  (`OrderStoreService::sendToSRI`, `ShopStoreService::sendVouchers`,
+  `ReferralGuideStoreService::createReferralGuide`).
+- El flujo de lote por Excel (`OrderLotController::store`) — un job por cada
+  fila del lote, en vez de firmar+enviar 50 órdenes seguidas dentro del
+  mismo request.
+
+`ShouldBeUnique` + `WithoutOverlapping` (clave `voucher:{type}:{id}`) evitan
+que un doble-click encole el mismo comprobante dos veces.
+
+### 2.2 — Reintento manual, no el backoff nativo de Laravel
+
+Como §2.3 documenta, `SriSoapService::send()/authorize()` atrapan sus
+propias excepciones y nunca las relanzan — el retry automático de Laravel
+(basado en excepciones no capturadas) **nunca se dispara**. Por eso
+`ProcessVoucherJob::handle()` llama a `process()` y después **revisa el
+`state` del modelo** para decidir si reintentar:
+
+```php
+if ($this->attempts() < $this->tries && $this->stillPending($model->{$stateField})) {
+    $this->release(self::BACKOFF[...]); // [30, 60, 120, 180, 300, 300, 600, 600]
+}
+```
+
+`stillPending()` es el inverso de `VoucherStates::FINAL_STATES`
+(`AUTHORIZED`, `CANCELED`, `PENDIENTE DE ANULAR`) — **incluye `RETURNED` y
+`REJECTED`**, no solo los estados "en curso" (`SIGNED`/`SENDED`/`RECEIVED`/
+`IN_PROCESS`). Esto no es opcional: `process()` trata `RETURNED`/`REJECTED`
+como "reconstruir XML y reenviar" (ver el `match` de estado en cada
+`*LifecycleService::process()`), así que si el Job no los considera
+"pendientes" deja de reintentar comprobantes rechazados por el SRI después
+de un solo intento — fue justamente el primer bug encontrado en producción
+de este mecanismo.
+
+Con 8 intentos agotados sin avanzar, el comprobante queda en su último
+estado (visible en el listado) — el mismo botón "procesar" del frontend
+sirve de reintento manual una vez expira `uniqueFor` (15 min).
+
+### 2.3 — Reenvío automático tras `EN_PROCESO` repetido
+
+Si `authorize()` consulta y el SRI devuelve `EN_PROCESO` **3 veces
+seguidas**, se fuerza un reenvío del mismo XML firmado (no se reconstruye ni
+se re-firma) en vez de seguir solo consultando. Contador por comprobante en
+columnas `in_process_attempts`/`in_process_attempts_retention` (no puede
+vivir en `attempts()` del Job, que cuenta *todos* los reintentos —
+firma+envío incluidos — no específicamente cuántas veces seguidas dio
+`EN_PROCESO`). Lógica centralizada en
+`SriSoapService::saveAuthorizationResult()` (`MAX_IN_PROCESS_ATTEMPTS = 3`),
+parametrizada vía `inProcessAttemptsField` para que cada uno de los 4
+services pase su propio campo.
+
+### 2.4 — Worker de colas: reiniciar tras cada cambio de código (dev)
+
+`compose.yaml` (dev) monta el código como bind mount (`.:/var/www/html`) en
+el servicio `queue`. `php artisan queue:work` es un **proceso de larga
+duración**: PHP no relee una clase ya cargada en memoria aunque el archivo
+cambie en disco. Editar un Job/Service y no reiniciar el worker hace que
+siga corriendo la versión vieja — causó errores fantasma en logs varias
+veces durante el desarrollo de este mecanismo. Reiniciar con:
+
+```bash
+docker restart facec-web-queue-1
+```
+
+En producción (`compose.prod.yaml`) el servicio `queue` usa la imagen
+horneada (sin bind mount) — cada `deployment/deploy.sh` (que hace `build
+app` + `up -d`) recrea el container `queue` automáticamente con el código
+nuevo, no requiere este paso manual.
+
+## 3. Errores/mejoras compartidos (no específicos de Ventas o Compras)
+
+### 3.1 — Excepciones SOAP silenciadas
 
 `OrderSriService::sendLot/authorizeLot` y `SriSoapService::send/authorize`
 capturan `\Exception` y solo hacen `info('... error CODE: '.$e->getCode())`
@@ -59,17 +165,20 @@ capturan `\Exception` y solo hacen `info('... error CODE: '.$e->getCode())`
 completo ni el stacktrace, y el comprobante queda en el mismo estado sin
 ninguna señal visible de que algo falló — dificulta diagnosticar timeouts o
 caídas del servicio SRI. Afecta a `SriSoapService` en general, por lo tanto
-a Ventas y Compras por igual.
+a Ventas y Compras por igual. Es también la razón por la que §2.2 tiene que
+revisar el `state` en vez de confiar en excepciones para el retry del Job.
 
-## 3. Puntos de mejora generales
+## 4. Puntos de mejora generales
 
 - Reemplazar `info()` por `Log::error()` con contexto completo
-  (`$e->getMessage()`, id del comprobante) en los catch de SOAP (§2.1).
-- Unificar el flujo con `Shop`/`ReferralGuide` en un solo servicio genérico
-  parametrizado por tipo de comprobante, ya que `VoucherLifecycleService`
-  y `SriSoapService` ya están diseñados para ser reutilizables (parámetros
-  `xmlField`, `stateField`, etc.) pero cada builder de XML sigue viviendo
-  por separado.
+  (`$e->getMessage()`, id del comprobante) en los catch de SOAP (§3.1).
+- ~~Unificar el flujo con `Shop`/`ReferralGuide` en un solo servicio
+  genérico parametrizado por tipo de comprobante~~ — la capa de *dispatch*
+  ya está unificada (`ProcessVoucherJob` + `VoucherJobRegistry`, §2.1), pero
+  cada `*LifecycleService`/`*XmlService` sigue siendo una implementación
+  separada (mismo `match` de estado, mismo `saveAndSign()`/`send()`/
+  `authorize()`, pero 4 clases). Unificarlas de verdad en un solo servicio
+  parametrizado por tipo sigue pendiente.
 
 Puntos de mejora específicos de cada módulo están en
 [ventas.md](./ventas.md) y [compras.md](./compras.md).

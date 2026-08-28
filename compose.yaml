@@ -24,6 +24,19 @@ services:
             - mysql
             - redis
             - go-signer
+    queue:
+        image: 'sail-8.5/app'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - mysql
+            - go-signer
+        command: php artisan queue:work --sleep=3
     go-signer:
         build:
             context: './go-signer'

@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Order\Order;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -27,7 +28,7 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
         $this->hasBase5 = ! $this->beforeTaxChange && $this->companyBase5;
     }
 
-    public function query()
+    public function query(): Builder
     {
         $baseField = $this->beforeTaxChange ? 'base12' : 'base15';
         $ivaField = $this->beforeTaxChange ? 'iva' : 'iva15';

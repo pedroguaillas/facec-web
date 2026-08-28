@@ -3,24 +3,33 @@
 namespace App\Http\Controllers\Order;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessVoucherJob;
 use App\Models\Order\Order;
 use App\Services\Order\OrderLifecycleService;
 use App\Services\Order\OrderSriService;
+use App\StaticClasses\VoucherStates;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderLifecycleController extends Controller
 {
-    public function process(Order $order, OrderLifecycleService $service): JsonResponse
+    public function process(Order $order): JsonResponse
     {
-        try {
-            $service->process($order);
-        } catch (\Throwable $e) {
-            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        $company = Auth::user()->company;
+
+        if (! $company?->active_voucher) {
+            return response()->json(['succes' => false, 'message' => 'La facturación electrónica no está activa para esta empresa.'], 422);
         }
 
-        return response()->json(['succes' => true, 'message' => 'Comprobante procesado con éxito.', 'order' => $order->fresh()]);
+        if (in_array($order->state, VoucherStates::FINAL_STATES, true)) {
+            return response()->json(['succes' => false, 'message' => 'El comprobante ya fue procesado.', 'order' => $order], 422);
+        }
+
+        ProcessVoucherJob::dispatch('order', $order->id, $company->id)->afterCommit();
+
+        return response()->json(['succes' => true, 'message' => 'Comprobante en proceso.', 'order' => $order->fresh()]);
     }
 
     public function cancel(Order $order, OrderLifecycleService $service): JsonResponse

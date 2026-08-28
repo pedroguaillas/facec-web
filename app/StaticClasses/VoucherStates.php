@@ -27,4 +27,7 @@ class VoucherStates
     const CANCELED = 'ANULADO';
 
     const PENDING_CANCELATION = 'PENDIENTE DE ANULAR';
+
+    /** Estados finales: ya no se debe volver a firmar/enviar/autorizar el comprobante. */
+    const FINAL_STATES = [self::AUTHORIZED, self::CANCELED, self::PENDING_CANCELATION];
 }

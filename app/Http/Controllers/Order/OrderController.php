@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Order;
 
+use App\Exports\OrderExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\OrderStoreRequest;
 use App\Http\Requests\Order\OrderUpdateRequest;
@@ -20,6 +21,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class OrderController extends Controller
 {
@@ -87,6 +90,18 @@ class OrderController extends Controller
     public function printf(Order $order, OrderPdfService $service)
     {
         return $service->buildPrintPdf($order->id)->stream("{$order->serie}.pdf");
+    }
+
+    public function export(string $yearMonth): BinaryFileResponse
+    {
+        [$year, $month] = explode('-', $yearMonth);
+        $company = Auth::user()->company;
+        $branch = $company->branches()->orderBy('created_at')->first();
+
+        return Excel::download(
+            new OrderExport($branch->id, $year, $month, (bool) $company->base5),
+            "ventas-{$yearMonth}.xlsx"
+        );
     }
 
     /**

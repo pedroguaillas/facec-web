@@ -20,6 +20,9 @@ class SriSoapService
 
     private const CONSULTA_PROD = 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/ConsultaComprobante?wsdl';
 
+    /** Consultas seguidas en EN_PROCESO antes de forzar un reenvío del XML firmado. */
+    private const MAX_IN_PROCESS_ATTEMPTS = 3;
+
     // ─── WSDL resolution ──────────────────────────────────────────────────────
 
     public function receiptWsdl(int $environment): string
@@ -175,8 +178,9 @@ class SriSoapService
         string $extraDetailField = 'extra_detail',
         ?string $authorizationField = 'authorization',
         ?callable $onAuthorized = null,
+        ?string $inProcessAttemptsField = null,
     ): void {
-        if (in_array($model->{$stateField}, [VoucherStates::AUTHORIZED, VoucherStates::CANCELED])) {
+        if (in_array($model->{$stateField}, VoucherStates::FINAL_STATES, true)) {
             return;
         }
 
@@ -202,6 +206,7 @@ class SriSoapService
                 authorizationField: $authorizationField,
                 autorizacion: $autorizacion,
                 onAuthorized: $onAuthorized,
+                inProcessAttemptsField: $inProcessAttemptsField,
             );
         } catch (\Exception $e) {
             info('SRI authorize error CODE: '.$e->getCode());
@@ -211,6 +216,10 @@ class SriSoapService
     /**
      * Aplica el resultado de autorización del SRI sobre el modelo.
      * Usado tanto en authorize() individual como en authorizeLot() de SriOrderService.
+     *
+     * @param  string|null  $inProcessAttemptsField  Campo contador de consultas seguidas en EN_PROCESO.
+     *                                               Si se pasa, tras MAX_IN_PROCESS_ATTEMPTS se resetea
+     *                                               y el estado se fuerza a SIGNED para forzar un reenvío.
      */
     public function saveAuthorizationResult(
         Model $model,
@@ -221,6 +230,7 @@ class SriSoapService
         string $extraDetailField = 'extra_detail',
         ?string $authorizationField = 'authorization',
         ?callable $onAuthorized = null,
+        ?string $inProcessAttemptsField = null,
     ): void {
         switch ($autorizacion->estado) {
             case VoucherStates::AUTHORIZED:
@@ -259,7 +269,22 @@ class SriSoapService
                 break;
 
             default:
-                $model->{$stateField} = VoucherStates::IN_PROCESS;
+                if ($inProcessAttemptsField) {
+                    $attempts = ((int) $model->{$inProcessAttemptsField}) + 1;
+
+                    if ($attempts >= self::MAX_IN_PROCESS_ATTEMPTS) {
+                        // Reinicia el contador y fuerza SIGNED: el próximo process() del Job
+                        // cae en la rama `elseif ($state === SIGNED)` y reenvía el mismo XML
+                        // firmado (no se reconstruye ni se re-firma).
+                        $model->{$inProcessAttemptsField} = 0;
+                        $model->{$stateField} = VoucherStates::SIGNED;
+                    } else {
+                        $model->{$inProcessAttemptsField} = $attempts;
+                        $model->{$stateField} = VoucherStates::IN_PROCESS;
+                    }
+                } else {
+                    $model->{$stateField} = VoucherStates::IN_PROCESS;
+                }
                 $model->save();
                 break;
         }

@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessVoucherJob;
 use App\Models\Shop\Shop;
 use App\Services\Shop\Retention\RetentionPdfService;
 use App\Services\Shop\Retention\RetentionXmlService;
+use App\StaticClasses\VoucherStates;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -17,17 +20,23 @@ class RetentionController extends Controller
         return $service->stream($id);
     }
 
-    public function process(Shop $shop, RetentionXmlService $service): JsonResponse
+    public function process(Shop $shop): JsonResponse
     {
         abort_unless($shop->serie_retencion !== null, 404);
 
-        try {
-            $service->process($shop);
-        } catch (\Throwable $e) {
-            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        $company = Auth::user()->company;
+
+        if (! $company?->active_voucher) {
+            return response()->json(['succes' => false, 'message' => 'La facturación electrónica no está activa para esta empresa.'], 422);
         }
 
-        return response()->json(['succes' => true, 'message' => 'Retención procesada con éxito.', 'shop' => $shop->fresh()]);
+        if (in_array($shop->state_retencion, VoucherStates::FINAL_STATES, true)) {
+            return response()->json(['succes' => false, 'message' => 'La retención ya fue procesada.', 'shop' => $shop], 422);
+        }
+
+        ProcessVoucherJob::dispatch('shop_retention', $shop->id, $company->id)->afterCommit();
+
+        return response()->json(['succes' => true, 'message' => 'Retención en proceso.', 'shop' => $shop->fresh()]);
     }
 
     public function cancel(Shop $shop, RetentionXmlService $service): JsonResponse

@@ -2,6 +2,7 @@
 
 namespace App\Services\ReferralGuide;
 
+use App\Jobs\ProcessVoucherJob;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
@@ -38,7 +39,7 @@ class ReferralGuideStoreService
         });
 
         if (! empty($data['send'])) {
-            app(ReferralGuideLifecycleService::class)->process($referralguide);
+            ProcessVoucherJob::dispatch('referral_guide', $referralguide->id, $this->company->id)->afterCommit();
         }
 
         return $referralguide;

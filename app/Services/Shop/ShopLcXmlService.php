@@ -9,7 +9,6 @@ use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
 use App\Xml\SettlementOnPurchaseBuilder;
-use Illuminate\Support\Facades\Auth;
 
 class ShopLcXmlService
 {
@@ -18,10 +17,8 @@ class ShopLcXmlService
         private SriSoapService $sriSoapService
     ) {}
 
-    public function process(Shop $shop)
+    public function process(Shop $shop, Company $company)
     {
-        $company = Auth::user()->company;
-
         if (! $company->active_voucher) {
             return;
         }
@@ -81,7 +78,8 @@ class ShopLcXmlService
     {
         $this->sriSoapService->authorize(
             model: $shop,
-            onAuthorized: fn () => null
+            onAuthorized: fn () => null,
+            inProcessAttemptsField: 'in_process_attempts',
         );
     }
 }

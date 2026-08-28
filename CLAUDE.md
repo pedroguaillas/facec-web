@@ -1,3 +1,76 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+`facec-web` — backend API for Ecuadorian SRI electronic invoicing (facturación electrónica), migrated from Lumen to **Laravel 13 + Sanctum**. Pure JSON API, consumed by a separate Next.js frontend (`facec-front-next`). Runs entirely in Docker via Laravel Sail — PHP is not required on the host.
+
+## Commands
+
+```bash
+./vendor/bin/sail up -d                     # start (API on http://localhost/api — port 80, not 8000)
+./vendor/bin/sail artisan migrate --seed
+```
+
+### Tests
+
+`.env` has `DB_CONNECTION=mysql` / `DB_HOST=mysql` — tests need the mysql container, so they must run inside the Sail container, not as bare `php artisan test` on the host:
+
+```bash
+./vendor/bin/sail test --compact
+./vendor/bin/sail test --compact --filter=TestName
+# if `sail test` hangs (no tty), use docker exec on the running app container instead:
+docker exec facec-web-laravel.test-1 php artisan test --compact --filter=TestName
+```
+
+### Lint / static analysis
+
+```bash
+vendor/bin/pint --dirty --format agent   # run after any PHP edit, before finishing
+vendor/bin/phpstan analyse                # composer types:check
+composer test                             # config:clear + lint:check + types:check + full suite
+```
+
+## Architecture
+
+### Multi-tenancy: Company → Branch, scoped implicitly
+
+- `User` → `CompanyUser` (`level`/`level_id`, e.g. `level_id` = company id) → `Company` → `Branch`.
+- Most domain models extend `BaseModel`, which applies the `BranchScope` global scope: it resolves the branch as `Branch::where('company_id', $company->id)->orderBy('created_at')->first()` — i.e. **always the oldest branch of the authenticated user's company**. In a multi-branch company, only that first branch's records are visible/creatable through the API. This is a known, documented limitation (see `docs/productos.md` §7.3) — don't "fix" it incidentally as a side effect of unrelated work.
+- Controllers that create records resolve the branch the same explicit way, to stay consistent with the global scope.
+
+### Auth
+
+- Sanctum bearer tokens. `POST /api/login` (`{user, password}`) → `{token, user, permissions}`; `Authorization: Bearer <token>` on everything else; `POST /api/logout` revokes the current token.
+- `'role'` middleware alias → `CheckRoleMiddleware`, checks `$user->hasRole($role)` against `UserType` (`admin` / `client`, seeded by `UserTypeSeeder`). Applied per-route-group in `routes/api.php`, not globally.
+
+### SRI e-invoicing flow (the core domain)
+
+Shared by Ventas (`Order`), Compras (`Shop`), and Guía de Remisión (`ReferralGuide`) — same state machine and services, one XML builder per voucher type:
+
+- **State machine**: `App\StaticClasses\VoucherStates` — `CREADO` → `FIRMADO` → `ENVIADO` → `RECIBIDA`/`DEVUELTA` → `EN_PROCESO` → `AUTORIZADO`/`NO AUTORIZADO`, plus `ANULADO`.
+- **`VoucherLifecycleService`** + **`SriSoapService`** drive the transitions for every voucher type (parameterized by `xmlField`/`stateField`); each type builds its own XML via `app/Xml/*Builder.php` (`InvoiceBuilder`, `CreditNoteBuilder`, `SettlementOnPurchaseBuilder`, `ReferralGuideBuilder`, `RetentionBuilder`).
+- **Signing does not happen in PHP.** `VoucherLifecycleService::saveAndSign()` calls out over HTTP to a separate Go microservice (`go-signer/`, service `go-signer` in `compose.yaml`/`compose.prod.yaml`) via `XmlSignerService`; URL comes from `config('services.xml_signer.url')` / env `XML_SIGNER_URL`. If `company->cert_dir` is `null`, signing is skipped by design and the voucher stays at `CREADO` — that's expected, not a bug.
+- Ventas has a dedicated orchestration layer (`OrderLifecycleService` + `OrderSriService`); Compras currently does it inline in `ShopLcXmlService`, with no separate Lifecycle/Sri layer yet (see `docs/facturacion-electronica/README.md`).
+- Certificates live at `storage/app/private/cert/`, logos at `storage/app/public/logos/` (needs `php artisan storage:link`) — neither is part of DB dumps, they're copied separately when migrating real data.
+- **Processing is asynchronous (queued)**, not inline in the HTTP request: `ProcessVoucherJob` + `VoucherJobRegistry` (`app/Jobs/`, `app/StaticClasses/VoucherJobRegistry.php`) drive all 4 voucher types through a single generic job. The 4 `process()` endpoints dispatch and return immediately (`succes:true`, not the SRI result) — frontend must poll. Full design, retry/backoff rules, and the dev-only "restart the `queue` worker after editing code" gotcha are in `docs/facturacion-electronica/README.md` §2.
+
+### `docs/` — read before touching a module
+
+Each domain module has a doc under `docs/`: `clientes.md`, `productos.md`, `ventas.md`, `compras.md`, `guias-remision.md`, `proveedores.md`, `transportistas.md`, plus `docs/facturacion-electronica/` for the shared e-invoicing flow. These capture business rules, known bugs, and open "points of improvement" that aren't obvious from the code alone. Check the relevant doc before making non-trivial changes to a module, and update it when behavior changes.
+
+### API response envelope quirk
+
+Success/failure JSON responses across the app use the key `'succes'` (missing the second "s"), not `'success'` — consistently, in ~30 places (controllers, the exception handlers in `bootstrap/app.php`). This is an established typo baked into the frontend contract, not something to silently "fix" in passing — changing it would break API consumers.
+
+### Production
+
+- Always `compose.prod.yaml` + `.env.production`, never the dev `.env`. Caddy (`docker/production/Caddyfile`) terminates TLS and reverse-proxies to `app` over plain HTTP inside the docker network; `app` has no published port, so it's only reachable through Caddy.
+- `queue` service (same `facec-web-app:latest` image as `app`, no bind mount) runs `php artisan queue:work` — without it nothing in `ProcessVoucherJob` actually processes, comprobantes just sit queued. `deployment/deploy.sh` only explicitly builds `app`, but `up -d` still (re)creates `queue` from the freshly built image.
+- Migrations are run manually after deploy (`deployment/deploy.sh` only echoes a reminder) — don't forget when a deploy adds a migration.
+- VPS access and prod runbooks (log tailing, stuck-invoice troubleshooting, cert re-encoding) are documented in `README.md` under "Producción (VPS)" — check there first for prod incidents.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

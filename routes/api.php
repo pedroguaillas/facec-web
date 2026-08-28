@@ -35,6 +35,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::post('orders/lot', [OrderLotController::class, 'store'])->name('orders.lot.store');
+    Route::get('orders/export/{yearMonth}', [OrderController::class, 'export'])
+        ->where('yearMonth', '\d{4}-\d{2}')
+        ->name('orders.export');
     Route::get('orders/{order}', [OrderController::class, 'edit'])->name('orders.edit');
     Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
     Route::get('orders/{order}/pdf', [OrderController::class, 'pdf'])->name('orders.pdf');

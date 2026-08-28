@@ -218,11 +218,16 @@ regenera ítems y adicionales — **nunca toca los reembolsos**. Al editar una
 factura de reembolso, los `Repayment`/`RepaymentTax` originales quedan
 huérfanos y desincronizados de los ítems recreados.
 
-### 5.6 — `OrderExport` está definido pero nunca se invoca
+### 5.6 — ~~`OrderExport` está definido pero nunca se invoca~~ (resuelto)
 
-`app/Exports/OrderExport.php` no está referenciado por ninguna ruta,
-controlador, comando ni job (confirmado por grep en `app/` y `routes/`). O es
-código muerto, o falta cablear el endpoint de exportación que debería usarlo.
+Ya cableado: `GET orders/export/{yearMonth}` (`OrderController::export`,
+`routes/api.php`) descarga el xlsx del mes vía `OrderExport`. De paso se
+encontró y corrigió un bug latente: `OrderExport::query()` no declaraba tipo
+de retorno, incompatible con `Maatwebsite\Excel\Concerns\FromQuery::query()`
+— cualquier intento de usar la clase tiraba `Fatal error` (nunca se había
+detectado porque nada la invocaba). `ShopExport` tiene el mismo problema de
+tipo y **tampoco está enrutada** — si se cablea un endpoint equivalente para
+Compras, aplicar el mismo fix (`query(): Builder`) antes.
 
 ### 5.7 — Typo `'succes'` en las respuestas de `OrderLifecycleController`
 

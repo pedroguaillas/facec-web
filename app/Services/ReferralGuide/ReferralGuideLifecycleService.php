@@ -2,13 +2,13 @@
 
 namespace App\Services\ReferralGuide;
 
+use App\Models\Company;
 use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\ReferralGuide\ReferralGuideItem;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
 use App\Xml\ReferralGuideBuilder;
-use Illuminate\Support\Facades\Auth;
 
 class ReferralGuideLifecycleService
 {
@@ -17,10 +17,8 @@ class ReferralGuideLifecycleService
         private SriSoapService $sriSoapService
     ) {}
 
-    public function process(ReferralGuide $referralguide)
+    public function process(ReferralGuide $referralguide, Company $company)
     {
-        $company = Auth::user()->company;
-
         if (! $company->active_voucher) {
             return;
         }
@@ -75,7 +73,8 @@ class ReferralGuideLifecycleService
     {
         $this->sriSoapService->authorize(
             model: $referralGuide,
-            onAuthorized: fn () => null
+            onAuthorized: fn () => null,
+            inProcessAttemptsField: 'in_process_attempts',
         );
     }
 }

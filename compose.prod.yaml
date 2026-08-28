@@ -24,6 +24,24 @@ services:
             go-signer:
                 condition: service_healthy
 
+    queue:
+        image: facec-web-app:latest
+        restart: unless-stopped
+        env_file:
+            - .env.production
+        volumes:
+            - storage-app:/var/www/html/storage/app
+        networks:
+            - app
+        depends_on:
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            go-signer:
+                condition: service_healthy
+        command: php artisan queue:work --sleep=3
+
     go-signer:
         build:
             context: ./go-signer

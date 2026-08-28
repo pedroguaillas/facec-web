@@ -2,13 +2,12 @@
 
 namespace App\Services\Shop;
 
+use App\Jobs\ProcessVoucherJob;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Shop\Shop;
 use App\Services\Shop\Retention\RetentionTotalsCalculator;
-use App\Services\Shop\Retention\RetentionXmlService;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -126,11 +125,11 @@ class ShopStoreService
         $send = ! empty($data['send']);
 
         if ($send && (int) $shop->voucher_type === 3) {
-            App::make(ShopLcXmlService::class)->process($shop);
+            ProcessVoucherJob::dispatch('shop', $shop->id, $this->company->id)->afterCommit();
         }
 
         if ($send && ! empty($data['app_retention']) && ! empty($data['taxes'])) {
-            App::make(RetentionXmlService::class)->process($shop);
+            ProcessVoucherJob::dispatch('shop_retention', $shop->id, $this->company->id)->afterCommit();
         }
     }
 }

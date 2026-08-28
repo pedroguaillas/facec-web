@@ -104,8 +104,9 @@ docker compose -f compose.prod.yaml --env-file .env.production logs -f app
 
 ### Facturas atascadas en estado `CREADO`
 
-Causas conocidas (sin scheduler/retry automático — ver `app/Services/Order/OrderLifecycleService.php`, `app/Services/VoucherLifecycleService.php`):
+El procesamiento corre por cola (`ProcessVoucherJob`, ver `docs/facturacion-electronica/README.md` §2) con reintento automático (hasta 8 intentos, backoff de 30s a 10min) — un comprobante recién creado puede tardar unos minutos en avanzar solo. Si sigue en `CREADO` después de eso:
 
+- **Container `queue` caído o no corre** (primer chequeo): `docker compose -f compose.prod.yaml --env-file .env.production ps` — sin él, los jobs se quedan encolados sin procesar. `docker compose -f compose.prod.yaml --env-file .env.production logs -f queue`.
 - **Certificado `.p12` con encoding BER en vez de DER estricto** — el firmador Go (`go-signer`) exige DER estricto; error en logs: `"Failed to decode certificate: pkcs12: error reading P12 data: asn1: syntax error: indefinite length found (not DER)"`. Fix (reencodear con openssl, requiere el password guardado en `companies.pass_cert`):
 
   ```bash

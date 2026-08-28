@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Order;
 
+use App\Jobs\ProcessVoucherJob;
 use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\EmisionPoint;
@@ -124,7 +125,10 @@ class OrderLotController extends BaseController
                 'customer_id' => $customer[0]->id,
                 'lot_id' => $lot->id,
                 'total' => $subTotal + $iva,
-                'pay_method' => $company->pay_method,
+                // Consumidor final (identificación 9999999999999): forma de pago 01
+                // (SIN UTILIZACIÓN DEL SISTEMA FINANCIERO) en vez de la de la empresa —
+                // el Excel del lote no trae columna de forma de pago por fila.
+                'pay_method' => $customer[0]->identication === '9999999999999' ? '01' : $company->pay_method,
             ];
 
             $input["base{$product->percentage}"] = $subTotal;
@@ -150,9 +154,11 @@ class OrderLotController extends BaseController
             $item->orderitems()->create($orderItems[$i++]);
         }
 
-        // Firmar (sin enviar individualmente, se envía como lote)
+        // Cada comprobante se encola por separado (mismo mecanismo que el resto del
+        // módulo): firmar+enviar+autorizar 50 órdenes síncronas en el request bloquearía
+        // la respuesta HTTP hasta minutos.
         foreach ($orders as $item) {
-            $this->orderXmlService->process($item, true);
+            ProcessVoucherJob::dispatch('order', $item->id, $company->id)->afterCommit();
         }
 
         // Crea Lote

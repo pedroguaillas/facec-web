@@ -2,6 +2,7 @@
 
 namespace App\Services\Order;
 
+use App\Models\Company;
 use App\Models\Order\Lot;
 use App\Models\Order\Order;
 use App\Models\Order\OrderItem;
@@ -21,10 +22,8 @@ class OrderLifecycleService
         private OrderSriService $sri,
     ) {}
 
-    public function process(Order $order, bool $send = true): void
+    public function process(Order $order, Company $company, bool $send = true): void
     {
-        $company = Auth::user()->company;
-
         if (! $company->active_voucher) {
             return;
         }
