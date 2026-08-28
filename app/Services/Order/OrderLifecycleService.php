@@ -38,6 +38,17 @@ class OrderLifecycleService
                 return;
             }
 
+            // Sincroniza la fecha en el MISMO objeto $order que llega hasta send().
+            // buildXml() también corrige la fecha, pero lo hace sobre una consulta
+            // propia (objeto distinto) — sin este sync, OrderSriService::send() ve
+            // la fecha vieja en memoria y descarta la firma recién hecha, reseteando
+            // a CREADO sin llegar a enviar nada al SRI (bug real: comprobantes de un
+            // lote que cruzan medianoche podían quedar pegados en CREADO).
+            $tz = config('app.timezone');
+            if (! Carbon::createFromFormat('Y-m-d', $order->date, $tz)->isToday()) {
+                $order->date = Carbon::today($tz)->format('Y-m-d');
+            }
+
             $this->lifecycle->saveAndSign(
                 company: $company,
                 model: $order,

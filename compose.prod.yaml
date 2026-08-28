@@ -41,6 +41,11 @@ services:
             go-signer:
                 condition: service_healthy
         command: php artisan queue:work --sleep=3
+        # La imagen trae un HEALTHCHECK (Dockerfile.prod) que hace `curl http://localhost/up`,
+        # pensado para el container `app` (nginx+php-fpm vía supervisord). Este container
+        # solo corre `queue:work`, no sirve HTTP — el healthcheck heredado fallaría siempre.
+        healthcheck:
+            disable: true
 
     go-signer:
         build:
