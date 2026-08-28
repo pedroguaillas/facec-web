@@ -42,7 +42,7 @@ test('--dry-run no encola nada', function () {
     Queue::assertNothingPushed();
 });
 
-test('por defecto solo encola los creados hoy, --all incluye los de antes', function () {
+test('por defecto solo encola los creados/tocados hoy, --all incluye los de antes', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
@@ -50,8 +50,11 @@ test('por defecto solo encola los creados hoy, --all incluye los de antes', func
     $customer = Customer::factory()->create(['branch_id' => $branch->id]);
 
     $today = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => $customer->id, 'state' => VoucherStates::SAVED]);
-    $yesterday = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => $customer->id, 'state' => VoucherStates::SAVED]);
-    $yesterday->forceFill(['created_at' => now()->subDay()])->saveQuietly();
+    // Viejo de verdad: created_at Y updated_at de ayer (no solo uno de los dos —
+    // un lote subido antes de medianoche deja created_at de "ayer" pero updated_at
+    // de "hoy" en el primer intento fallido, y ese caso sí debe encolarse).
+    $old = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => $customer->id, 'state' => VoucherStates::SAVED]);
+    $old->forceFill(['created_at' => now()->subDay(), 'updated_at' => now()->subDay()])->saveQuietly();
 
     $this->artisan('vouchers:reprocess-stuck')->assertSuccessful();
 
@@ -61,6 +64,23 @@ test('por defecto solo encola los creados hoy, --all incluye los de antes', func
     Queue::fake();
     $this->artisan('vouchers:reprocess-stuck --all')->assertSuccessful();
     Queue::assertPushed(ProcessVoucherJob::class, 2);
+});
+
+test('creado antes de medianoche pero tocado hoy (updated_at) igual se encola', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $branch = Branch::factory()->for($company)->create();
+    $customer = Customer::factory()->create(['branch_id' => $branch->id]);
+
+    $order = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => $customer->id, 'state' => VoucherStates::SAVED]);
+    // Simula un lote subido antes de medianoche: created_at queda "ayer", pero el
+    // primer intento fallido de anoche/hoy temprano actualiza updated_at a "hoy".
+    $order->forceFill(['created_at' => now()->subDay()])->saveQuietly();
+
+    $this->artisan('vouchers:reprocess-stuck')->assertSuccessful();
+
+    Queue::assertPushed(ProcessVoucherJob::class, 1);
 });
 
 test('tipo desconocido reporta error y no encola', function () {

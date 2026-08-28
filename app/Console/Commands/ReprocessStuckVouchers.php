@@ -52,7 +52,13 @@ class ReprocessStuckVouchers extends Command
             });
 
         if ($since) {
-            $query->whereDate('created_at', '>=', $since);
+            // No solo created_at: un lote subido antes de medianoche crea filas con
+            // created_at de "ayer" aunque el problema (y el último intento fallido,
+            // que sí actualiza updated_at) sea de hoy.
+            $query->where(function (Builder $q) use ($since) {
+                $q->whereDate('created_at', '>=', $since)
+                    ->orWhereDate('updated_at', '>=', $since);
+            });
         }
 
         // Solo aplica a liquidaciones de compra (voucher_type=3); el resto de Shops
