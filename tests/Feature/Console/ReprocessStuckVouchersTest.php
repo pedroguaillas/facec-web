@@ -42,6 +42,27 @@ test('--dry-run no encola nada', function () {
     Queue::assertNothingPushed();
 });
 
+test('por defecto solo encola los creados hoy, --all incluye los de antes', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $branch = Branch::factory()->for($company)->create();
+    $customer = Customer::factory()->create(['branch_id' => $branch->id]);
+
+    $today = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => $customer->id, 'state' => VoucherStates::SAVED]);
+    $yesterday = Order::factory()->create(['branch_id' => $branch->id, 'customer_id' => $customer->id, 'state' => VoucherStates::SAVED]);
+    $yesterday->forceFill(['created_at' => now()->subDay()])->saveQuietly();
+
+    $this->artisan('vouchers:reprocess-stuck')->assertSuccessful();
+
+    Queue::assertPushed(ProcessVoucherJob::class, 1);
+    Queue::assertPushed(ProcessVoucherJob::class, fn (ProcessVoucherJob $job) => (new ReflectionProperty($job, 'modelId'))->getValue($job) === $today->id);
+
+    Queue::fake();
+    $this->artisan('vouchers:reprocess-stuck --all')->assertSuccessful();
+    Queue::assertPushed(ProcessVoucherJob::class, 2);
+});
+
 test('tipo desconocido reporta error y no encola', function () {
     Queue::fake();
 

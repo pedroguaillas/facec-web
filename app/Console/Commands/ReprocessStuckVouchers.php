@@ -11,14 +11,19 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 
-#[Signature('vouchers:reprocess-stuck {--type=* : order|shop|referral_guide|shop_retention (por defecto: order)} {--dry-run : Solo listar, no encolar}')]
-#[Description('Reencola ProcessVoucherJob para todos los comprobantes que quedaron en un estado no final (CREADO, DEVUELTA, etc.) — para reprocesar en bloque en vez de uno por uno desde la interfaz.')]
+#[Signature('vouchers:reprocess-stuck {--type=* : order|shop|referral_guide|shop_retention (por defecto: order)} {--since= : Solo creados desde esta fecha (Y-m-d, por defecto: hoy)} {--all : Ignora el filtro de fecha, incluye comprobantes de cualquier día} {--dry-run : Solo listar, no encolar}')]
+#[Description('Reencola ProcessVoucherJob para los comprobantes que quedaron en un estado no final (CREADO, DEVUELTA, etc.) — para reprocesar en bloque en vez de uno por uno desde la interfaz. Por defecto solo toca los creados hoy.')]
 class ReprocessStuckVouchers extends Command
 {
     public function handle(): int
     {
         $types = $this->option('type') ?: ['order'];
         $dryRun = (bool) $this->option('dry-run');
+        $since = $this->option('all') ? null : ($this->option('since') ?: now()->toDateString());
+
+        if ($since) {
+            $this->comment("Filtrando comprobantes creados desde {$since} (usá --all para incluir todos).");
+        }
 
         foreach ($types as $type) {
             $config = VoucherJobRegistry::TYPES[$type] ?? null;
@@ -29,14 +34,14 @@ class ReprocessStuckVouchers extends Command
                 continue;
             }
 
-            $this->reprocessType($type, $config, $dryRun);
+            $this->reprocessType($type, $config, $dryRun, $since);
         }
 
         return self::SUCCESS;
     }
 
     /** @param array{model: class-string, service: class-string, state: string} $config */
-    private function reprocessType(string $type, array $config, bool $dryRun): void
+    private function reprocessType(string $type, array $config, bool $dryRun, ?string $since): void
     {
         $modelClass = $config['model'];
         $stateField = $config['state'];
@@ -45,6 +50,10 @@ class ReprocessStuckVouchers extends Command
             ->where(function (Builder $q) use ($stateField) {
                 $q->whereNull($stateField)->orWhereNotIn($stateField, VoucherStates::FINAL_STATES);
             });
+
+        if ($since) {
+            $query->whereDate('created_at', '>=', $since);
+        }
 
         // Solo aplica a liquidaciones de compra (voucher_type=3); el resto de Shops
         // nunca entra al ciclo de vida electrónico.
