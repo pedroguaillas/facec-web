@@ -50,8 +50,8 @@ class OrderLotController extends BaseController
             $limit++;
         }
 
-        if ($limit > 50) {
-            return response()->json(['msm' => 'Limite maximo permite 50 registros']);
+        if ($limit > 500) {
+            return response()->json(['msm' => 'Limite maximo permite 500 registros']);
         }
 
         if (! $all) {
