@@ -33,7 +33,6 @@ class CompanyUpdateRequest extends FormRequest
             'economic_activity' => ['sometimes', 'string', 'max:300'],
             'accounting' => ['sometimes'],
             'rimpe' => ['sometimes', 'nullable', 'integer'],
-            'micro_business' => ['sometimes', 'boolean'],
             'retention_agent' => ['sometimes', 'nullable', 'integer'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:15'],
             'enviroment_type' => ['sometimes', 'integer', 'in:1,2'],
@@ -45,6 +44,19 @@ class CompanyUpdateRequest extends FormRequest
             'logo' => ['sometimes', 'file', 'image', 'max:2048'],
             'cert' => ['sometimes', 'file', 'extensions:p12,pfx', 'max:2048'],
             'pass_cert' => ['nullable', 'required_with:cert', 'string', 'max:50'],
+            'base5' => ['sometimes', 'boolean'],
+            'base8' => ['sometimes', 'boolean'],
+            'tourism_from' => ['nullable', 'date'],
+            'tourism_to' => ['nullable', 'date', 'after_or_equal:tourism_from'],
+            'ice' => ['sometimes', 'boolean'],
+            'inventory' => ['sometimes', 'boolean'],
+            'pay_method' => ['sometimes', 'integer'],
+            'printf' => ['sometimes', 'boolean'],
+            'guia_in_invoice' => ['sometimes', 'boolean'],
+            'import_in_invoice' => ['sometimes', 'boolean'],
+            'import_in_invoices' => ['sometimes', 'boolean'],
+            'transport' => ['sometimes', 'boolean'],
+            'repayment' => ['sometimes', 'boolean'],
         ];
     }
 

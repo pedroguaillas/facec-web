@@ -21,9 +21,10 @@ class Company extends Model
         'company',
         'economic_activity',
         'accounting',
-        'micro_business',
         'retention_agent',
         'phone',
+        'active',
+        'active_voucher',
         'logo_dir',
         'cert_dir',
         'pass_cert',
@@ -62,8 +63,10 @@ class Company extends Model
     ];
 
     protected $casts = [
-        'micro_business' => 'boolean',
         'accounting' => 'boolean',
+        'active' => 'boolean',
+        'active_voucher' => 'boolean',
+        'base5' => 'boolean',
         'base8' => 'boolean',
         'tourism_from' => 'date',
         'tourism_to' => 'date',

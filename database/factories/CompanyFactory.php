@@ -13,7 +13,6 @@ class CompanyFactory extends Factory
             'company' => $this->faker->company(),
             'economic_activity' => $this->faker->sentence(4),
             'accounting' => $this->faker->boolean(),
-            'micro_business' => $this->faker->boolean(),
             'retention_agent' => $this->faker->optional()->numberBetween(100, 999),
             'phone' => $this->faker->numerify('09########'),
             'logo_dir' => 'logos/default.png',

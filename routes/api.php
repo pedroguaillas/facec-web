@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticationController;
+use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Carrier\CarrierController;
 use App\Http\Controllers\Company\AdminCompanyController;
 use App\Http\Controllers\Customer\CustomerController;
@@ -25,8 +26,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthenticationController::class, 'login']);
 
+Route::middleware('throttle:6,1')->group(function () {
+    Route::post('password/forgot', [PasswordController::class, 'forgot'])->name('password.forgot');
+    Route::post('password/reset', [PasswordController::class, 'reset'])->name('password.reset');
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthenticationController::class, 'logout']);
+    Route::post('password/change', [PasswordController::class, 'update'])->name('password.change');
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 

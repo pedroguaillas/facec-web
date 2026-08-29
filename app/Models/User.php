@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Mail\PasswordReset;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
@@ -80,5 +82,14 @@ class User extends Authenticatable
             'id',
             'level_id'
         );
+    }
+
+    /**
+     * El proyecto no usa notifications (solo Mailables en app/Mail), así que se
+     * reemplaza el Notification default de CanResetPassword por un Mailable propio.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        Mail::to($this->email)->send(new PasswordReset($this, $token));
     }
 }

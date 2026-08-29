@@ -9,6 +9,7 @@ use App\Http\Requests\Product\ProductStoreRequest;
 use App\Http\Requests\Product\ProductUpdateRequest;
 use App\Http\Resources\ProductResources;
 use App\Imports\ProductsImport;
+use App\Models\Company;
 use App\Models\Product\IceCataloge;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
@@ -147,10 +148,25 @@ class ProductController extends Controller
                 ->selectRaw("code AS value, CONCAT(percentage, '%') AS label")
                 ->get(),
             'iceCataloges' => $company->ice ? IceCataloge::get(['code', 'description']) : [],
-            'sriCategories' => ($company->transport || $company->base5)
-                ? SriCategory::get(['code', 'description', 'type'])
-                : [],
+            'sriCategories' => $this->sriCategoriesFor($company),
             'transport' => $company->transport,
         ];
+    }
+
+    /**
+     * @return Collection|array<int, mixed>
+     */
+    private function sriCategoriesFor(Company $company): Collection|array
+    {
+        $types = array_filter([
+            $company->transport ? 'transporte' : null,
+            $company->base5 ? 'ferreteria' : null,
+        ]);
+
+        if ($types === []) {
+            return [];
+        }
+
+        return SriCategory::whereIn('type', $types)->get(['code', 'description', 'type']);
     }
 }
