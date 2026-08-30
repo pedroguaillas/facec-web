@@ -110,12 +110,45 @@ adicionales, los productos y el cliente. `OrderController::create`/`edit`
 adjuntan además `emisionData()` (puntos de emisión, métodos de pago, tarifas
 IVA activas, flag `tourism`) para poblar el formulario.
 
-### Carga por lote (`OrderLotController::store`)
+### Carga por lote (`OrderController::storeLot` → `OrderLotService::store`)
 
-`app/Http/Controllers/Order/OrderLotController.php:26`. Sube un Excel
-(máx. 50 filas), valida clientes/productos existentes, crea un `Lot` y una
-`Order` por fila, y las firma individualmente. **Flujo a medio implementar**
-(ver §5).
+`app/Services/Order/OrderLotService.php:44`. Arquitectura de 4 piezas, single
+responsibility:
+
+- **`OrderLotStoreRequest`** (`app/Http/Requests/Order/`) — valida que venga
+  el archivo `lot` (`required|file|mimes:xlsx,xls,csv`).
+- **`OrderLotExcelReader`** (`app/Services/Order/`) — lee el Excel fila por
+  fila con PhpSpreadsheet (sin heading row: descarta la primera fila como
+  encabezado, columnas posicionales `[0]` identificación, `[2]` código,
+  `[3]` cantidad, `[4]` precio).
+- **`OrderLotService`** — orquesta todo el flujo (ver detalle abajo).
+- **`OrderController::storeLot`** — controlador delgado: llama al service,
+  atrapa `RuntimeException` para las 4 validaciones de negocio y responde
+  `['msm' => ...]`.
+
+Flujo en `OrderLotService::store()`:
+
+1. Lee el Excel, valida que no haya celdas en blanco y que el número de filas
+   no supere `OrderLotService::MAX_ROWS` (**2000**) — si no, lanza
+   `RuntimeException`.
+2. Resuelve clientes (`identication`) y productos (`code`) contra la
+   `branch_id` de la sucursal — si falta alguno, `RuntimeException`.
+3. Crea un `Lot` y, por cada fila, una `Order` con su `OrderItem` (misma
+   sucursal, mismo `lot_id`). Consumidor final (`9999999999999`) usa forma de
+   pago `01`; el resto usa `company->pay_method`.
+4. Inserta el adicional obligatorio `Order::REQUIRED_ADITIONAL` ("RUC
+   Proveedor") por cada orden, igual que en la creación individual
+   (`OrderStoreService::createOrderAditionals`) — antes del refactor esto
+   **no se insertaba** en el flujo de lote.
+5. Encola un `ProcessVoucherJob` por orden en la cola **`lots`**
+   (`->onQueue('lots')`), separada de la cola `default` que usan los
+   comprobantes creados uno a uno — así un lote de hasta 2000 filas no le
+   quita turno a un comprobante individual que llegue mientras tanto (ver
+   `compose.prod.yaml`, workers `queue`/`queue2`).
+
+Igual que antes del refactor, **no hay un flujo de "lote" a nivel SRI**: cada
+`Order` se firma/envía/autoriza individualmente vía `ProcessVoucherJob`, no
+existe agrupación de envío por lote (ver §5.2).
 
 ## 3. Validaciones y reglas de negocio
 
@@ -156,7 +189,7 @@ Todas bajo el grupo autenticado de `routes/api.php:34-45`.
 | GET | `orders` | Listado paginado + filtros | `OrderController::index` |
 | GET | `orders/create` | Datos para el formulario | `OrderController::create` |
 | POST | `orders` | Crear venta | `OrderController::store` |
-| POST | `orders/lot` | Carga por lote (Excel) | `OrderLotController::store` |
+| POST | `orders/lot` | Carga por lote (Excel) | `OrderController::storeLot` (`OrderLotService::store`) |
 | GET | `orders/{order}` | Detalle para edición | `OrderController::edit` |
 | PUT | `orders/{order}` | Actualizar venta | `OrderController::update` |
 | GET | `orders/{order}/pdf` | PDF del comprobante | `OrderController::pdf` |
@@ -174,34 +207,37 @@ aquí van los específicos del módulo Ventas general.
 
 ### 5.1 — `Lot::create()` descarta `date` y `voucher_type` (bug de fillable)
 
-`OrderLotController::store` crea el lote con `date` y `voucher_type`
-(`OrderLotController.php:91-98`), pero el `$fillable` de `Lot`
+`OrderLotService::store` crea el lote con `date` y `voucher_type`
+(`OrderLotService.php:53-60`), pero el `$fillable` de `Lot`
 (`Lot.php:9-12`) solo incluye `emision_point_id, serie, authorization, state`.
 Esas dos columnas existen en la tabla (migración
 `2026_04_13_234605_add_date_voucher_type_to_lots_table.php`) pero **se
 descartan silenciosamente** por mass-assignment: el lote queda con `date` y
-`voucher_type` en `null`.
+`voucher_type` en `null`. Sigue sin corregirse tras el refactor a service (no
+era el alcance de ese cambio).
 
-### 5.2 — `OrderLotController::store` no responde en el happy path
+### 5.2 — `OrderController::storeLot` no responde en el happy path
 
-El bloque final que devolvía `response()->json([...], 201)` está **comentado**
-(`OrderLotController.php:158-169`), igual que la creación/envío del lote como
-tal (`processLot` + `sendLot`). La acción firma cada orden individualmente
-(`:154-156`) y **no retorna nada** → HTTP 200 con cuerpo vacío. El flujo de
-"envío por lote" quedó a medio implementar; hoy solo firma. Además, los
-`return response()->json(['msm' => ...])` de error (`:53`, `:57`, `:69`, `:78`)
-usan status 200 para condiciones que son de validación.
+`OrderLotService::store()` no retorna nada y el controlador no construye una
+respuesta de éxito → HTTP 200 con cuerpo vacío si todo sale bien. Preservado
+intencionalmente en el refactor a service (no se tocó el contrato con el
+frontend); si el frontend en algún momento necesita el `Lot`/las `Order`
+creadas en la respuesta, hay que decidirlo explícitamente. Además, los
+`response()->json(['msm' => ...])` de error dentro de `OrderLotService::store`
+(vía `RuntimeException`, atrapada en `OrderController::storeLot`) usan status
+200 para condiciones que son de validación.
 
 ### 5.3 — La carga por lote no usa `OrderTotalsCalculator`
 
-`OrderLotController::store` calcula totales inline con la fórmula antigua
-`iva = subTotal * percentage * 0.01` y `total = subTotal + iva`
-(`OrderLotController.php:115-133`), sin descuento, sin ICE y sin la corrección
+`OrderLotService::buildOrderRows` calcula totales inline con la fórmula
+antigua `iva = subTotal * percentage * 0.01` y `total = subTotal + iva`
+(`OrderLotService.php:154-183`), sin descuento, sin ICE y sin la corrección
 de doble redondeo. Es exactamente la **segunda fuente de cálculo** que el fix
 documentado en facturación electrónica eliminó del flujo normal, pero que
 sigue viva aquí — mismo riesgo de `ERROR EN DIFERENCIAS` del SRI. Además arma
 las columnas dinámicamente (`base{$percentage}`, `iva{$percentage}`): para un
 producto al 12% generaría `iva12`, columna que no existe y sería descartada.
+Sigue sin corregirse tras el refactor a service.
 
 ### 5.4 — Regla de tope de $50 a consumidor final solo en creación
 

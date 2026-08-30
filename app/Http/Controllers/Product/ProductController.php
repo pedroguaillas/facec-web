@@ -39,6 +39,9 @@ class ProductController extends Controller
                         ->orWhere('products.name', 'LIKE', "%{$escaped}%");
                 });
             })
+            ->when($request->filled('type'), function ($query) use ($request) {
+                $query->ofType((int) $request->input('type'));
+            })
             ->selectRaw('products.id, products.code, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.tourism')
             ->latest('products.created_at')
             ->paginate($paginate)

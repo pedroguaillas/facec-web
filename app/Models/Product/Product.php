@@ -9,12 +9,17 @@ use App\Models\Order\OrderItem;
 use App\Models\ReferralGuide\ReferralGuideItem;
 use App\Models\Shop\ShopItem;
 use Database\Factories\ProductFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends BaseModel
 {
     use HasFactory, SoftDeletes;
+
+    public const TYPE_PRODUCT = 1;
+
+    public const TYPE_SERVICE = 2;
 
     protected static function newFactory(): ProductFactory
     {
@@ -81,5 +86,10 @@ class Product extends BaseModel
     public function referralGuideItems()
     {
         return $this->hasMany(ReferralGuideItem::class);
+    }
+
+    public function scopeOfType(Builder $query, int $typeProduct): Builder
+    {
+        return $query->where('products.type_product', $typeProduct);
     }
 }

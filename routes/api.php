@@ -9,7 +9,6 @@ use App\Http\Controllers\Customer\CustomerLookupController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Order\OrderLifecycleController;
-use App\Http\Controllers\Order\OrderLotController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductLookupController;
 use App\Http\Controllers\Provider\ProviderController;
@@ -41,7 +40,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
-    Route::post('orders/lot', [OrderLotController::class, 'store'])->name('orders.lot.store');
+    Route::post('orders/lot', [OrderController::class, 'storeLot'])->name('orders.lot.store');
     Route::get('orders/export/{yearMonth}', [OrderController::class, 'export'])
         ->where('yearMonth', '\d{4}-\d{2}')
         ->name('orders.export');

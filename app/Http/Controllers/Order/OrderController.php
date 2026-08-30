@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Order;
 
 use App\Exports\OrderExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Order\OrderLotStoreRequest;
 use App\Http\Requests\Order\OrderStoreRequest;
 use App\Http\Requests\Order\OrderUpdateRequest;
 use App\Http\Resources\OrderResources;
@@ -11,6 +12,7 @@ use App\Models\Branch;
 use App\Models\MethodOfPayment;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
+use App\Services\Order\OrderLotService;
 use App\Services\Order\OrderPdfService;
 use App\Services\Order\OrderShowService;
 use App\Services\Order\OrderStoreService;
@@ -22,6 +24,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class OrderController extends Controller
@@ -63,6 +66,15 @@ class OrderController extends Controller
         $order = $service->createOrder($request->validated());
 
         return response()->json($order, 201);
+    }
+
+    public function storeLot(OrderLotStoreRequest $request, OrderLotService $service)
+    {
+        try {
+            $service->store($request->file('lot'));
+        } catch (RuntimeException $e) {
+            return response()->json(['msm' => $e->getMessage()]);
+        }
     }
 
     public function edit(Order $order, OrderShowService $service): JsonResponse

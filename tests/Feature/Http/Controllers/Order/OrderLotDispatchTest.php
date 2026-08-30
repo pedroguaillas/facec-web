@@ -22,7 +22,7 @@ function lotUploadFile(array $rows): UploadedFile
     $spreadsheet = new Spreadsheet;
     $sheet = $spreadsheet->getActiveSheet();
 
-    // Fila 1: encabezado, descartado por OrderLotController::getData().
+    // Fila 1: encabezado, descartado por OrderLotExcelReader::read().
     $sheet->fromArray(['identificacion', 'nombre', 'codigo', 'cantidad', 'precio'], null, 'A1');
 
     foreach ($rows as $i => $row) {

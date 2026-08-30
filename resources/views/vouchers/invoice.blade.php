@@ -19,7 +19,9 @@
                             @endif
                         </tr>
                         <tr>
+                            @if($movement->address)
                             <td class="relleno" colspan="2">Dirección: {{ $movement->address }}</td>
+                            @endif
                         </tr>
                     </tbody>
                 </table>

@@ -89,9 +89,10 @@ $companyId)->afterCommit()`) ocurre en:
 - Los 3 disparadores automáticos al crear el comprobante
   (`OrderStoreService::sendToSRI`, `ShopStoreService::sendVouchers`,
   `ReferralGuideStoreService::createReferralGuide`).
-- El flujo de lote por Excel (`OrderLotController::store`) — un job por cada
-  fila del lote, en vez de firmar+enviar 50 órdenes seguidas dentro del
-  mismo request.
+- El flujo de lote por Excel (`OrderLotService::store`, ver
+  [ventas.md](../ventas.md#carga-por-lote-ordercontrollerstorelot--orderlotservicestore))
+  — un job por cada fila del lote (hasta 2000), en cola `lots` (§2.5), en vez
+  de firmar+enviar todas las órdenes seguidas dentro del mismo request.
 
 `ShouldBeUnique` + `WithoutOverlapping` (clave `voucher:{type}:{id}`) evitan
 que un doble-click encole el mismo comprobante dos veces.
@@ -155,16 +156,28 @@ horneada (sin bind mount) — cada `deployment/deploy.sh` (que hace `build
 app` + `up -d`) recrea el container `queue` automáticamente con el código
 nuevo, no requiere este paso manual.
 
-### 2.5 — Dos workers en paralelo (producción)
+### 2.5 — Dos colas separadas: `default` vs `lots` (producción)
 
-Un solo worker procesa 100% serial: un lote grande de un cliente deja en fila
-a los comprobantes de todos los demás hasta que termina. `compose.prod.yaml`
-define `queue` **y** `queue2`, dos containers idénticos (`php artisan
-queue:work --sleep=3`) consumiendo la misma cola `default`. El driver
-`database` reserva cada job con `SELECT ... FOR UPDATE` antes de procesarlo,
-así que dos workers nunca toman el mismo job — es seguro escalar así sin
-tocar código. Si hace falta más throughput, agregar un tercer servicio
-`queue3` con el mismo patrón (copiar/pegar el bloque de `queue2`).
+Un solo worker/cola procesa 100% serial: un lote grande de un cliente dejaba
+en fila a los comprobantes de todos los demás hasta que terminaba.
+`compose.prod.yaml` define dos workers dedicados, **cada uno a su propia
+cola** (no dos workers compartiendo la misma):
+
+- `queue` → `php artisan queue:work --queue=default --sleep=3` — comprobantes
+  creados uno a uno (`OrderStoreService::sendToSRI`,
+  `ShopStoreService::sendVouchers`, `ReferralGuideStoreService`, los 4
+  endpoints `process()`).
+- `queue2` → `php artisan queue:work --queue=lots --sleep=3` — solo
+  `OrderLotService::store()`, que despacha con `->onQueue('lots')`.
+
+Aislamiento total: un lote de hasta 2000 filas nunca compite por worker con
+un comprobante normal, y viceversa. El driver `database` reserva cada job con
+`SELECT ... FOR UPDATE`, así que agregar más throughput a cualquiera de las
+dos colas es tan simple como copiar su bloque con otro nombre de servicio
+(`queue3`, misma cola vía `--queue=...`) — no hace falta tocar código.
+Trade-off: si una cola está ociosa, su worker no ayuda a la otra (sin
+fallback cruzado); para eso habría que correr `--queue=default,lots` en
+alguno de los dos, a costa de perder parte del aislamiento.
 
 ## 3. Errores/mejoras compartidos (no específicos de Ventas o Compras)
 

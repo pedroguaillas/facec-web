@@ -40,7 +40,9 @@ services:
                 condition: service_healthy
             go-signer:
                 condition: service_healthy
-        command: php artisan queue:work --sleep=3
+        # Solo cola `default` (comprobantes normales, uno a uno) — separada de `lots`
+        # para que un lote grande no le quite turno a un comprobante individual.
+        command: php artisan queue:work --queue=default --sleep=3
         # La imagen trae un HEALTHCHECK (Dockerfile.prod) que hace `curl http://localhost/up`,
         # pensado para el container `app` (nginx+php-fpm vía supervisord). Este container
         # solo corre `queue:work`, no sirve HTTP — el healthcheck heredado fallaría siempre.
@@ -63,11 +65,10 @@ services:
                 condition: service_healthy
             go-signer:
                 condition: service_healthy
-        # Segundo worker en paralelo sobre la misma cola `default` — el driver
-        # `database` reserva cada job con SELECT ... FOR UPDATE, así que dos workers
-        # no toman el mismo job. Sin esto, un lote grande de un cliente bloquea en fila
-        # a los comprobantes de todos los demás clientes (un solo worker = 100% serial).
-        command: php artisan queue:work --sleep=3
+        # Worker dedicado a la cola `lots` (OrderLotController despacha ahí) —
+        # separada de `default` para que un lote grande (hasta 500 comprobantes)
+        # no bloquee en fila a los comprobantes normales que llegan mientras tanto.
+        command: php artisan queue:work --queue=lots --sleep=3
         healthcheck:
             disable: true
 
