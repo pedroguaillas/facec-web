@@ -2,12 +2,17 @@
 
 namespace App\Services\Shop\Retention;
 
+use App\Mail\RetentionShipped;
 use App\Models\Company;
+use App\Models\Provider;
 use App\Models\Shop\Shop;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
 use App\Xml\RetentionBuilder;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class RetentionXmlService
 {
@@ -85,8 +90,33 @@ class RetentionXmlService
             authorizedField: 'autorized_retention',
             extraDetailField: 'extra_detail_retention',
             authorizationField: 'authorization_retention',
-            onAuthorized: fn () => null,
+            onAuthorized: fn () => $this->sendRetentionMail($shop),
             inProcessAttemptsField: 'in_process_attempts_retention',
         );
+    }
+
+    /**
+     * Envía copia de la retención autorizada por correo al proveedor si tiene
+     * email registrado. Un fallo de correo se loggea pero nunca revierte ni
+     * reporta como error la autorización del SRI, que ya quedó guardada antes
+     * de este callback (mismo patrón que OrderSriService::sendOrderMail).
+     */
+    private function sendRetentionMail(Shop $shop): void
+    {
+        $email = Provider::find($shop->provider_id)?->email;
+
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new RetentionShipped($shop));
+            $shop->update(['send_mail_retention' => true]);
+        } catch (Throwable $e) {
+            Log::error('RetentionShipped mail failed', [
+                'shop_id' => $shop->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

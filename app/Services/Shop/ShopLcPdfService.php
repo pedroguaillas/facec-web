@@ -8,6 +8,7 @@ use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class ShopLcPdfService
 {
@@ -15,10 +16,18 @@ class ShopLcPdfService
 
     public function stream(int $id)
     {
-        return $this->buildPdf($id)->stream();
+        [$pdf] = $this->buildPdf($id);
+
+        return $pdf->stream();
     }
 
-    private function buildPdf(int $id)
+    public function savePdf(int $id): void
+    {
+        [$pdf, $movement] = $this->buildPdf($id);
+        $pdf->save(Storage::path(str_replace('.xml', '.pdf', $movement->xml)));
+    }
+
+    private function buildPdf(int $id): array
     {
         $movement = $this->getMovement($id);
         $beforeTaxChange = Carbon::parse($movement->date)->isBefore(Carbon::parse('2024-04-01'));
@@ -33,10 +42,12 @@ class ShopLcPdfService
 
         $branch = $this->getBranch($movement->serie);
 
-        return Pdf::loadView(
+        $pdf = Pdf::loadView(
             'vouchers/settlementonpurchase',
             compact('movement', 'branch', 'company', 'movement_items', 'beforeTaxChange')
         );
+
+        return [$pdf, $movement];
     }
 
     private function getMovement(int $id)

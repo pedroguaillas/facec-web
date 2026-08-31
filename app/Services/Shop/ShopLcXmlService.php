@@ -2,13 +2,18 @@
 
 namespace App\Services\Shop;
 
+use App\Mail\ShopLcShipped;
 use App\Models\Company;
+use App\Models\Provider;
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
 use App\Xml\SettlementOnPurchaseBuilder;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class ShopLcXmlService
 {
@@ -78,8 +83,33 @@ class ShopLcXmlService
     {
         $this->sriSoapService->authorize(
             model: $shop,
-            onAuthorized: fn () => null,
+            onAuthorized: fn () => $this->sendShopMail($shop),
             inProcessAttemptsField: 'in_process_attempts',
         );
+    }
+
+    /**
+     * Envía copia de la liquidación en compra autorizada por correo al proveedor
+     * si tiene email registrado. Un fallo de correo se loggea pero nunca revierte
+     * ni reporta como error la autorización del SRI, que ya quedó guardada antes
+     * de este callback (mismo patrón que OrderSriService::sendOrderMail).
+     */
+    private function sendShopMail(Shop $shop): void
+    {
+        $email = Provider::find($shop->provider_id)?->email;
+
+        if (! $email) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new ShopLcShipped($shop));
+            $shop->update(['send_mail_set_purchase' => true]);
+        } catch (Throwable $e) {
+            Log::error('ShopLcShipped mail failed', [
+                'shop_id' => $shop->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

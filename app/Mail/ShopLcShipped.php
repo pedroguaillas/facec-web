@@ -6,12 +6,12 @@ use App\Models\Branch;
 use App\Models\CompanyUser;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
-use App\Services\Shop\Retention\RetentionPdfService;
+use App\Services\Shop\ShopLcPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class RetentionShipped extends Mailable
+class ShopLcShipped extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -28,25 +28,25 @@ class RetentionShipped extends Mailable
             : null;
         $replyTo = $companyUser?->user?->email ?? config('mail.from.address');
 
-        // Se instancia RetentionPdfService directamente (no app()) porque su binding
+        // Se instancia ShopLcPdfService directamente (no app()) porque su binding
         // contextual resuelve Company vía Auth::user()?->company — null en contexto
         // de Job (sin usuario autenticado).
-        (new RetentionPdfService($company))->savePdf($this->shop->id);
+        (new ShopLcPdfService($company))->savePdf($this->shop->id);
 
         return $this->from(config('mail.from.address'), config('mail.from.name'))
             ->replyTo($replyTo)
-            ->subject('RETENCIÓN '.$this->shop->serie_retencion.' de '.$company->company)
-            ->view('mail', ['title' => 'RETENCIÓN '.$this->shop->serie_retencion, 'customer' => Provider::find($this->shop->provider_id)->name])
+            ->subject('LIQUIDACIÓN EN COMPRA '.$this->shop->serie.' de '.$company->company)
+            ->view('mail', ['title' => 'LIQUIDACIÓN EN COMPRA '.$this->shop->serie, 'customer' => Provider::find($this->shop->provider_id)->name])
             ->attachFromStorage(
-                str_replace('.xml', '.pdf', $this->shop->xml_retention),
-                'RET-'.$this->shop->serie_retencion.'.pdf',
+                str_replace('.xml', '.pdf', $this->shop->xml),
+                'LC-'.$this->shop->serie.'.pdf',
                 [
                     'mime' => 'application/pdf',
                 ]
             )
             ->attachFromStorage(
-                $this->shop->xml_retention,
-                'RET-'.$this->shop->serie_retencion.'.xml',
+                $this->shop->xml,
+                'LC-'.$this->shop->serie.'.xml',
                 [
                     'mime' => 'application/xml',
                 ]

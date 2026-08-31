@@ -215,3 +215,23 @@ no se repiten aquí. Lo siguiente es específico del módulo CRUD:
    retenciones, pero las líneas de producto quedan intactas. Si es
    intencional (los ítems no se editan tras crear), conviene documentarlo;
    si no, es una omisión.
+
+7. **~~No se enviaba correo al proveedor al autorizar liquidación/retención~~
+   (resuelto)**. `ShopLcXmlService::authorize()` y
+   `RetentionXmlService::authorize()` tenían `onAuthorized: fn () => null`
+   — a diferencia de Ventas (`OrderSriService::sendOrderMail`), nunca se
+   armaba el correo. Los mailables `ShopShipped`/`RetentionShipped` que sí
+   existían eran código muerto de la migración Lumen→Laravel (referenciaban
+   `App\Http\Controllers\Api\*Controller`, clases que no existen en este
+   proyecto Laravel; nunca se invocaban). Fix: `app/Mail/ShopLcShipped.php`
+   (reemplaza al `ShopShipped` roto) y `RetentionShipped.php` reescritos
+   siguiendo el patrón de `OrderShipped` (companyId/replyTo resueltos desde
+   el propio modelo, sin `Auth::user()`, para funcionar igual en el Job de
+   colas que en el request HTTP), enganchados en `onAuthorized` de ambos
+   services. Destinatario: `Provider::find($shop->provider_id)->email` — si
+   el proveedor no tiene correo registrado, no se envía (mismo criterio que
+   Ventas con `Customer`). Flags `send_mail_set_purchase`/
+   `send_mail_retention` (ya existían en la tabla `shops`, sin usar) ahora
+   se marcan `true` tras el envío. `ShopLcPdfService` ganó un `savePdf()`
+   (antes solo tenía `stream()`) para poder adjuntar el PDF igual que
+   `RetentionPdfService`/`OrderPdfService`.
