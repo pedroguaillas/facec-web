@@ -105,7 +105,7 @@ class CertExtractSigningKeyCommand extends Command
             }
 
             $verify = Process::run([
-                'openssl', 'pkcs12', '-in', $tmpP12, '-info', '-noout', '-legacy',
+                'openssl', 'pkcs12', '-in', $tmpP12, '-nodes', '-legacy',
                 '-passin', "pass:{$company->pass_cert}",
             ]);
 
@@ -116,8 +116,9 @@ class CertExtractSigningKeyCommand extends Command
                 return self::FAILURE;
             }
 
-            preg_match_all('/key\s*bag/i', $verify->output(), $keyMatches);
-            $foundKeyBags = count($keyMatches[0]);
+            $foundKeyBags = collect($inspector->parse($verify->output()))
+                ->where('type', 'key')
+                ->count();
 
             if ($foundKeyBags !== 1) {
                 $this->error("Verificación falló: el .p12 generado tiene {$foundKeyBags} key bag(s), se esperaba exactamente 1.");
