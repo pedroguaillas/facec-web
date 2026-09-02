@@ -17,7 +17,7 @@ class CreateInventoriesTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('product_id');
             $table->unsignedBigInteger('model_id')->nullable(); // Hace referencia al id de la compra o venta
-            $table->set('type', ['Inventario inicial', 'Compra', 'Venta', 'Devolución en compra', 'Devolución en venta', 'Ajuste ingreso', 'Ajuste salida']);
+            $table->string('type', 50);
             $table->decimal('quantity', 10, 6);
             $table->decimal('price', 8, 6);
             $table->date('date');

@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Order;
 
 use App\Models\Customer;
+use App\Models\Product\Product;
+use App\Models\Product\SriCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -51,6 +53,7 @@ class OrderStoreRequest extends FormRequest
             'date_order' => 'sometimes|nullable|date',
             'serie_order' => 'sometimes|nullable|string',
             'reason' => 'sometimes|nullable|string',
+            'plate' => 'sometimes|nullable|string|max:10',
         ];
     }
 
@@ -67,7 +70,23 @@ class OrderStoreRequest extends FormRequest
                 if ($customer && $customer->identication === '9999999999999' && $this->total > 50) {
                     $validator->errors()->add('total', 'No es posible una venta mayor a $50 a consumidor final.');
                 }
+
+                if (blank($this->plate) && $this->hasTransportService()) {
+                    $validator->errors()->add('plate', 'La placa es obligatoria cuando la venta incluye un servicio de transporte.');
+                }
             },
         ];
+    }
+
+    private function hasTransportService(): bool
+    {
+        $productIds = collect($this->products)->pluck('product_id');
+
+        $transportAuxCodes = SriCategory::where('type', 'transporte')->pluck('code');
+
+        return Product::whereIn('id', $productIds)
+            ->where('type_product', Product::TYPE_SERVICE)
+            ->whereIn('aux_cod', $transportAuxCodes)
+            ->exists();
     }
 }

@@ -15,12 +15,15 @@ class Order extends BaseModel
     /**
      * Info adicional obligatoria en toda venta, para todas las empresas.
      *
-     * @var array{name: string, description: string}
+     * @return array{name: string, description: string}
      */
-    public const REQUIRED_ADITIONAL = [
-        'name' => 'RUC Proveedor',
-        'description' => '1105167694001',
-    ];
+    public static function requiredAditional(): array
+    {
+        return [
+            'name' => 'RUC Proveedor',
+            'description' => config('services.order.ruc_proveedor'),
+        ];
+    }
 
     protected static function newFactory(): OrderFactory
     {
@@ -62,6 +65,8 @@ class Order extends BaseModel
         'authorization_retention',
         // Metodo de pago
         'pay_method',
+        // Placa vehicular (transporte terrestre)
+        'plate',
         // Nota de Credito
         'date_order',
         'serie_order',

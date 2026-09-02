@@ -102,6 +102,7 @@ class InvoiceBuilder extends BaseVoucherBuilder
         $string .= '<propina>0</propina>';
         $string .= '<importeTotal>'.round($order->total, 2).'</importeTotal>';
         $string .= '<moneda>DOLAR</moneda>';
+        $string .= $order->plate !== null ? "<placa>{$order->plate}</placa>" : null;
 
         $string .= '<pagos>';
         $string .= '<pago>';

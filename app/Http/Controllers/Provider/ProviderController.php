@@ -79,14 +79,14 @@ class ProviderController extends Controller
 
     public function edit(Provider $provider): JsonResponse
     {
-        return response()->json(['provider' => $provider]);
+        return response()->json($provider);
     }
 
     public function update(ProviderUpdateRequest $request, Provider $provider): JsonResponse
     {
         $provider->update($request->validated());
 
-        return response()->json(['provider' => $provider]);
+        return response()->json($provider);
     }
 
     public function destroy(Provider $provider): JsonResponse

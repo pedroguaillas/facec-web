@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Product;
 
 use App\Models\Branch;
+use App\Models\Product\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -44,8 +45,8 @@ class ProductUpdateRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                $requiresAuxCod = (int) $this->input('iva') === 5
-                    || (bool) auth()->user()->company->transport;
+                $requiresAuxCod = (int) $this->input('type_product') === Product::TYPE_PRODUCT
+                    && (int) $this->input('iva') === 5;
 
                 if ($requiresAuxCod && blank($this->input('aux_cod'))) {
                     $validator->errors()->add('aux_cod', 'El código auxiliar es obligatorio para este producto.');

@@ -20,7 +20,6 @@ class ProductsImport implements SkipsOnFailure, ToModel, WithBatchInserts, WithC
 
     public function __construct(
         protected int $branchId,
-        protected bool $companyRequiresAuxCod,
     ) {}
 
     public function model(array $row): Product
@@ -45,7 +44,7 @@ class ProductsImport implements SkipsOnFailure, ToModel, WithBatchInserts, WithC
     {
         return [
             'codigo' => ['required', 'string', 'max:25', new UniqueBranchScoped('products', 'code')],
-            'codigo_auxiliar' => ['nullable', 'string', 'max:25', new RequiredAuxCodRule($this->companyRequiresAuxCod)],
+            'codigo_auxiliar' => ['nullable', 'string', 'max:25', new RequiredAuxCodRule],
             'tipo' => ['required', 'integer', 'in:1,2'],
             'nombre' => ['required', 'string', 'max:300'],
             'precio' => ['required', 'numeric', 'min:0'],

@@ -215,7 +215,7 @@ class OrderLotService
         $rows = [];
 
         foreach ($orders as $order) {
-            $rows[] = array_merge(Order::REQUIRED_ADITIONAL, [
+            $rows[] = array_merge(Order::requiredAditional(), [
                 'order_id' => $order->id,
                 'created_at' => $now,
                 'updated_at' => $now,

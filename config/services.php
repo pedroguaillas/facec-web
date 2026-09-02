@@ -43,4 +43,8 @@ return [
         'url' => env('XML_SIGNER_URL', 'http://go-signer:8080'),
     ],
 
+    'order' => [
+        'ruc_proveedor' => env('RUC_PROVEEDOR'),
+    ],
+
 ];

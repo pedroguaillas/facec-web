@@ -24,6 +24,7 @@ class OrderUpdateRequest extends FormRequest
             'products.*.discount' => 'required|numeric',
             'products.*.iva' => 'required',
             'aditionals' => 'present|array',
+            'plate' => 'sometimes|nullable|string|max:10',
         ];
     }
 

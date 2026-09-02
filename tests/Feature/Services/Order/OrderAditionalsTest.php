@@ -41,8 +41,8 @@ test('createOrderAditionals agrega el RUC Proveedor fijo aunque no venga nada de
     $aditionals = OrderAditional::where('order_id', $order->id)->get();
 
     expect($aditionals)->toHaveCount(1)
-        ->and($aditionals->first()->name)->toBe(Order::REQUIRED_ADITIONAL['name'])
-        ->and($aditionals->first()->description)->toBe(Order::REQUIRED_ADITIONAL['description']);
+        ->and($aditionals->first()->name)->toBe(Order::requiredAditional()['name'])
+        ->and($aditionals->first()->description)->toBe(Order::requiredAditional()['description']);
 });
 
 test('createOrderAditionals conserva los aditionals del frontend y agrega el RUC Proveedor fijo', function () {
@@ -58,7 +58,7 @@ test('createOrderAditionals conserva los aditionals del frontend y agrega el RUC
     $aditionals = OrderAditional::where('order_id', $order->id)->get();
 
     expect($aditionals)->toHaveCount(2)
-        ->and($aditionals->pluck('name'))->toContain('Guía', Order::REQUIRED_ADITIONAL['name']);
+        ->and($aditionals->pluck('name'))->toContain('Guía', Order::requiredAditional()['name']);
 });
 
 test('updateOrderAditionals reemplaza los aditionals pero nunca deja de incluir el RUC Proveedor fijo', function () {
@@ -70,8 +70,8 @@ test('updateOrderAditionals reemplaza los aditionals pero nunca deja de incluir 
     $aditionals = OrderAditional::where('order_id', $order->id)->get();
 
     expect($aditionals)->toHaveCount(1)
-        ->and($aditionals->first()->name)->toBe(Order::REQUIRED_ADITIONAL['name'])
-        ->and($aditionals->first()->description)->toBe(Order::REQUIRED_ADITIONAL['description']);
+        ->and($aditionals->first()->name)->toBe(Order::requiredAditional()['name'])
+        ->and($aditionals->first()->description)->toBe(Order::requiredAditional()['description']);
 });
 
 test('updateOrderAditionals combina lo enviado por el frontend con el RUC Proveedor fijo, sin duplicarlo', function () {
@@ -85,5 +85,5 @@ test('updateOrderAditionals combina lo enviado por el frontend con el RUC Provee
     $aditionals = OrderAditional::where('order_id', $order->id)->get();
 
     expect($aditionals)->toHaveCount(2)
-        ->and($aditionals->where('name', Order::REQUIRED_ADITIONAL['name']))->toHaveCount(1);
+        ->and($aditionals->where('name', Order::requiredAditional()['name']))->toHaveCount(1);
 });

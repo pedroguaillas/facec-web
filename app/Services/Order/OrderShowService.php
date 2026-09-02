@@ -51,7 +51,7 @@ class OrderShowService
     {
         return OrderAditional::select('id', 'name', 'description')
             ->where('order_id', $orderId)
-            ->where('name', '!=', Order::REQUIRED_ADITIONAL['name'])
+            ->where('name', '!=', Order::requiredAditional()['name'])
             ->get();
     }
 

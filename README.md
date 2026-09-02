@@ -127,6 +127,70 @@ El procesamiento corre por cola (`ProcessVoucherJob`, ver `docs/facturacion-elec
   docker compose -f compose.prod.yaml --env-file .env.production exec app php artisan tinker --execute='dump(App\Models\Company::whereNotNull("cert_dir")->get(["id","cert_dir"])->toArray());'
   ```
 
+- **Certificado `.p12` con más de una llave privada** (distinto del caso BER/DER de arriba) — error en logs: `"pkcs12: expected exactly one key bag"`. `go-pkcs12` (librería de `go-signer`) exige exactamente una key bag; algunos certificados (p. ej. los del **Banco Central del Ecuador**, que separan `Signing Key`/`Decryption Key` en el mismo archivo) traen varias. No lo soluciona el reencode de arriba (duplica las llaves igual). Usar en vez del procedimiento manual:
+
+  ```bash
+  # 1. Diagnóstico — lista cada bag (llave/cert) con su localKeyID y friendlyName, no modifica nada
+  docker compose -f compose.prod.yaml --env-file .env.production exec app \
+    php artisan cert:inspect <company_id>
+
+  # 2. Con el localKeyID de la llave de FIRMA (friendlyName suele decir "Signing Key"),
+  #    genera un .p12 limpio como <cert_dir>.fixed.p12 sin tocar el original todavía
+  docker compose -f compose.prod.yaml --env-file .env.production exec app \
+    php artisan cert:extract-signing-key <company_id> --key-id=<localKeyID>
+
+  # 3. Recién con --apply reemplaza el .p12 real — hace backup automático (<cert_dir>.bak-<timestamp>.p12) antes
+  docker compose -f compose.prod.yaml --env-file .env.production exec app \
+    php artisan cert:extract-signing-key <company_id> --key-id=<localKeyID> --apply
+  ```
+
+  `pass_cert` se reutiliza tal cual está en la company (no hay que reescribirlo ni arriesgarse a que la password del `.p12` reexportado deje de coincidir con la guardada en BD).
+
+  <details>
+  <summary>Procedimiento manual (sin los comandos artisan) — solo si hace falta reproducirlo a mano</summary>
+
+  ```bash
+  # 1. Traer el .p12 a la máquina local
+  docker compose -f compose.prod.yaml --env-file .env.production exec app \
+    cat storage/app/private/cert/<cert_dir> > /tmp/cert.p12
+
+  # 2. Ver cuántos bags trae y sus localKeyID/friendlyName (pide el pass_cert)
+  openssl pkcs12 -info -in /tmp/cert.p12 -noout -legacy
+
+  # 3. Volcar todo con atributos a texto plano
+  openssl pkcs12 -in /tmp/cert.p12 -nodes -legacy 2>/dev/null > /tmp/full_info.pem
+
+  # 4. Partir en un archivo por cada bag
+  awk -v RS="Bag Attributes" 'NR>1{print "Bag Attributes" $0 > ("/tmp/bag_" NR-1 ".txt")}' /tmp/full_info.pem
+
+  # 5. Ubicar el bloque de la Signing Key y el de la Verification Certificate (mismo localKeyID entre los dos)
+  grep -l "Signing Key" /tmp/bag_*.txt
+  grep -l "Verification Certificate" /tmp/bag_*.txt
+
+  # 6. Extraer el PEM (BEGIN...END) de cada bloque encontrado — reemplazar N y M por los números reales
+  sed -n '/-----BEGIN/,/-----END/p' /tmp/bag_N.txt > /tmp/signing_key.pem
+  sed -n '/-----BEGIN/,/-----END/p' /tmp/bag_M.txt > /tmp/verification_cert.pem
+  cat /tmp/signing_key.pem /tmp/verification_cert.pem > /tmp/signing_pair.pem
+
+  # 7. Reexportar como p12 limpio, password explícita (la de companies.pass_cert)
+  openssl pkcs12 -export -in /tmp/signing_pair.pem -out /tmp/cert_fixed.p12 -name "cert" \
+    -passin pass:<PASS_CERT> -passout pass:<PASS_CERT>
+
+  # 8. Verificar: debe mostrar EXACTAMENTE un Shrouded Keybag
+  openssl pkcs12 -info -in /tmp/cert_fixed.p12 -noout -legacy
+
+  # 9. Backup del cert actual en el contenedor antes de pisarlo
+  docker compose -f compose.prod.yaml --env-file .env.production exec app \
+    cp storage/app/private/cert/<cert_dir> storage/app/private/cert/<cert_dir>.bak-$(date +%Y%m%d-%H%M%S)
+
+  # 10. Recién ahí, subir el .p12 limpio
+  docker compose -f compose.prod.yaml --env-file .env.production exec -T app \
+    tee storage/app/private/cert/<cert_dir> < /tmp/cert_fixed.p12 > /dev/null
+  ```
+
+  No borrar `/tmp/cert.p12` ni `/tmp/cert_fixed.p12` hasta confirmar en logs que `go-signer` firma bien con el nuevo archivo (ver "Ver logs" arriba) — este fue justo el paso que faltó la vez que se rompió la firma sin dejar respaldo.
+  </details>
+
 - **Falta variable de entorno en `.env.production`** — p. ej. `SRI_CATASTRO_URL` (usada por `App\Services\SriResolveNameService` para buscar RUC en el SRI; si falta, `Http::get(null, ...)` explota con `TypeError`). Revisar que `.env.production` tenga todas las keys de `.env.production.example`.
 
 ### Notas sobre `tinker --execute`

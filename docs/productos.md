@@ -22,7 +22,7 @@ arrastra el **global scope de sucursal** (ver §7.3) y `SoftDeletes`.
 | `branch_id` | FK `branches` | Asignado automáticamente (sucursal más antigua de la empresa) |
 | `category_id` | FK `categories`, nullable | Un producto puede no estar categorizado |
 | `code` | string(25) | Único por `(branch_id, code)` (`product_unique`) |
-| `aux_cod` | string(25), nullable | Código auxiliar; obligatorio si IVA 5% o empresa de transporte |
+| `aux_cod` | string(25), nullable | Código auxiliar SRI; obligatorio solo si `type_product = 1` (bien) e `iva = 5` (código de categoría `ferreteria`). Opcional en `type_product = 2` (servicio), incluida la categoría `transporte` |
 | `type_product` | integer | `1` = bien, `2` = servicio (validado `in:1,2`) |
 | `name` | string(300) | Descripción que va al comprobante |
 | `unity_id` | FK `unities`, nullable | Solo para inventarios |
@@ -193,10 +193,10 @@ Reglas por fila (`rules()`):
   usan Provider/Carrier/Customer) contra `(branch_id, code)`.
 - `codigo_auxiliar`: `nullable` + `App\Rules\RequiredAuxCodRule`, que
   replica la regla de negocio de `ProductStoreRequest::after()` (obligatorio
-  si `iva == 5` o `company->transport`). Marca `public $implicit = true`
-  para que corra aunque el valor venga vacío — sin eso, Laravel salta las
-  reglas de un campo `nullable` cuando el valor es `null` y la validación
-  nunca se ejecutaría.
+  si `tipo == 1` e `iva == 5`; lee ambos de la fila del Excel, no del flag
+  de empresa). Marca `public $implicit = true` para que corra aunque el
+  valor venga vacío — sin eso, Laravel salta las reglas de un campo
+  `nullable` cuando el valor es `null` y la validación nunca se ejecutaría.
 - `tipo`, `nombre`, `precio`, `iva`, `ice`, `stock`: mismas reglas que
   `ProductStoreRequest`.
 
@@ -233,9 +233,17 @@ En update, el `unique` de `code` ignora el propio producto
 (`ProductUpdateRequest.php:28-31`).
 
 **Regla de negocio — `aux_cod` obligatorio** (`ProductStoreRequest::after`,
-`:40-52`): si `iva == 5` (IVA 5%) **o** la empresa es de transporte
-(`company->transport`), `aux_cod` es obligatorio aunque la regla base lo
-marque `nullable`. Se valida en un `after()` con mensaje propio.
+`:40-52`, y el mismo `after()` en `ProductUpdateRequest`): obligatorio
+solo si `type_product == Product::TYPE_PRODUCT` (`1`, bien) **y**
+`iva == 5` (código de categoría SRI `ferreteria`) — aunque la regla base lo
+marque `nullable`. En `type_product == 2` (servicio) el campo es siempre
+opcional, incluidos los productos de la categoría SRI `transporte`
+(`H492001`/`H492002`, ver `SriCategorySeeder`); antes de este fix el flag
+`company->transport` forzaba `aux_cod` también en servicios, lo que rompía
+la creación de ventas de transporte sin código auxiliar. `company->transport`
+sigue usado para filtrar qué `sriCategories` se ofrecen en el formulario
+(`ProductController::sriCategoriesFor`, `:162-174`), solo dejó de disparar
+la obligatoriedad de `aux_cod`.
 
 **Borrado** (`ProductController::destroy`, `:74-94`): si el producto está
 referenciado por alguna venta, compra, guía o movimiento de inventario, se

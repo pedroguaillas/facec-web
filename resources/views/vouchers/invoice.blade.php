@@ -20,7 +20,10 @@
                         </tr>
                         <tr>
                             @if($movement->address)
-                            <td class="relleno" colspan="2">Dirección: {{ $movement->address }}</td>
+                            <td class="relleno">Dirección: {{ $movement->address }}</td>
+                            @endif
+                            @if($movement->plate)
+                            <td class="align-middle">Placa: {{ $movement->plate }}</td>
                             @endif
                         </tr>
                     </tbody>

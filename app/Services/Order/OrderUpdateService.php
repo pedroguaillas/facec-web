@@ -62,7 +62,7 @@ class OrderUpdateService
     {
         OrderAditional::where('order_id', $order->id)->delete();
 
-        $aditionals[] = Order::REQUIRED_ADITIONAL;
+        $aditionals[] = Order::requiredAditional();
 
         $valid = array_filter($aditionals, fn ($a) => ! empty($a['name']) && ! empty($a['description'])
         );

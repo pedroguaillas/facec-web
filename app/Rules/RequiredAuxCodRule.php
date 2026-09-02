@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use App\Models\Product\Product;
 use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -18,8 +19,6 @@ class RequiredAuxCodRule implements DataAwareRule, ValidationRule
      */
     protected array $data = [];
 
-    public function __construct(protected bool $companyRequiresAuxCod) {}
-
     /**
      * @param  array<array-key, mixed>  $data
      */
@@ -34,9 +33,10 @@ class RequiredAuxCodRule implements DataAwareRule, ValidationRule
     {
         $rowIndex = strtok($attribute, '.');
         $row = $this->data[$rowIndex] ?? $this->data;
+        $type = (int) ($row['tipo'] ?? 0);
         $iva = (int) ($row['iva'] ?? 0);
 
-        if (($this->companyRequiresAuxCod || $iva === 5) && blank($value)) {
+        if ($type === Product::TYPE_PRODUCT && $iva === 5 && blank($value)) {
             $fail('El código auxiliar es obligatorio para este producto.');
         }
     }

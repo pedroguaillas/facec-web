@@ -52,7 +52,10 @@ class CustomerController extends Controller
                 ->latest()
                 ->first();
 
-            $sriData = strlen($identification) === 13
+            $isValidIdentification = in_array(strlen($identification), [10, 13], true)
+                && ctype_digit($identification);
+
+            $sriData = $isValidIdentification
                 ? $sriService->searchByIdentificationSRI($identification)
                 : [];
 

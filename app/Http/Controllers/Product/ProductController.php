@@ -42,7 +42,7 @@ class ProductController extends Controller
             ->when($request->filled('type'), function ($query) use ($request) {
                 $query->ofType((int) $request->input('type'));
             })
-            ->selectRaw('products.id, products.code, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.tourism')
+            ->selectRaw('products.id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.tourism')
             ->latest('products.created_at')
             ->paginate($paginate)
             ->withQueryString();
@@ -93,7 +93,7 @@ class ProductController extends Controller
         $company = Auth::user()->company;
         $branch = $company->branches()->orderBy('created_at')->first();
 
-        $import = new ProductsImport($branch->id, (bool) $company->transport);
+        $import = new ProductsImport($branch->id);
 
         // El navegador puede subir el archivo con una extensión de filename
         // engañosa (p. ej. .csv) aunque el contenido real sea xlsx; el

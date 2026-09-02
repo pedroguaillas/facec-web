@@ -12,6 +12,12 @@ class AddTriggersToOrders extends Migration
      */
     public function up()
     {
+        // Sintaxis de trigger MySQL (IF/THEN dentro de BEGIN...END) — no portable
+        // a SQLite. En CI (tests, SQLite) se omite; dev/prod son siempre MySQL.
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::unprepared('DROP TRIGGER IF EXISTS stock_edit');
         DB::unprepared("CREATE TRIGGER stock_edit AFTER INSERT ON inventories
             FOR EACH ROW

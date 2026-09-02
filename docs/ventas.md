@@ -65,6 +65,7 @@ Todos con cast `float` salvo indicación (`Order.php:70-87`).
 | `extra_detail` | Último mensaje de rechazo/estado del SRI |
 | `send_mail` (`bool`) / `expiration_days` / `description` | Correo enviado, crédito, observación |
 | `guia`, `serie_retencion`, `date_order`, `serie_order`, `reason`, `lot_id` | Campos de guía de remisión, retención, nota de crédito referenciada y lote |
+| `plate` | Placa del vehículo (transporte terrestre). Nullable; obligatoria solo si algún producto de la venta es de tipo servicio (`type_product = 2`) con `aux_cod` de categoría SRI `transporte` (ver `OrderStoreRequest::hasTransportService()`, §3). Emitida en el XML como `<placa>` (nombre de tag fijo del manual SRI) entre `<moneda>` y `<pagos>` (`InvoiceBuilder.php:104-105`) según manual FE §2 (Tabla 33) |
 
 > Los campos `base12` / `iva` (tarifa 12%) siguen existiendo solo para
 > **visualizar** comprobantes históricos; la tarifa 12% está descontinuada en
@@ -136,10 +137,12 @@ Flujo en `OrderLotService::store()`:
 3. Crea un `Lot` y, por cada fila, una `Order` con su `OrderItem` (misma
    sucursal, mismo `lot_id`). Consumidor final (`9999999999999`) usa forma de
    pago `01`; el resto usa `company->pay_method`.
-4. Inserta el adicional obligatorio `Order::REQUIRED_ADITIONAL` ("RUC
-   Proveedor") por cada orden, igual que en la creación individual
+4. Inserta el adicional obligatorio `Order::requiredAditional()` ("RUC
+   Proveedor" + el RUC leído de `config('services.order.ruc_proveedor')`,
+   env `RUC_PROVEEDOR`) por cada orden, igual que en la creación individual
    (`OrderStoreService::createOrderAditionals`) — antes del refactor esto
-   **no se insertaba** en el flujo de lote.
+   **no se insertaba** en el flujo de lote. El RUC estaba hardcodeado en el
+   modelo; se movió a config/env para no tener el dato en el código fuente.
 5. Encola un `ProcessVoucherJob` por orden en la cola **`lots`**
    (`->onQueue('lots')`), separada de la cola `default` que usan los
    comprobantes creados uno a uno — así un lote de hasta 2000 filas no le
@@ -164,11 +167,20 @@ existe agrupación de envío por lote (ver §5.2).
 - **Regla de negocio — tope consumidor final** (`after()`, `:57-71`): si el
   cliente tiene `identication === '9999999999999'` y `total > 50`, error
   `"No es posible una venta mayor a $50 a consumidor final."`
+- **Regla de negocio — `plate` obligatoria en transporte** (`after()` +
+  `hasTransportService()`): si algún `products[].product_id` corresponde a un
+  `Product` con `type_product == Product::TYPE_SERVICE` y `aux_cod` dentro de
+  los códigos de `SriCategory` tipo `transporte`, `plate` (placa del
+  vehículo) es obligatoria aunque la regla base la marque `nullable`.
 
 ### `OrderUpdateRequest` (`app/Http/Requests/Order/OrderUpdateRequest.php`)
 
-- Reglas mínimas (`:16`): `total`, `products`, `aditionals`. No re-valida
-  `customer_id`, `date`, `serie`, `point_id` ni `voucher_type` (no se editan).
+- Reglas mínimas (`:16`): `total`, `products`, `aditionals`, `plate`
+  (`sometimes|nullable`, igual que en creación). No re-valida `customer_id`,
+  `date`, `serie`, `point_id` ni `voucher_type` (no se editan). A diferencia
+  de `OrderStoreRequest`, no repite la regla de "obligatoria si hay servicio
+  de transporte" — se puede guardar sin `plate` aunque la orden tenga un
+  producto de transporte.
 - **Regla — estados protegidos** (`after()`, `:30-48`): bloquea la edición si
   el estado es `ENVIADO`, `RECIBIDA`, `EN_PROCESO`, `AUTORIZADO` o `ANULADO`.
   Solo se puede editar en `CREADO`, `DEVUELTA` o `NO AUTORIZADO`.

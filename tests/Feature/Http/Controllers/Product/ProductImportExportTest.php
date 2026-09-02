@@ -110,16 +110,15 @@ test('import exige código auxiliar cuando el IVA es 5%', function () {
     expect($response->json('failures.0.attribute'))->toBe('codigo_auxiliar');
 });
 
-test('import exige código auxiliar en todos los productos si la empresa es de transporte', function () {
+test('import no exige código auxiliar en productos tipo servicio aunque la empresa sea de transporte', function () {
     $company = productActingAsCompanyUser(['transport' => true]);
     Branch::factory()->for($company)->create();
 
     $file = productsUploadFile([
-        ['P300', null, 1, 'Producto Transporte', 10, 2, null, null],
+        ['P300', null, 2, 'Servicio Transporte', 10, 2, null, null],
     ]);
 
     $response = $this->post(route('products.import'), ['file' => $file]);
 
-    $response->assertOk()->assertJson(['success' => false]);
-    expect($response->json('failures.0.attribute'))->toBe('codigo_auxiliar');
+    $response->assertOk()->assertJson(['success' => true]);
 });
