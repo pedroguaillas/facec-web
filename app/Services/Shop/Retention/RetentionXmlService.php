@@ -103,20 +103,39 @@ class RetentionXmlService
      */
     private function sendRetentionMail(Shop $shop): void
     {
-        $email = Provider::find($shop->provider_id)?->email;
-
-        if (! $email) {
+        if (! Provider::find($shop->provider_id)?->email) {
             return;
         }
 
         try {
-            Mail::to($email)->send(new RetentionShipped($shop));
-            $shop->update(['send_mail_retention' => true]);
+            $this->resendMail($shop);
         } catch (Throwable $e) {
             Log::error('RetentionShipped mail failed', [
                 'shop_id' => $shop->id,
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Envía (o reenvía) el correo de la retención. Usado tanto automáticamente
+     * al autorizar como manualmente desde el botón "reenviar" del frontend.
+     * Propaga cualquier error para que el llamador decida cómo manejarlo.
+     */
+    public function resendMail(Shop $shop): void
+    {
+        if ($shop->state_retencion !== VoucherStates::AUTHORIZED) {
+            throw new \RuntimeException('La retención debe estar autorizada para poder enviar el correo.');
+        }
+
+        $email = Provider::find($shop->provider_id)?->email;
+
+        if (! $email) {
+            throw new \RuntimeException('El proveedor no tiene correo electrónico registrado.');
+        }
+
+        Mail::to($email)->send(new RetentionShipped($shop));
+
+        $shop->update(['send_mail_retention' => true]);
     }
 }

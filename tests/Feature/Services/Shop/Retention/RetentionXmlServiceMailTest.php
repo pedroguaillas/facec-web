@@ -39,3 +39,33 @@ test('sendRetentionMail envía el correo si el proveedor sí tiene correo regist
     Mail::assertSent(RetentionShipped::class);
     expect($shop->fresh()->send_mail_retention)->toBeTruthy();
 });
+
+test('resendMail lanza excepción si la retención no está autorizada', function () {
+    Mail::fake();
+
+    $provider = Provider::factory()->create(['email' => 'proveedor@example.com']);
+    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'state_retencion' => VoucherStates::SIGNED]);
+
+    app(RetentionXmlService::class)->resendMail($shop);
+})->throws(RuntimeException::class, 'La retención debe estar autorizada para poder enviar el correo.');
+
+test('resendMail lanza excepción si el proveedor no tiene correo', function () {
+    Mail::fake();
+
+    $provider = Provider::factory()->create(['email' => null]);
+    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'state_retencion' => VoucherStates::AUTHORIZED]);
+
+    app(RetentionXmlService::class)->resendMail($shop);
+})->throws(RuntimeException::class, 'El proveedor no tiene correo electrónico registrado.');
+
+test('resendMail envía el correo y marca send_mail_retention cuando está autorizada y el proveedor tiene correo', function () {
+    Mail::fake();
+
+    $provider = Provider::factory()->create(['email' => 'proveedor@example.com']);
+    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'state_retencion' => VoucherStates::AUTHORIZED]);
+
+    app(RetentionXmlService::class)->resendMail($shop);
+
+    Mail::assertSent(RetentionShipped::class);
+    expect($shop->fresh()->send_mail_retention)->toBeTruthy();
+});

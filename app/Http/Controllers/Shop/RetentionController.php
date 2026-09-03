@@ -64,6 +64,17 @@ class RetentionController extends Controller
         return response()->json(['succes' => true, 'message' => 'Retención anulada con éxito.', 'shop' => $shop->fresh()]);
     }
 
+    public function mail(Shop $shop, RetentionXmlService $service): JsonResponse
+    {
+        try {
+            $service->resendMail($shop);
+        } catch (\Throwable $e) {
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['succes' => true, 'message' => 'Correo enviado con éxito.', 'shop' => $shop->fresh()]);
+    }
+
     public function download(Shop $shop): StreamedResponse
     {
         abort_unless($shop->xml_retention && Storage::exists($shop->xml_retention), 404, 'XML no disponible.');

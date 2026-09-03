@@ -93,6 +93,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('shops/{shop}/xml', [ShopLifecycleController::class, 'download'])->name('shops.xml');
     Route::get('retentions/{id}/pdf', [RetentionController::class, 'pdf'])->name('retentions.pdf');
     Route::get('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
+    Route::get('retentions/{shop}/mail', [RetentionController::class, 'mail'])->name('retentions.mail');
     Route::get('retentions/{shop}/cancel', [RetentionController::class, 'cancel'])->name('retentions.cancel');
     Route::get('retentions/{shop}/xml', [RetentionController::class, 'download'])->name('retentions.xml');
 
