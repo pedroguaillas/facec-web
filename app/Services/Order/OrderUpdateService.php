@@ -62,7 +62,11 @@ class OrderUpdateService
     {
         OrderAditional::where('order_id', $order->id)->delete();
 
-        $aditionals[] = Order::requiredAditional();
+        // "RUC Proveedor" es un requisito del XML del SRI; no aplica a
+        // nota de venta/proforma, que nunca se envían al SRI.
+        if ($order->voucherType->requires_electronic) {
+            $aditionals[] = Order::requiredAditional();
+        }
 
         $valid = array_filter($aditionals, fn ($a) => ! empty($a['name']) && ! empty($a['description'])
         );

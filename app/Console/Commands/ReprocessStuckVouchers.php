@@ -6,6 +6,7 @@ use App\Jobs\ProcessVoucherJob;
 use App\Models\Branch;
 use App\StaticClasses\VoucherJobRegistry;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -61,10 +62,10 @@ class ReprocessStuckVouchers extends Command
             });
         }
 
-        // Solo aplica a liquidaciones de compra (voucher_type=3); el resto de Shops
+        // Solo aplica a liquidaciones de compra; el resto de Shops
         // nunca entra al ciclo de vida electrónico.
         if ($type === 'shop') {
-            $query->where('voucher_type', 3);
+            $query->whereHas('voucherType', fn (Builder $q) => $q->where('slug', VoucherTypes::COMPRA_LIQUIDACION_COMPRA));
         }
 
         // Retención es un flujo opcional sobre Shop — sin serie_retencion nunca se

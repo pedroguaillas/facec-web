@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class OrderStoreRequest extends FormRequest
@@ -20,9 +21,12 @@ class OrderStoreRequest extends FormRequest
         return [
             'customer_id' => 'required|integer|exists:customers,id',
             'total' => 'required|numeric',
-            'voucher_type' => 'required|integer|in:1,4',
+            'voucher_type_id' => [
+                'required',
+                'integer',
+                Rule::exists('voucher_types', 'id')->where('module', 'venta')->where('active', true),
+            ],
             'point_id' => 'required|integer|exists:emision_points,id',
-            'serie' => 'required|string',
             'date' => 'required|date',
             'send' => 'sometimes|boolean',
             'products' => 'present|array',

@@ -12,6 +12,7 @@ class ReferralGuideResources extends JsonResource
         return [
             'id' => $this->id,
             'atts' => [
+                'date' => $this->date,
                 'date_start' => $this->date_start,
                 'date_end' => $this->date_end,
                 'serie' => $this->serie,

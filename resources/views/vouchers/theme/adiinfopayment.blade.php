@@ -14,6 +14,7 @@
     </table>
     @endif
 
+    @isset($payMethod)
     <table style="margin-top: .5em; border-radius: 0;" class="table-rounded">
         <tbody>
             <tr style="background-color: #e6e6e6;">
@@ -26,3 +27,4 @@
             </tr>
         </tbody>
     </table>
+    @endisset

@@ -6,28 +6,38 @@
             </tr>
             <tr>
                 <th style="font-size: 16px; letter-spacing: 2px;" class="align-middle" colspan="2">
-                    @switch($movement->voucher_type)
-                    @case(1)
+                    @switch($voucherTypeSlug)
+                    @case(\App\StaticClasses\VoucherTypes::VENTA_FACTURA)
+                    @case(\App\StaticClasses\VoucherTypes::COMPRA_FACTURA)
                     FACTURA
                     @break
 
-                    @case(3)
+                    @case(\App\StaticClasses\VoucherTypes::COMPRA_LIQUIDACION_COMPRA)
                     LIQUIDACIÓN EN COMPRA
                     @break
 
-                    @case(4)
+                    @case(\App\StaticClasses\VoucherTypes::VENTA_NOTA_CREDITO)
                     NOTA DE CRÉDITO
                     @break
 
-                    @case(5)
-                    NOTA DE DÉDITO
+                    @case(\App\StaticClasses\VoucherTypes::VENTA_NOTA_VENTA)
+                    @case(\App\StaticClasses\VoucherTypes::COMPRA_NOTA_VENTA)
+                    NOTA DE VENTA
                     @break
 
-                    @case(6)
+                    @case(\App\StaticClasses\VoucherTypes::VENTA_PROFORMA)
+                    PROFORMA
+                    @break
+
+                    @case(\App\StaticClasses\VoucherTypes::COMPRA_NOTA_DEBITO)
+                    NOTA DE DÉBITO
+                    @break
+
+                    @case(\App\StaticClasses\VoucherTypes::GUIA_REMISION)
                     GUIA DE REMISIÓN
                     @break
 
-                    @case(7)
+                    @case(\App\StaticClasses\VoucherTypes::RETENCION)
                     COMPROBANTE DE RETENCIÓN
                     @break
 
@@ -40,6 +50,7 @@
                 <td class="relleno">No.</td>
                 <td class="align-middle">{{ $movement->serie }}</td>
             </tr>
+            @if($isElectronic)
             <tr>
                 <td class="relleno" colspan="2">NÚMERO DE AUTORIZACIÓN</td>
             </tr>
@@ -66,10 +77,10 @@
             <tr>
                 <td class="relleno" colspan="2">{{ substr($movement->xml ?? '', -53, 49) }}</td>
             </tr>
-            <!-- <tr>
-                <td class="relleno" colspan="2">
-                    Código de barra
-                </td>
-            </tr> -->
+            @else
+            <tr>
+                <td class="relleno" colspan="2" style="color: #888;">Documento no electrónico — sin autorización SRI</td>
+            </tr>
+            @endif
         </tbody>
     </table>

@@ -18,8 +18,7 @@ class OrderResources extends JsonResource
             'id' => $this->id,
             'atts' => [
                 'date' => $this->date,
-                'voucher_type' => $this->voucher_type,
-                'serie' => $this->serie,
+                'serie' => "{$this->voucherType->abbreviation} {$this->serie}",
                 'state' => $this->state,
                 'total' => $this->total,
                 'xml' => $this->xml,

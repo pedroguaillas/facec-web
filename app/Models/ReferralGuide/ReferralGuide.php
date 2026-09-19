@@ -8,7 +8,7 @@ class ReferralGuide extends BaseModel
 {
     protected $fillable = [
         'branch_id', 'customer_id', 'carrier_id',
-        'serie', 'address_from', 'address_to',
+        'serie', 'date', 'address_from', 'address_to',
         'date_start', 'date_end', 'reason_transfer',
         'customs_doc', 'branch_destiny', 'route',
 

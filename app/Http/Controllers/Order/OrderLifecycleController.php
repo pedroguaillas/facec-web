@@ -27,6 +27,10 @@ class OrderLifecycleController extends Controller
             return response()->json(['succes' => false, 'message' => 'El comprobante ya fue procesado.', 'order' => $order], 422);
         }
 
+        if (! $order->voucherType->requires_electronic) {
+            return response()->json(['succes' => false, 'message' => 'Este tipo de comprobante no requiere proceso electrónico ante el SRI.'], 422);
+        }
+
         ProcessVoucherJob::dispatch('order', $order->id, $company->id)->afterCommit();
 
         return response()->json(['succes' => true, 'message' => 'Comprobante en proceso.', 'order' => $order->fresh()]);

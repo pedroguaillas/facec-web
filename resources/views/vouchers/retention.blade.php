@@ -71,3 +71,7 @@
         </td>
     </tr>
 @endsection
+
+@section('footer')
+    @include('vouchers.theme.rucproveedor')
+@endsection

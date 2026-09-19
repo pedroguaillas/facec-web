@@ -7,6 +7,7 @@ use App\Models\CompanyUser;
 use App\Models\Customer;
 use App\Models\Order\Order;
 use App\Services\Order\OrderPdfService;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -54,20 +55,22 @@ class OrderShipped extends Mailable
         // lo que rompería el constructor con Company no-nullable.
         (new OrderPdfService($company))->savePdf($this->order->id);
 
+        $isInvoice = $this->order->voucherType->slug === VoucherTypes::VENTA_FACTURA;
+
         return $this->from(config('mail.from.address'), config('mail.from.name'))
             ->replyTo($replyTo)
-            ->subject(($this->order->voucher_type == 1 ? 'FACTURA ' : 'NOTA DE CRÉDITO ').$this->order->serie.' de '.$company->company)
+            ->subject(($isInvoice ? 'FACTURA ' : 'NOTA DE CRÉDITO ').$this->order->serie.' de '.$company->company)
             ->view('mail', ['title' => 'FACTURA '.$this->order->serie, 'customer' => Customer::find($this->order->customer_id)->name])
             ->attachFromStorage(
                 str_replace('.xml', '.pdf', $this->order->xml),
-                ($this->order->voucher_type == 1 ? 'FAC-' : 'NC-').$this->order->serie.'.pdf',
+                ($isInvoice ? 'FAC-' : 'NC-').$this->order->serie.'.pdf',
                 [
                     'mime' => 'application/pdf',
                 ]
             )
             ->attachFromStorage(
                 $this->order->xml,
-                ($this->order->voucher_type == 1 ? 'FAC-' : 'NC-').$this->order->serie.'.xml',
+                ($isInvoice ? 'FAC-' : 'NC-').$this->order->serie.'.xml',
                 [
                     'mime' => 'application/xml',
                 ]

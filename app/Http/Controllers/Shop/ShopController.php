@@ -13,9 +13,11 @@ use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
 use App\Models\Shop\ShopRetentionItem;
 use App\Models\Tax;
+use App\Models\VoucherType;
 use App\Services\Shop\ShopLcPdfService;
 use App\Services\Shop\ShopStoreService;
 use App\Services\Shop\ShopUpdateService;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,6 +33,7 @@ class ShopController extends Controller
 
         $shops = Shop::join('providers AS p', 'p.id', 'shops.provider_id')
             ->select('shops.*', 'p.name', 'p.email')
+            ->with('voucherType')
             ->withSum('shopretentionitems as retention_sum', 'value')
             ->latest('shops.created_at')
             ->when($search, function ($query) use ($search) {
@@ -67,7 +70,7 @@ class ShopController extends Controller
 
     public function edit(Shop $shop): JsonResponse
     {
-        $isSettlement = (int) $shop->voucher_type === 3;
+        $isSettlement = $shop->voucherType->slug === VoucherTypes::COMPRA_LIQUIDACION_COMPRA;
 
         return response()->json([
             'shop' => collect($shop->toArray())
@@ -94,9 +97,9 @@ class ShopController extends Controller
 
     public function pdf(Shop $shop, ShopLcPdfService $service)
     {
-        // Solo la Liquidación de Compra (voucher_type 3) es un comprobante electrónico propio;
+        // Solo la Liquidación de Compra es un comprobante electrónico propio;
         // factura/nota de venta/nota de débito son documentos externos, sin PDF generado por el sistema.
-        abort_unless((int) $shop->voucher_type === 3, 404);
+        abort_unless($shop->voucherType->slug === VoucherTypes::COMPRA_LIQUIDACION_COMPRA, 404);
 
         return $service->stream($shop->id);
     }
@@ -126,17 +129,20 @@ class ShopController extends Controller
     }
 
     /**
-     * @return array{points: Collection}
+     * @return array{points: Collection, voucherTypes: Collection}
      */
     private function emisionData(): array
     {
         $company = Auth::user()->company;
 
         return [
-            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, ep.retention, ep.settlementonpurchase, recognition")
+            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, recognition")
                 ->leftJoin('emision_points AS ep', 'branches.id', 'ep.branch_id')
                 ->where('branches.company_id', $company->id)
                 ->get(),
+            'voucherTypes' => VoucherType::where('module', 'compra')
+                ->where('active', true)
+                ->get(['id', 'slug', 'name', 'abbreviation']),
         ];
     }
 }

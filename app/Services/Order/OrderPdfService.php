@@ -9,6 +9,7 @@ use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
 use App\Models\Order\Repayment\Repayment;
+use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 
@@ -30,9 +31,11 @@ class OrderPdfService
 
         $enabledDiscount = $movement_items->contains(fn ($item) => $item->discount > 0);
         $enabledCodeAux = $movement_items->contains(fn ($item) => $item->aux_cod !== null);
+        $voucherTypeSlug = $movement->voucherType->slug;
+        $isElectronic = $movement->voucherType->requires_electronic;
 
         $pdf = $this->generatePdfView($movement, compact(
-            'company', 'branch', 'movement', 'movement_items',
+            'company', 'branch', 'movement', 'movement_items', 'voucherTypeSlug', 'isElectronic',
             'orderaditionals', 'beforeTaxChange', 'enabledDiscount', 'enabledCodeAux'
         ));
 
@@ -74,7 +77,7 @@ class OrderPdfService
     private function isBeforeTaxChange($movement): bool
     {
         return Carbon::parse(
-            $movement->voucher_type == 4 ? $movement->date_order : $movement->date
+            $movement->voucherType->slug === VoucherTypes::VENTA_NOTA_CREDITO ? $movement->date_order : $movement->date
         )->isBefore('2024-04-01');
     }
 
@@ -96,17 +99,23 @@ class OrderPdfService
 
     private function generatePdfView($movement, array $data)
     {
-        if ($movement->voucher_type == 1) {
-            $data['payMethod'] = MethodOfPayment::where('code', $movement->pay_method)->value('description');
-            $data['repayments'] = Repayment::selectRaw('identification, sequential, date, SUM(base) base, SUM(iva) iva')
-                ->join('repayment_taxes AS rt', 'repayments.id', 'repayment_id')
-                ->where('order_id', $movement->id)
-                ->groupBy('identification', 'sequential', 'date')
-                ->get();
+        return match ($movement->voucherType->slug) {
+            VoucherTypes::VENTA_FACTURA => app('dompdf.wrapper')->loadView('vouchers.invoice', $this->withPayMethodData($movement, $data)),
+            VoucherTypes::VENTA_NOTA_CREDITO => app('dompdf.wrapper')->loadView('vouchers.creditnote', $data),
+            VoucherTypes::VENTA_NOTA_VENTA => app('dompdf.wrapper')->loadView('vouchers.notaventa', $this->withPayMethodData($movement, $data)),
+            VoucherTypes::VENTA_PROFORMA => app('dompdf.wrapper')->loadView('vouchers.proforma', $data),
+        };
+    }
 
-            return app('dompdf.wrapper')->loadView('vouchers.invoice', $data);
-        }
+    private function withPayMethodData($movement, array $data): array
+    {
+        $data['payMethod'] = MethodOfPayment::where('code', $movement->pay_method)->value('description');
+        $data['repayments'] = Repayment::selectRaw('identification, sequential, date, SUM(base) base, SUM(iva) iva')
+            ->join('repayment_taxes AS rt', 'repayments.id', 'repayment_id')
+            ->where('order_id', $movement->id)
+            ->groupBy('identification', 'sequential', 'date')
+            ->get();
 
-        return app('dompdf.wrapper')->loadView('vouchers.creditnote', $data);
+        return $data;
     }
 }

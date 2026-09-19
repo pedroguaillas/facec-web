@@ -12,7 +12,9 @@ use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
 use App\Models\Product\Product;
+use App\Models\VoucherType;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\UploadedFile;
@@ -144,6 +146,8 @@ class OrderLotService
         $orders = [];
         $orderItems = [];
 
+        $facturaVoucherTypeId = VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id');
+
         foreach ($excelData as $productData) {
             $customer = array_values(array_filter($customers, fn ($item) => $item->identication === $productData[0]));
             $product = array_values(array_filter($products, fn ($item) => $item->code === $productData[2]));
@@ -159,6 +163,7 @@ class OrderLotService
                 'customer_id' => $customer[0]->id,
                 'lot_id' => $lot->id,
                 'total' => $subTotal + $iva,
+                'voucher_type_id' => $facturaVoucherTypeId,
                 // Consumidor final (identificación 9999999999999): forma de pago 01
                 // (SIN UTILIZACIÓN DEL SISTEMA FINANCIERO) en vez de la de la empresa —
                 // el Excel del lote no trae columna de forma de pago por fila.

@@ -5,9 +5,13 @@ namespace App\Services;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
+use App\Models\EmisionPointSequence;
 use App\Models\Order\Order;
 use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\Shop\Shop;
+use App\Models\VoucherType;
+use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\DB;
 
 class EmisionPointService
 {
@@ -53,70 +57,87 @@ class EmisionPointService
     private function autoCreatePoint(Branch $branch): void
     {
         $store = (int) $branch->store;
-        $emisionPoint = new EmisionPoint;
         $point = null;
 
         $configs = [
             [
                 'model' => Order::class,
-                'type' => 'invoice',
-                'voucher' => 1,
+                'slug' => VoucherTypes::VENTA_FACTURA,
                 'col' => 'serie',
+                'filterBySlug' => true,
             ],
             [
                 'model' => Order::class,
-                'type' => 'creditnote',
-                'voucher' => 4,
+                'slug' => VoucherTypes::VENTA_NOTA_CREDITO,
                 'col' => 'serie',
+                'filterBySlug' => true,
             ],
             [
                 'model' => Shop::class,
-                'type' => 'settlementonpurchase',
-                'voucher' => 3,
+                'slug' => VoucherTypes::COMPRA_LIQUIDACION_COMPRA,
                 'col' => 'serie',
+                'filterBySlug' => true,
             ],
             [
                 'model' => Shop::class,
-                'type' => 'retention',
-                'voucher' => null,
+                'slug' => VoucherTypes::RETENCION,
                 'col' => 'serie_retencion',
+                'filterBySlug' => false,
             ],
             [
                 'model' => ReferralGuide::class,
-                'type' => 'referralguide',
-                'voucher' => null,
+                'slug' => VoucherTypes::GUIA_REMISION,
                 'col' => 'serie',
+                'filterBySlug' => false,
             ],
         ];
+
+        $nextNumbers = [];
 
         foreach ($configs as $conf) {
             $query = $conf['model']::select($conf['col'].' AS serie')
                 ->where('branch_id', $branch->id);
 
-            if ($conf['voucher']) {
-                $query->where('voucher_type', $conf['voucher']);
+            if ($conf['filterBySlug']) {
+                $query->where('voucher_type_id', VoucherType::where('slug', $conf['slug'])->value('id'));
             }
 
             $doc = $query->latest('created_at')->first();
+            $nextSequence = $this->nextSequenceNumber($doc, $store, $point);
 
-            if (! $this->validSerie($emisionPoint, $doc, $conf['type'], $store, $point)) {
+            if ($nextSequence === null) {
                 return;
             }
+
+            $nextNumbers[$conf['slug']] = $nextSequence;
         }
 
-        if ($point !== null) {
-            $emisionPoint->branch_id = $branch->id;
-            $emisionPoint->point = sprintf('%03d', $point); // formato 001
-            $emisionPoint->save();
+        if ($point === null) {
+            return;
         }
+
+        DB::transaction(function () use ($branch, $point, $nextNumbers) {
+            $emisionPoint = EmisionPoint::create([
+                'branch_id' => $branch->id,
+                'point' => sprintf('%03d', $point), // formato 001
+            ]);
+
+            foreach ($nextNumbers as $slug => $nextNumber) {
+                EmisionPointSequence::create([
+                    'emision_point_id' => $emisionPoint->id,
+                    'voucher_type_id' => VoucherType::where('slug', $slug)->value('id'),
+                    'next_number' => $nextNumber,
+                ]);
+            }
+        });
     }
 
-    private function validSerie($emisionPoint, $doc, $type, $store, &$point): bool
+    private function nextSequenceNumber($doc, int $store, ?int &$point): ?int
     {
         if ($doc) {
             $serie = explode('-', $doc->serie);
             if (count($serie) < 3) {
-                return false;
+                return null;
             }
 
             $docStore = (int) $serie[0];
@@ -126,18 +147,16 @@ class EmisionPointService
             // Validar que el establecimiento coincida y el punto sea consistente
             if ($docStore === $store && ($point === null || $point === $docPoint)) {
                 $point = $docPoint;
-                $emisionPoint->{$type} = $nextSequence;
 
-                return true;
+                return $nextSequence;
             }
 
-            return false;
+            return null;
         }
 
         // Si no hay documentos previos, iniciar la secuencia en 1
         $point ??= 1;
-        $emisionPoint->{$type} = 1;
 
-        return true;
+        return 1;
     }
 }

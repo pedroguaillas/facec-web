@@ -35,8 +35,9 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
 
         return Order::query()
             ->join('customers AS c', 'c.id', 'customer_id')
+            ->join('voucher_types AS vt', 'vt.id', 'orders.voucher_type_id')
             ->select(
-                'voucher_type', 'date', 'authorization', 'serie',
+                'vt.name AS voucher_type_name', 'date', 'authorization', 'serie',
                 'no_iva', 'base0', 'base5', $baseField, 'iva5',
                 $ivaField, 'total', 'orders.state', 'identication', 'c.name'
             )
@@ -80,7 +81,7 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
         $row = [
             $order->identication,
             $order->name,
-            $this->voucherTypeName($order->voucher_type),
+            $order->voucher_type_name,
             $order->date,
             $order->authorization,
             $order->serie,
@@ -111,16 +112,5 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
             'A' => NumberFormat::FORMAT_TEXT,
             'E' => NumberFormat::FORMAT_TEXT,
         ];
-    }
-
-    private function voucherTypeName(int $type): string
-    {
-        return match ($type) {
-            1 => 'Factura',
-            2 => 'Nota de venta',
-            3 => 'Liquidación en compra',
-            4 => 'Nota de crédito',
-            default => '',
-        };
     }
 }

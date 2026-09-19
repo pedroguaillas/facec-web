@@ -5,6 +5,7 @@ namespace App\Services\Shop\Retention;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Shop\Shop;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\Storage;
 
 class RetentionPdfService
@@ -14,18 +15,21 @@ class RetentionPdfService
     public function buildPdf(int $id): array
     {
         $movement = $this->getMovement($id);
-        $movement->voucher_type = 7;
 
         $retention_items = $movement->shopretentionitems;
         $company = $this->company;
         $company->logo_dir = $company->logo_dir ?: 'default.png';
 
         $branch = $this->getBranch($movement->serie);
-        $comprobante = $this->voucherTypeLabel($movement->voucher_type_v);
+        $comprobante = $movement->voucher_type_name;
+        // La retención es siempre el propio comprobante del contribuyente,
+        // independiente del tipo de la compra sobre la que se retiene.
+        $voucherTypeSlug = VoucherTypes::RETENCION;
+        $isElectronic = true;
 
         $pdf = app('dompdf.wrapper')->loadView(
             'vouchers/retention',
-            compact('movement', 'company', 'branch', 'retention_items', 'comprobante')
+            compact('movement', 'company', 'branch', 'retention_items', 'comprobante', 'voucherTypeSlug', 'isElectronic')
         );
 
         return [$pdf, $movement];
@@ -47,10 +51,11 @@ class RetentionPdfService
     private function getMovement(int $id)
     {
         return Shop::join('providers AS p', 'provider_id', 'p.id')
+            ->join('voucher_types AS vt', 'vt.id', 'shops.voucher_type_id')
             ->select(
                 'shops.id',
                 'shops.date AS date_v',
-                'shops.voucher_type AS voucher_type_v',
+                'vt.name AS voucher_type_name',
                 'shops.date_retention AS date',
                 'shops.serie AS serie_retencion',
                 'shops.serie_retencion AS serie',
@@ -71,16 +76,5 @@ class RetentionPdfService
 
         return Branch::where(['company_id' => $this->company->id, 'store' => $store])->first()
             ?? Branch::where('company_id', $this->company->id)->orderBy('created_at')->first();
-    }
-
-    private function voucherTypeLabel(int $tv): string
-    {
-        return match ($tv) {
-            1 => 'Factura',
-            2 => 'Nota Venta',
-            3 => 'Liquidación en Compra',
-            5 => 'Nota de Débito',
-            default => '',
-        };
     }
 }

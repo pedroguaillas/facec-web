@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests\Shop;
 
+use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
 use App\StaticClasses\VoucherStates;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class ShopUpdateRequest extends FormRequest
 {
+    use ValidatesProviderIdentification;
+
     public function authorize(): bool
     {
         return Auth::check();
@@ -31,6 +35,12 @@ class ShopUpdateRequest extends FormRequest
                 if (in_array($shop->state, $protectedStates)) {
                     $validator->errors()->add('shop', 'No se puede modificar una compra en estado '.$shop->state.'.');
                 }
+
+                $this->validateProviderIdentification(
+                    $validator,
+                    $this->input('voucher_type_id', $shop->voucher_type_id),
+                    $this->input('provider_id', $shop->provider_id),
+                );
             },
         ];
     }
@@ -40,7 +50,11 @@ class ShopUpdateRequest extends FormRequest
         return [
             // Cabecera
             'date' => ['sometimes', 'date'],
-            'voucher_type' => ['sometimes', 'integer', 'in:1,2,3,5'],
+            'voucher_type_id' => [
+                'sometimes',
+                'integer',
+                Rule::exists('voucher_types', 'id')->where('module', 'compra')->where('active', true),
+            ],
             'provider_id' => ['sometimes', 'integer', 'exists:providers,id'],
             'serie' => ['sometimes', 'string', 'max:17'],
             'authorization' => ['nullable', 'string', 'max:49'],
@@ -82,7 +96,7 @@ class ShopUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'voucher_type.in' => 'El tipo de comprobante no es válido.',
+            'voucher_type_id.exists' => 'El tipo de comprobante no es válido.',
             'provider_id.exists' => 'El proveedor seleccionado no existe.',
             'serie_retencion.required_if' => 'La serie de retención es obligatoria cuando se aplica retención.',
             'taxes.required_if' => 'Los impuestos son obligatorios cuando se aplica retención.',

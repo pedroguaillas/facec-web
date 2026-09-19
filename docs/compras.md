@@ -12,24 +12,34 @@ y el flujo genérico en
 [facturacion-electronica/README.md](./facturacion-electronica/README.md).
 Para lógica de formulario/UI ver `facec-front-next/docs/compras.md`.
 
+> Refactor 2026-09: `voucher_type` (int) pasó a `voucher_type_id` (FK al
+> catálogo `voucher_types`, ver
+> [facturacion-electronica/README.md §0](./facturacion-electronica/README.md#0-catálogo-de-tipos-de-comprobante-voucher_types)).
+> Las referencias `archivo.php:línea` de este documento son anteriores a ese
+> cambio y pueden estar corridas unas pocas líneas.
+
 ## 1. Overview
 
 Una compra es una fila `Shop` que representa un comprobante recibido de un
-`Provider`. El tipo lo define `voucher_type`:
+`Provider`. El tipo lo define `voucher_type_id` (slugs del módulo `compra`):
 
-| `voucher_type` | Comprobante | ¿Electrónico propio? |
-|---|---|---|
-| 1 | Factura | No — documento externo del proveedor |
-| 2 | Nota de venta | No — documento externo |
-| 3 | **Liquidación de Compra** | Sí — lo emite la empresa al SRI |
-| 5 | Nota de débito | No — documento externo |
+| slug (antes `voucher_type`) | Comprobante | ¿Electrónico propio? | ¿Secuencial propio? |
+|---|---|---|---|---|
+| `compra_factura` (antes `1`) | Factura | No — documento externo del proveedor | No — la numera el proveedor |
+| `compra_nota_venta` (antes `2`) | Nota de venta | No — documento externo | No — la numera el proveedor |
+| `compra_liquidacion_compra` (antes `3`) | **Liquidación de Compra** | Sí — lo emite la empresa al SRI | **Sí** — la emite el contribuyente |
+| `compra_nota_debito` (antes `5`) | Nota de débito | No — documento externo | No — la numera el proveedor |
 
-Solo la **Liquidación de Compra (3)** tiene ciclo de vida electrónico
-propio (firma, envío, autorización, PDF generado por el sistema). Los demás
-tipos se registran como referencia contable / soporte de la retención
-(`ShopController.php:96-98`). Sobre cualquier `voucher_type` se puede además
-emitir un **Comprobante de Retención** electrónico, independiente del estado
-de la liquidación.
+Solo la **Liquidación de Compra** tiene ciclo de vida electrónico propio
+(firma, envío, autorización, PDF generado por el sistema) **y** secuencial
+propio: es el único tipo de Compras que el contribuyente mismo emite (los
+otros tres los emite el proveedor — su numeración no le pertenece al
+comprador, por eso `requires_sequence=false` en el catálogo para esos tres).
+Los tipos externos se registran como referencia contable / soporte de la
+retención (`ShopController.php:96-98`). Sobre cualquier `voucher_type_id` se
+puede además emitir un **Comprobante de Retención** electrónico
+(secuencial propio, slug `retencion`), independiente del estado de la
+liquidación.
 
 Modelos involucrados:
 
@@ -54,8 +64,8 @@ y `..._add_bases_to_shops.php`. Casts en `app/Models/Shop/Shop.php:65-78`.
 |---|---|
 | `branch_id`, `provider_id` | Sucursal emisora y proveedor (FKs) |
 | `date` | Fecha del comprobante |
-| `serie` | Serie del comprobante (estab. + punto + secuencia, 17 chars) |
-| `voucher_type` | Tipo de comprobante (ver tabla arriba) |
+| `serie` | Serie del comprobante (estab. + punto + secuencia, 17 chars). Solo se genera server-side para liquidación — en los otros 3 tipos es el dato del proveedor tal cual se captura |
+| `voucher_type_id` | FK a `voucher_types` (ver tabla arriba) |
 | `doc_realeted` | Documento relacionado (para retención sobre factura) |
 | `sub_total`, `total`, `discount`, `ice` | Totales de la compra |
 | `no_iva`, `base0`, `base5`, `base12`, `base15` | Bases imponibles por tarifa |
@@ -80,20 +90,27 @@ y `..._add_bases_to_shops.php`. Casts en `app/Models/Shop/Shop.php:65-78`.
 `ShopController::store` → `ShopStoreService::createShop`
 (`app/Services/Shop/ShopStoreService.php:27`). Todo dentro de una transacción:
 
-1. `prepareShopData()` (`:47`) — descarta campos no persistibles (`taxes`,
-   `pay_methods`, `app_retention`, `send`, `point_id`), y si es LC
-   (`voucher_type` 3) genera la `serie` desde la secuencia del punto de
-   emisión y marca `state = 'CREADO'`. Si hay retención genera
-   `serie_retencion` y `state_retencion = 'CREADO'`.
-2. `createShopItems()` (`:73`) — crea `ShopItem` desde `data['products']`.
-3. `createRetentionItems()` (`:90`) — crea `ShopRetentionItem`; **recalcula
+1. `prepareShopData()` — descarta campos no persistibles (`taxes`,
+   `pay_methods`, `app_retention`, `send`, `point_id`), resuelve el
+   `VoucherType` desde `voucher_type_id` y, si `requires_sequence=true`
+   (hoy solo liquidación), genera la `serie` vía
+   `VoucherSequenceService::generateSerie()` y marca `state = 'CREADO'`. Si
+   hay retención genera `serie_retencion` con el mismo servicio (slug
+   `retencion`) y `state_retencion = 'CREADO'`. El incremento de secuencia
+   ya ocurre dentro de `generateSerie()` — no hay paso aparte. Por eso
+   `ShopStoreRequest.serie` es `required_unless:voucher_type_id,<id de
+   compra_liquidacion_compra>` en vez de `required` fijo: para liquidación
+   el valor que mande el cliente se descarta igual, exigirlo era un 422
+   falso; para los otros 3 tipos (documento real del proveedor) sigue
+   siendo obligatorio.
+2. `createShopItems()` — crea `ShopItem` desde `data['products']`.
+3. `createRetentionItems()` — crea `ShopRetentionItem`; **recalcula
    `value` server-side** vía `RetentionTotalsCalculator` antes de persistir
    (ver [facturacion-electronica/compras.md §2](./facturacion-electronica/compras.md)).
-4. `updateEmisionPointSequence()` (`:111`) — incrementa la secuencia de LC
-   y/o de retención en el `EmisionPoint`.
-5. Fuera de la transacción, `sendVouchers()` (`:124`) — si `send` viene
-   true, dispara la emisión electrónica (`ShopLcXmlService::process` y/o
-   `RetentionXmlService::process`).
+4. Fuera de la transacción, `sendVouchers()` — si `send` viene true **y**
+   el tipo tiene `requires_electronic=true` (liquidación), dispara la
+   emisión electrónica (`ShopLcXmlService::process` y/o
+   `RetentionXmlService::process` si aplica retención).
 
 ### Editar (`update`)
 
@@ -122,9 +139,25 @@ Requests: `ShopStoreRequest` y `ShopUpdateRequest`
 
 - **Autorización**: solo `Auth::check()` (`ShopStoreRequest.php:12`). No hay
   policy — el aislamiento por empresa lo da `BranchScope`, no el request.
-- **`voucher_type`**: `in:1,2,3,5` (`ShopStoreRequest.php:22`).
-- **Retención condicional**: `serie_retencion` y `taxes` son
-  `required_if:app_retention,true` (`ShopStoreRequest.php:49,61`).
+- **`voucher_type_id`**: debe existir en `voucher_types` con `module=compra`
+  y `active=true` (`ShopStoreRequest.php`).
+- **Identificación del proveedor según el tipo** (trait
+  `App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification`, usado
+  por `ShopStoreRequest` y `ShopUpdateRequest`): liquidación de compra exige
+  `provider.type_identification` en `cédula`/`pasaporte` — es el tipo
+  reservado para proveedores **sin RUC** que no pueden emitir su propia
+  factura, por eso el contribuyente liquida la compra en su lugar. Los otros
+  3 tipos (factura, nota de venta, nota de débito) son documentos que el
+  proveedor emitió él mismo, así que exigen `ruc`. En `update` cae al
+  `voucher_type_id`/`provider_id` actuales del `Shop` cuando esos campos no
+  vienen en el body (son `sometimes`).
+- **Retención condicional**: `taxes` es `required_if:app_retention,true`
+  (`ShopStoreRequest.php`). `serie_retencion` **no** es campo del request en
+  `store` — la retención siempre es del contribuyente (`requires_sequence`
+  fijo en el catálogo), el backend la genera igual que `serie` de
+  liquidación. En `update` sigue siendo `required_if`, porque
+  `ShopUpdateService` no vuelve a generarla — si conviene unificar ese
+  camino con `VoucherSequenceService`, queda pendiente.
 - **Líneas de producto** (`products.*`): `product_id` debe existir,
   `quantity`/`price`/`discount`/`iva` requeridos y `>= 0`
   (`ShopStoreRequest.php:53-58`).
@@ -144,10 +177,18 @@ Requests: `ShopStoreRequest` y `ShopUpdateRequest`
 
 Definidos en `routes/api.php:74-86` (grupo autenticado).
 
+`ShopController::emisionData()` (compartido por `create`/`edit`) sigue el
+mismo patrón que `OrderController::emisionData()`: `points` liviano
+(id/store/point/recognition, sin preview de secuencial — se sacó el join
+viejo contra `emision_point_sequences` que solo cubría liquidación/retención
+y nunca se mostraba en el form) y `voucherTypes` filtrado a
+`module=compra, active=true`, para que el frontend arme el selector "Tipo de
+comprobante" sin hardcodear los 4 slugs de Compras.
+
 | Método | Ruta | Acción | Controller |
 |---|---|---|---|
 | GET | `shops` | Listado paginado (búsqueda por serie/proveedor, filtro `date`) | `ShopController@index` |
-| GET | `shops/create` | Datos para el formulario (taxes, puntos de emisión) | `ShopController@create` |
+| GET | `shops/create` | Datos para el formulario (taxes, puntos de emisión, `voucherTypes` módulo compra) | `ShopController@create` |
 | POST | `shops` | Crear compra (+ emisión si `send`) | `ShopController@store` |
 | GET | `shops/{shop}` | Datos para editar (ítems, retenciones, proveedor) | `ShopController@edit` |
 | PUT | `shops/{shop}` | Actualizar compra | `ShopController@update` |
@@ -194,13 +235,11 @@ no se repiten aquí. Lo siguiente es específico del módulo CRUD:
    los campos internos (`xml`, `state`, `extra_detail`, etc.) e es
    inconsistente con `index`, que sí usa el resource.
 
-4. **Comentario `voucher_type` desactualizado**
-   (`create_shops_table.php:34`): dice `01-F / 03-LC / 04-NC / 05-ND`, pero
-   la validación real acepta `in:1,2,3,5` — incluye `2` (nota de venta) y
-   **no** existe `4`. Las etiquetas vigentes están en
-   `RetentionPdfService::voucherTypeLabel` (`:76-85`): 1=Factura,
-   2=Nota Venta, 3=Liquidación en Compra, 5=Nota de Débito. El comentario de
-   la migración induce a error.
+4. **~~Comentario `voucher_type` desactualizado~~ (resuelto por el refactor
+   2026-09)**: la columna `voucher_type` (int) fue eliminada de `shops`;
+   ahora es `voucher_type_id` (FK), con nombre/código/flags en una sola
+   fuente de verdad (`voucher_types`, seed en `VoucherTypeSeeder`) en vez de
+   comentarios de migración y labels hardcodeados en varios archivos.
 
 5. **El módulo asume una sola sucursal por empresa.** Tanto la creación
    (`ShopStoreService.php:24`, `branches()->orderBy('created_at')->first()`)

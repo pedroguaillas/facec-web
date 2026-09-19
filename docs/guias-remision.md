@@ -85,7 +85,8 @@ La máquina de estados es la misma `VoucherStates` que Order/Shop
 `app/Xml/ReferralGuideBuilder.php` extiende `BaseVoucherBuilder` (comparte
 `infoTributaria()` y la generación de clave de acceso). Solo formatea; toma
 los valores tal cual del modelo y del transportista. La clave de acceso usa
-`date_start` (`:20-23`) y el `serieRaw()` es `guide->serie` (`:25-28`).
+`date` (fecha de emisión del comprobante — no `date_start`, que es la fecha
+de inicio de transporte) y el `serieRaw()` es `guide->serie`.
 
 El `$guide` que recibe el builder viene de un `join` con `customers` y
 `carriers` (`ReferralGuideLifecycleService::buildXml`, `:51-64`), por eso
@@ -96,6 +97,7 @@ e `identication`, `name` (destinatario/cliente).
 |---|---|---|
 | `<estab>`/`<ptoEmi>`/`<secuencial>` | `guide->serie` (desglosado en `BaseVoucherBuilder::infoTributaria`) | base:60-62 |
 | `<codDoc>` | constante `'06'` | `voucherTypeCode()` :15-18 |
+| clave de acceso (fecha) | `guide->date` (fecha de emisión, vía `accessKeyDate()`) | `BaseVoucherBuilder::infoTributaria` |
 | `<dirPartida>` | `guide->address_from` | :40 |
 | `<razonSocialTransportista>` | `guide->ca_name` (con `&`→`Y`) | :41 |
 | `<tipoIdentificacionTransportista>` | `04` si `strlen(ca_identication)==13`, si no `05` | :42 |
@@ -114,14 +116,26 @@ e `identication`, `name` (destinatario/cliente).
 | `<numAutDocSustento>` | `guide->authorization_invoice` | :60 |
 | `<fechaEmisionDocSustento>` | `guide->date_invoice` (`d/m/Y`) | :61 |
 | `<detalle>` (por ítem) | `codigoInterno`=`item->code`, `descripcion`=`item->name`, `cantidad`=`item->quantity` | :64-70 |
+| `<infoAdicional>` → `<campoAdicional nombre="RUC Proveedor">` | `config('services.order.ruc_proveedor')` (env `RUC_PROVEEDOR`), fijo | al final, antes de `</guiaRemision>` |
+
+`ReferralGuide` no tiene tabla de adicionales tipo `OrderAditional` — a
+diferencia de Ventas, aquí el único campo de información adicional que hace
+falta es un valor fijo por empresa (RUC Proveedor), así que se hardcodea
+directo en el builder en vez de armar una tabla para un solo campo. Mismo
+patrón en `SettlementOnPurchaseBuilder` (liquidación de compra) y
+`RetentionBuilder` (retención) — ver `docs/compras.md`. En PDF, el partial
+compartido es `resources/views/vouchers/theme/rucproveedor.blade.php`.
 
 ## 4. Validaciones y reglas de negocio
 
 - `ReferralGuideStoreRequest` (`app/Http/Requests/ReferralGuide/ReferralGuideStoreRequest.php`):
   `customer_id`, `carrier_id`, `point_id` deben existir; `serie` `max:17`;
   `address_from`/`address_to`/`reason_transfer` requeridos `max:300`;
-  `date_end` `after_or_equal:date_start` (`:25`); `products.*.quantity`
-  `numeric min:0`. `authorize()` solo exige `Auth::check()` (`:10-13`).
+  `date_end` `after_or_equal:date_start`; `products.*.quantity`
+  `numeric min:0`. `authorize()` solo exige `Auth::check()`. `date` (fecha
+  de emisión) **no** es campo del request — `ReferralGuideStoreService`
+  siempre la fija en `now()` al crear, igual criterio que `serie`; cualquier
+  `date` que mande el cliente se ignora.
 - `ReferralGuideUpdateRequest`: idéntico salvo que **no** pide `point_id` ni
   `serie` (el secuencial ya está asignado y no se regenera en update).
 - **Secuencial server-side:** el número de la serie no se confía del
@@ -193,16 +207,28 @@ Hallazgos concretos con evidencia:
    de *sanitización* (no de totales). Recomendado: `htmlspecialchars(...,
    ENT_XML1, 'UTF-8')` en todos los campos, en `BaseVoucherBuilder`.
 
-2. **No hay guarda de fecha antes de enviar (comprobante vencido).** En
-   Ventas, `OrderSriService` verifica `!$dateOrder->isToday()` y resetea la
-   fecha para no mandar un comprobante con fecha vencida
+2. **~~Clave de acceso generada con `date_start`~~ (resuelto, 2026-09).**
+   `date_start`/`date_end` son fechas de transporte (fechaIniTransporte/
+   fechaFinTransporte), no la fecha de emisión del comprobante — `referral_guides`
+   nunca había tenido una columna `date` propia y el código reusaba
+   `date_start` para todo lo que necesitaba "la fecha del documento"
+   (clave de acceso, listado). Se agregó `date` (migración
+   `2026_09_18_210000_add_date_to_referral_guides_table`, backfill desde
+   `date_start` para filas existentes) y `ReferralGuideBuilder::accessKeyDate()`
+   ahora usa `guide->date`. A diferencia de `date` en `OrderStoreRequest`/
+   `ShopStoreRequest` (ahí sí lo manda el cliente), acá `date` no es campo
+   del request — `ReferralGuideStoreService` la fija siempre en `now()` al
+   crear, mismo criterio que `serie`.
+
+   **Sigue pendiente**: no hay guarda de fecha antes de enviar (comprobante
+   vencido). En Ventas, `OrderSriService` verifica `!$dateOrder->isToday()` y
+   resetea la fecha para no mandar un comprobante con fecha vencida
    (`app/Services/Order/OrderSriService.php:26-29`).
    `ReferralGuideLifecycleService::send()` (`:66-72`) llama a
-   `SriSoapService::send()` directo, sin ninguna guarda equivalente, y la
-   clave de acceso se genera con `date_start` (`ReferralGuideBuilder.php:20-23`).
-   Una guía con `date_start` pasado (perfectamente válido según
-   `ReferralGuideStoreRequest`, que no exige que sea hoy) se firma y envía y
-   puede ser rechazada por fecha. Falta el mismo chequeo.
+   `SriSoapService::send()` directo, sin ninguna guarda equivalente — una
+   guía creada con `date` de ayer (o antes) y enviada hoy generaría una
+   clave de acceso con fecha vencida. Falta el mismo chequeo que tiene
+   Ventas.
 
 3. **Nunca se notifica por correo al autorizar.** `authorize()` pasa
    `onAuthorized: fn () => null` (`ReferralGuideLifecycleService.php:78`),

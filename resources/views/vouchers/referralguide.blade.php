@@ -7,6 +7,11 @@
                 <table class="table-bordered">
                     <tbody>
                         <tr>
+                            <td class="relleno" style="width: 100px;">Fecha de Emisión:</td>
+                            <td class="relleno" colspan="4">{{ date('d/m/Y', strtotime($movement->date)) }}</td>
+                            <td></td>
+                        </tr>
+                        <tr>
                             <td class="relleno" colspan="2">Identificación (Transportista):</td>
                             <td class="relleno" colspan="3">{{ $movement->ca_identication }}</td>
                         </tr>
@@ -114,4 +119,8 @@
             </td>
         </tr>
     @endforeach
+@endsection
+
+@section('footer')
+    @include('vouchers.theme.rucproveedor')
 @endsection

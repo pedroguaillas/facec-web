@@ -12,11 +12,14 @@ use App\Models\Branch;
 use App\Models\MethodOfPayment;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
+use App\Models\VoucherType;
 use App\Services\Order\OrderLotService;
 use App\Services\Order\OrderPdfService;
+use App\Services\Order\OrderProformaToInvoiceService;
 use App\Services\Order\OrderShowService;
 use App\Services\Order\OrderStoreService;
 use App\Services\Order\OrderUpdateService;
+use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +39,7 @@ class OrderController extends Controller
 
         $orders = Order::join('customers AS c', 'c.id', 'orders.customer_id')
             ->select('orders.*', 'c.name', 'c.email')
+            ->with('voucherType')
             ->latest('orders.created_at')
             ->when($search, function ($query) use ($search) {
                 $escaped = str_replace(['%', '_'], ['\%', '\_'], $search);
@@ -66,6 +70,17 @@ class OrderController extends Controller
         $order = $service->createOrder($request->validated());
 
         return response()->json($order, 201);
+    }
+
+    public function convertToInvoice(Order $order, OrderProformaToInvoiceService $service): JsonResponse
+    {
+        if ($order->voucherType->slug !== VoucherTypes::VENTA_PROFORMA) {
+            return response()->json(['succes' => false, 'message' => 'Solo una proforma puede convertirse a factura.'], 422);
+        }
+
+        $invoice = $service->convert($order);
+
+        return response()->json($invoice, 201);
     }
 
     public function storeLot(OrderLotStoreRequest $request, OrderLotService $service)
@@ -117,17 +132,20 @@ class OrderController extends Controller
     }
 
     /**
-     * @return array{points: Collection, methodOfPayments: Collection, tourism: bool, ivaTaxes: Collection}
+     * @return array{points: Collection, voucherTypes: Collection, methodOfPayments: Collection, tourism: bool, ivaTaxes: Collection}
      */
     private function emisionData(): array
     {
         $company = Auth::user()->company;
 
         return [
-            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, ep.invoice, ep.creditnote, recognition")
+            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, recognition")
                 ->leftJoin('emision_points AS ep', 'branches.id', 'ep.branch_id')
                 ->where('branches.company_id', $company->id)
                 ->get(),
+            'voucherTypes' => VoucherType::where('module', 'venta')
+                ->where('active', true)
+                ->get(['id', 'slug', 'name', 'abbreviation']),
             'methodOfPayments' => MethodOfPayment::query()
                 ->whereNotIn('code', [15, 17, 18, 21])
                 ->get(),

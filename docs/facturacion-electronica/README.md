@@ -14,6 +14,116 @@ y `SriSoapService`.
 Para lógica de formulario/UI ver `facec-front-next/docs/ventas.md` y
 `facec-front-next/docs/compras.md`.
 
+## 0. Catálogo de tipos de comprobante (`voucher_types`)
+
+Antes del refactor de 2026-09, `Order.voucher_type`/`Shop.voucher_type` eran
+un `smallint` crudo (`1`, `4`, `3`...) validado con `in:` en cada
+FormRequest, y cada `App\Xml\*Builder` hardcodeaba su propio `codDoc` SRI
+(`str_pad($voucher_type, 2, '0', ...)` — funcionaba "por coincidencia" con el
+código SRI real). Añadir un tipo nuevo significaba tocar validación,
+builder, factory y columna de secuencia en 4+ archivos a la vez.
+
+Ahora existe una tabla catálogo `voucher_types` (`App\Models\VoucherType`,
+seed en `database/seeders/VoucherTypeSeeder.php`) con una fila por tipo de
+comprobante, en ambos módulos:
+
+| slug | módulo | sigla | `code_sri` | `requires_electronic` | `requires_sequence` |
+|---|---|---|---|---|---|
+| `venta_factura` | venta | FAC | `01` | sí | sí |
+| `venta_nota_credito` | venta | N/C | `04` | sí | sí |
+| `venta_nota_venta` | venta | N/V | — | no | sí |
+| `venta_proforma` | venta | PRO | — | no | sí |
+| `compra_factura` | compra | FAC | `01` | no | **no** |
+| `compra_nota_venta` | compra | N/V | — | no | **no** |
+| `compra_liquidacion_compra` | compra | L/C | `03` | sí | sí |
+| `compra_nota_debito` | compra | N/D | `05` | no | **no** |
+| `retencion` | común | RET | `07` | sí | sí |
+| `guia_remision` | común | G/R | `06` | sí | sí |
+
+- `abbreviation` es la sigla corta para UI/impresos (badges de listado,
+  reportes) — no es un identificador (`slug` cumple ese rol), se repite a
+  propósito entre `venta_factura`/`compra_factura` (mismo documento real, FAC
+  en ambos módulos).
+- `code_sri` es el `codDoc` oficial del catálogo del SRI — constantes fijas
+  en `App\StaticClasses\SriVoucherCode` (no deberían cambiar salvo que el SRI
+  actualice su normativa). Los slugs están en `App\StaticClasses\VoucherTypes`
+  — usar siempre esas constantes, nunca strings sueltos.
+- `requires_electronic` decide si el tipo pasa por firma/envío/autorización
+  SRI (`OrderLifecycleService::process()` y `OrderLifecycleController::process`
+  cortan temprano con 422/no-op si es `false` — así `venta_nota_venta` y
+  `venta_proforma` nunca disparan `ProcessVoucherJob` aunque el request pida
+  `send=true`).
+- `requires_sequence` decide si el tipo lleva secuencial propio. En Compras
+  **solo la liquidación** lo lleva: factura/nota de venta/nota de débito son
+  documentos que **emite el proveedor**, no el contribuyente — su numeración
+  no nos pertenece, así que `Shop.serie` para esos tres tipos es solo el
+  dato que el proveedor puso en su propio comprobante, tal cual lo registra
+  quien captura la compra (no se genera ni se secuencia acá).
+
+### Secuenciación (`emision_point_sequences` + `VoucherSequenceService`)
+
+Las 5 columnas sueltas que tenía `emision_points` (`invoice`, `creditnote`,
+`retention`, `referralguide`, `settlementonpurchase`) quedaron **obsoletas**
+(siguen en la tabla por compatibilidad de datos históricos, pero ya no las
+escribe ningún flujo) y fueron reemplazadas por una tabla normalizada:
+
+```
+emision_point_sequences (emision_point_id, voucher_type_id, next_number)
+  unique(emision_point_id, voucher_type_id)
+```
+
+`App\Services\VoucherSequenceService` es el único punto que lee/incrementa
+esta tabla:
+
+- `reserveNext(EmisionPoint $point, string $voucherTypeSlug): int` — atómico
+  (`lockForUpdate` dentro de la transacción abierta por el caller), autocrea
+  la fila en 1 la primera vez.
+- `generateSerie(EmisionPoint $point, string $voucherTypeSlug): string` — arma
+  el string de 17 chars `estab-ptoEmi-secuencial` de siempre. El prefijo
+  `estab-ptoEmi` sale de `$point->branch->store` + `$point->point`, no de
+  nada que mande el cliente — por eso `serie` dejó de ser un campo de
+  request en `OrderStoreRequest`/`ReferralGuideStoreRequest` (antes pedían
+  una "base" solo para descartar todo menos los primeros 8 chars, un campo
+  obligatorio para un valor que el backend ya podía derivar de `point_id`).
+  `orders/{order}/convert-to-invoice` va más lejos: como también deriva el
+  punto de emisión de la proforma origen (no de un `point_id` del request) y
+  `send` quedó fijo en `true`, no le queda ningún campo que validar —
+  directamente no tiene FormRequest, el guard "solo proforma" vive inline en
+  el controller. `Shop.serie` es la única
+  excepción real: para factura/nota de venta/nota de débito de Compras es
+  el número que puso el *proveedor* en su propio documento, dato genuino
+  que sí tiene que mandar el cliente — solo se sobreescribe cuando el tipo
+  es liquidación (`requires_sequence=true`).
+
+Todo comprobante con `requires_sequence = true` (factura/nota crédito/nota
+venta/proforma de Ventas, liquidación de Compras, retención, guía de
+remisión) reserva su número por esta vía — cada tipo tiene su propia
+secuencia independiente en el mismo punto de emisión, agregar un tipo nuevo
+es una fila de seeder, no una columna de migración ni un `if` más en el
+service de creación correspondiente.
+
+> **Bootstrap de datos existentes**: la migración
+> `2026_09_08_095000_bootstrap_emision_point_sequences_from_emision_points`
+> copia el valor *actual* de las 5 columnas viejas de `emision_points` hacia
+> `emision_point_sequences` la primera vez que corre `migrate` en una BD con
+> comprobantes reales — si no existiera, `emision_point_sequences` arrancaría
+> vacía y el primer comprobante nuevo reservaría el secuencial `1`,
+> chocando con uno ya emitido ante el SRI. Usa `insertOrIgnore` (respeta
+> `unique(emision_point_id, voucher_type_id)`): si una fila ya existe (un
+> comprobante nuevo se creó entre el deploy del schema y este bootstrap) no
+> la pisa hacia atrás. Es idempotente y su `down()` es un no-op intencional
+> (revertir borraría secuencial real, no lo restaura).
+
+> **Ojo con los endpoints de "preview" del formulario** (`orders/create`,
+> `shops/create`, `referralguides/create` → `emisionData()` en cada
+> controller): antes leían directo `ep.invoice`/`ep.creditnote`/etc. Como esas
+> columnas ya no se incrementan, se cambiaron a un `LEFT JOIN` contra
+> `emision_point_sequences` filtrado por `voucher_type_id` (con
+> `COALESCE(..., 1)` para el punto que todavía no tiene ninguna fila de
+> secuencia) — si se agrega un flujo nuevo con secuencial propio, este join
+> hay que replicarlo ahí también, o el preview del próximo número quedará
+> mostrando siempre `1`.
+
 ## 1. Máquina de estados (`App\StaticClasses\VoucherStates`)
 
 | Constante | Valor | Significado |

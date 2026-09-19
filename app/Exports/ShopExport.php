@@ -33,8 +33,9 @@ class ShopExport implements FromQuery, WithColumnFormatting, WithHeadings, WithM
 
         return Shop::query()
             ->join('providers AS p', 'p.id', 'provider_id')
+            ->join('voucher_types AS vt', 'vt.id', 'shops.voucher_type_id')
             ->select(
-                'voucher_type', 'date', 'authorization', 'serie',
+                'vt.name AS voucher_type_name', 'date', 'authorization', 'serie',
                 'no_iva', 'base0', 'base5', $baseField, 'iva5',
                 $ivaField, 'total', 'shops.state', 'p.identication', 'p.name'
             )
@@ -78,7 +79,7 @@ class ShopExport implements FromQuery, WithColumnFormatting, WithHeadings, WithM
         $row = [
             $shop->identication,
             $shop->name,
-            $this->voucherTypeName($shop->voucher_type),
+            $shop->voucher_type_name,
             $shop->date,
             $shop->authorization,
             $shop->serie,
@@ -109,16 +110,5 @@ class ShopExport implements FromQuery, WithColumnFormatting, WithHeadings, WithM
             'A' => NumberFormat::FORMAT_TEXT,
             'E' => NumberFormat::FORMAT_TEXT,
         ];
-    }
-
-    private function voucherTypeName(int $type): string
-    {
-        return match ($type) {
-            1 => 'Factura',
-            2 => 'Nota de venta',
-            3 => 'Liquidación en compra',
-            4 => 'Nota de crédito',
-            default => '',
-        };
     }
 }

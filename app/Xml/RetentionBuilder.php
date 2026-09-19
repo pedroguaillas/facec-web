@@ -2,6 +2,9 @@
 
 namespace App\Xml;
 
+use App\StaticClasses\SriVoucherCode;
+use App\StaticClasses\VoucherTypes;
+
 class RetentionBuilder extends BaseVoucherBuilder
 {
     public function __construct(
@@ -14,6 +17,23 @@ class RetentionBuilder extends BaseVoucherBuilder
     protected function voucherTypeCode(): string
     {
         return '07';
+    }
+
+    /**
+     * Código del documento de sustento (compra sobre la que se retiene).
+     * "Nota de venta" no tiene código oficial en el catálogo `voucher_types.code_sri`
+     * (no es un comprobante electrónico), pero el SRI históricamente ha recibido '02'
+     * para este caso en los XML de retención emitidos por este sistema.
+     */
+    private function docSustentoCode(string $voucherTypeSlug): string
+    {
+        return match ($voucherTypeSlug) {
+            VoucherTypes::COMPRA_FACTURA => SriVoucherCode::FACTURA,
+            VoucherTypes::COMPRA_NOTA_VENTA => '02',
+            VoucherTypes::COMPRA_LIQUIDACION_COMPRA => SriVoucherCode::LIQUIDACION_COMPRA,
+            VoucherTypes::COMPRA_NOTA_DEBITO => SriVoucherCode::NOTA_DEBITO,
+            default => SriVoucherCode::FACTURA,
+        };
     }
 
     protected function accessKeyDate(): \DateTime
@@ -57,7 +77,7 @@ class RetentionBuilder extends BaseVoucherBuilder
         $string .= '<docsSustento>';
         $string .= '<docSustento>';
         $string .= '<codSustento>'.((int) $shop->iva > 0 ? '01' : '07').'</codSustento>';
-        $string .= '<codDocSustento>'.str_pad($shop->voucher_type, 2, '0', STR_PAD_LEFT).'</codDocSustento>';
+        $string .= '<codDocSustento>'.$this->docSustentoCode($shop->voucherType->slug).'</codDocSustento>';
         $string .= '<numDocSustento>'.str_replace('-', '', $shop->serie).'</numDocSustento>';
         $string .= '<fechaEmisionDocSustento>'.$date->format('d/m/Y').'</fechaEmisionDocSustento>';
         $string .= '<pagoLocExt>01</pagoLocExt>';
@@ -95,6 +115,11 @@ class RetentionBuilder extends BaseVoucherBuilder
 
         $string .= '</docSustento>';
         $string .= '</docsSustento>';
+
+        $string .= '<infoAdicional>';
+        $string .= '<campoAdicional nombre="RUC Proveedor">'.config('services.order.ruc_proveedor').'</campoAdicional>';
+        $string .= '</infoAdicional>';
+
         $string .= '</comprobanteRetencion>';
 
         return $string;

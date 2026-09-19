@@ -15,8 +15,10 @@ use App\Models\Customer;
 use App\Models\Product\Product;
 use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\ReferralGuide\ReferralGuideItem;
+use App\Models\VoucherType;
 use App\Services\ReferralGuide\ReferralGuideStoreService;
 use App\Services\ReferralGuide\ReferralGuideUpdateService;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -35,6 +37,7 @@ class ReferralGuideController extends Controller
                 'referral_guides.*,'.
                 'c.name,'.
                 'ca.name AS carrier_name,'.
+                "DATE_FORMAT(date, '%d-%m-%Y') as date,".
                 "DATE_FORMAT(date_start, '%d-%m-%Y') as date_start,".
                 "DATE_FORMAT(date_end, '%d-%m-%Y') as date_end"
             )
@@ -98,7 +101,8 @@ class ReferralGuideController extends Controller
             ->where('referral_guides.id', $id)
             ->firstOrFail();
 
-        $movement->voucher_type = 6;
+        $voucherTypeSlug = VoucherTypes::GUIA_REMISION;
+        $isElectronic = true;
 
         $movement_items = ReferralGuideItem::join('products AS p', 'p.id', 'product_id')
             ->select('quantity', 'name', 'code')
@@ -114,7 +118,7 @@ class ReferralGuideController extends Controller
             ?? Branch::where('company_id', $company->id)->orderBy('created_at')->first();
 
         return app('dompdf.wrapper')
-            ->loadView('vouchers.referralguide', compact('movement', 'company', 'branch', 'movement_items'))
+            ->loadView('vouchers.referralguide', compact('movement', 'company', 'branch', 'movement_items', 'voucherTypeSlug', 'isElectronic'))
             ->stream();
     }
 
@@ -145,10 +149,14 @@ class ReferralGuideController extends Controller
     private function emisionData(): array
     {
         $company = Auth::user()->company;
+        $referralGuideTypeId = VoucherType::where('slug', VoucherTypes::GUIA_REMISION)->value('id');
 
         return [
-            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, ep.referralguide, recognition")
+            'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, COALESCE(seq_rg.next_number, 1) AS referralguide, recognition")
                 ->leftJoin('emision_points AS ep', 'branches.id', 'ep.branch_id')
+                ->leftJoin('emision_point_sequences AS seq_rg', function ($join) use ($referralGuideTypeId) {
+                    $join->on('seq_rg.emision_point_id', '=', 'ep.id')->where('seq_rg.voucher_type_id', $referralGuideTypeId);
+                })
                 ->where('branches.company_id', $company->id)
                 ->get(),
         ];

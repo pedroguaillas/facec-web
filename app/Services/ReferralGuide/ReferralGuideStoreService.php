@@ -7,6 +7,8 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\ReferralGuide\ReferralGuide;
+use App\Services\VoucherSequenceService;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +18,7 @@ class ReferralGuideStoreService
 
     private Branch $branch;
 
-    public function __construct()
+    public function __construct(private VoucherSequenceService $sequenceService)
     {
         $this->company = Auth::user()->company;
         $this->branch = $this->company->branches()->orderBy('created_at')->first();
@@ -31,9 +33,6 @@ class ReferralGuideStoreService
             $referralguide = $this->branch->referralguides()->create($inputs);
 
             $this->createItems($referralguide, $data['products'] ?? []);
-
-            $emisionPoint->referralguide += 1;
-            $emisionPoint->save();
 
             return $referralguide;
         });
@@ -50,7 +49,10 @@ class ReferralGuideStoreService
         $except = ['products', 'send', 'point_id'];
         $inputs = collect($data)->except($except)->toArray();
 
-        $inputs['serie'] = substr($data['serie'], 0, 8).str_pad($emisionPoint->referralguide, 9, '0', STR_PAD_LEFT);
+        $inputs['serie'] = $this->sequenceService->generateSerie($emisionPoint, VoucherTypes::GUIA_REMISION);
+        // Fecha de emisión: siempre la fecha del servidor al crear, no un
+        // campo que mande el cliente (igual criterio que `serie`).
+        $inputs['date'] = now()->format('Y-m-d');
 
         return $inputs;
     }

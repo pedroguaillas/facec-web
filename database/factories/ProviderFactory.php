@@ -26,7 +26,7 @@ class ProviderFactory extends Factory
         return [
             'branch_id' => Branch::factory(),
             'state' => $this->faker->randomElement([0, 1]),
-            'type_identification' => strlen($identification) === 10 ? 'cedula' : 'ruc',
+            'type_identification' => strlen($identification) === 10 ? 'cédula' : 'ruc',
             'identication' => $identification,
             'name' => $this->faker->name,
             'address' => $this->faker->address,

@@ -5,8 +5,10 @@ namespace App\Models\Order;
 use App\Models\BaseModel;
 use App\Models\Inventory;
 use App\Models\Order\Repayment\Repayment;
+use App\Models\VoucherType;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Order extends BaseModel
 {
@@ -46,7 +48,7 @@ class Order extends BaseModel
         'iva',
         'discount',
         'total',
-        'voucher_type',
+        'voucher_type_id',
         'paid',
         // Electronic
         'state',
@@ -97,9 +99,14 @@ class Order extends BaseModel
         'iva15' => 'float',
         'sub_total' => 'float',
         'total' => 'float',
-        'voucher_type' => 'integer',
+        'voucher_type_id' => 'integer',
         'send_mail' => 'boolean',
     ];
+
+    public function voucherType(): BelongsTo
+    {
+        return $this->belongsTo(VoucherType::class);
+    }
 
     public function orderitems()
     {

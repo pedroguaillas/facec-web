@@ -22,7 +22,7 @@
                 <td class="relleno" colspan="2">Obligado a llevar contabilidad</td>
                 <td class="align-middle">{{ $company->accounting ? 'SI' : 'NO' }}</td>
             </tr>
-            @if($movement->voucher_type!==4)
+            @if($voucherTypeSlug !== \App\StaticClasses\VoucherTypes::VENTA_NOTA_CREDITO)
 
             @if($company->retention_agent)
             <tr>

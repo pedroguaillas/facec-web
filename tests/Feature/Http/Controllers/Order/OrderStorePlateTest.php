@@ -10,6 +10,8 @@ use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
 use App\Models\User;
 use App\Models\UserType;
+use App\Models\VoucherType;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\DB;
 
 function plateActingAsCompany(): Branch
@@ -37,9 +39,8 @@ function plateOrderPayload(Branch $branch, Product $product, array $overrides = 
     return array_merge([
         'customer_id' => $customer->id,
         'total' => 10,
-        'voucher_type' => 1,
+        'voucher_type_id' => VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id'),
         'point_id' => $emisionPoint->id,
-        'serie' => '001001',
         'date' => now()->format('Y-m-d'),
         'products' => [[
             'product_id' => $product->id,

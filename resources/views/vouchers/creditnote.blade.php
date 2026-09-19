@@ -86,7 +86,7 @@
         <tbody>
             <tr>
                 <td style="width: 460px;">
-                    <!-- @include('vouchers.theme.payment') -->
+                    @include('vouchers.theme.adiinfopayment')
                 </td>
                 <td>@include('vouchers.theme.total')</td>
             </tr>

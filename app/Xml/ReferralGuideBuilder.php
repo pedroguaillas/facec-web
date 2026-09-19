@@ -19,7 +19,10 @@ class ReferralGuideBuilder extends BaseVoucherBuilder
 
     protected function accessKeyDate(): \DateTime
     {
-        return new \DateTime($this->guide->date_start);
+        // La clave de acceso lleva la fecha de EMISIÓN del comprobante
+        // (`date`), no la de inicio de transporte (`date_start`) — son
+        // conceptos distintos aunque suelen coincidir el mismo día.
+        return new \DateTime($this->guide->date);
     }
 
     protected function serieRaw(): string
@@ -72,6 +75,11 @@ class ReferralGuideBuilder extends BaseVoucherBuilder
 
         $string .= '</destinatario>';
         $string .= '</destinatarios>';
+
+        $string .= '<infoAdicional>';
+        $string .= '<campoAdicional nombre="RUC Proveedor">'.config('services.order.ruc_proveedor').'</campoAdicional>';
+        $string .= '</infoAdicional>';
+
         $string .= '</guiaRemision>';
 
         return $string;

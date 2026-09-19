@@ -103,7 +103,29 @@ abstracción prematura sin beneficio real — queda como parte del pendiente
 de `ShopTotalsCalculator` (§4), si ese trabajo llega a incluir
 descuento/ICE por ítem en Compras.
 
-## 4. Pendientes
+## 4. `infoAdicional` fijo con RUC Proveedor (liquidación y retención)
+
+Ni `Shop` ni `ReferralGuide` tienen una tabla de adicionales tipo
+`OrderAditional` — el único dato de "información adicional" que hace falta
+en estos comprobantes es un RUC fijo por empresa
+(`config('services.order.ruc_proveedor')`, env `RUC_PROVEEDOR`), así que en
+vez de armar una tabla completa para un solo campo, `SettlementOnPurchaseBuilder`
+y `RetentionBuilder` lo hardcodean directo:
+
+```php
+$string .= '<infoAdicional>';
+$string .= '<campoAdicional nombre="RUC Proveedor">'.config('services.order.ruc_proveedor').'</campoAdicional>';
+$string .= '</infoAdicional>';
+```
+
+En liquidación va después de `</detalles>`; en retención, después de
+`</docsSustento>` (ambos justo antes del cierre del tag raíz). Mismo patrón
+en `ReferralGuideBuilder` (ver `docs/guias-remision.md §3`). En PDF, el
+partial compartido `resources/views/vouchers/theme/rucproveedor.blade.php`
+se incluye en el footer de `settlementonpurchase.blade.php`,
+`retention.blade.php` y `referralguide.blade.php`.
+
+## 5. Pendientes
 
 - **Falta un `ShopTotalsCalculator`** análogo a `OrderTotalsCalculator`
   (ventas.md §3.1) que recalcule `sub_total`/`total`/`base0,5,15`/

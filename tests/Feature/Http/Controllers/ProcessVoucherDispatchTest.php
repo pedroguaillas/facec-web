@@ -11,7 +11,9 @@ use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\Shop\Shop;
 use App\Models\User;
 use App\Models\UserType;
+use App\Models\VoucherType;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\Queue;
 
 function actingAsVoucherCompany(): Company
@@ -94,7 +96,8 @@ test('shops.process encola ProcessVoucherJob con tipo shop', function () {
 
     $company = actingAsVoucherCompany();
     $branch = Branch::factory()->for($company)->create();
-    $shop = Shop::factory()->create(['branch_id' => $branch->id, 'voucher_type' => 3, 'state' => VoucherStates::SAVED]);
+    $liquidacionId = VoucherType::where('slug', VoucherTypes::COMPRA_LIQUIDACION_COMPRA)->value('id');
+    $shop = Shop::factory()->create(['branch_id' => $branch->id, 'voucher_type_id' => $liquidacionId, 'state' => VoucherStates::SAVED]);
 
     $response = $this->getJson(route('shops.process', $shop));
 
@@ -145,6 +148,7 @@ test('referralguides.process encola ProcessVoucherJob con tipo referral_guide', 
         'customer_id' => Customer::factory()->create(['branch_id' => $branch->id])->id,
         'carrier_id' => $carrier->id,
         'serie' => '001-001-000000001',
+        'date' => now()->toDateString(),
         'address_from' => 'Origen 123',
         'address_to' => 'Destino 456',
         'date_start' => now()->toDateString(),

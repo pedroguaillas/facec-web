@@ -18,11 +18,10 @@ class ShopResources extends JsonResource
             'id' => $this->id,
             'atts' => [
                 'date' => $this->date,
-                'voucher_type' => $this->voucher_type,
-                'serie' => $this->serie,
+                'serie' => "{$this->voucherType?->abbreviation} {$this->serie}",
                 'total' => $this->total,
                 // Retención
-                'serie_retencion' => $this->serie_retencion,
+                'serie_retencion' => $this->serie_retencion ? "RET {$this->serie_retencion}" : $this->serie_retencion,
                 'state_retencion' => $this->state_retencion,
                 'xml_retention' => $this->xml_retention,
                 'send_mail_retention' => $this->send_mail_retention,
@@ -37,6 +36,12 @@ class ShopResources extends JsonResource
             'provider' => [
                 'name' => $this->name,
                 'email' => $this->email,
+            ],
+            'voucher_type' => [
+                'slug' => $this->voucherType?->slug,
+                'name' => $this->voucherType?->name,
+                'abbreviation' => $this->voucherType?->abbreviation,
+                'code_sri' => $this->voucherType?->code_sri,
             ],
         ];
     }

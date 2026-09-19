@@ -21,7 +21,7 @@ class InvoiceBuilder extends BaseVoucherBuilder
 
     protected function voucherTypeCode(): string
     {
-        return str_pad($this->order->voucher_type, 2, '0', STR_PAD_LEFT);
+        return $this->order->voucherType->code_sri;
     }
 
     protected function accessKeyDate(): \DateTime

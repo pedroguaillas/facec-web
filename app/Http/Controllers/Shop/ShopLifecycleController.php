@@ -7,6 +7,7 @@ use App\Jobs\ProcessVoucherJob;
 use App\Models\Shop\Shop;
 use App\Services\Shop\ShopLcXmlService;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,8 +17,8 @@ class ShopLifecycleController extends Controller
 {
     public function process(Shop $shop): JsonResponse
     {
-        // Solo la Liquidación de Compra (voucher_type 3) tiene ciclo de vida electrónico.
-        abort_unless((int) $shop->voucher_type === 3, 404);
+        // Solo la Liquidación de Compra tiene ciclo de vida electrónico.
+        abort_unless($shop->voucherType->slug === VoucherTypes::COMPRA_LIQUIDACION_COMPRA, 404);
 
         $company = Auth::user()->company;
 
@@ -36,7 +37,7 @@ class ShopLifecycleController extends Controller
 
     public function cancel(Shop $shop, ShopLcXmlService $service): JsonResponse
     {
-        abort_unless((int) $shop->voucher_type === 3, 404);
+        abort_unless($shop->voucherType->slug === VoucherTypes::COMPRA_LIQUIDACION_COMPRA, 404);
 
         try {
             $result = $service->cancel($shop);

@@ -3,8 +3,10 @@
 namespace App\Models\Shop;
 
 use App\Models\BaseModel;
+use App\Models\VoucherType;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Shop extends BaseModel
 {
@@ -31,7 +33,7 @@ class Shop extends BaseModel
         'discount',
         'ice',
         'total',
-        'voucher_type',
+        'voucher_type_id',
         'paid',
 
         // Electrónico
@@ -63,6 +65,7 @@ class Shop extends BaseModel
     ];
 
     protected $casts = [
+        'voucher_type_id' => 'integer',
         'no_iva' => 'float',
         'base0' => 'float',
         'base5' => 'float',
@@ -85,5 +88,10 @@ class Shop extends BaseModel
     public function shopretentionitems()
     {
         return $this->hasMany(ShopRetentionItem::class);
+    }
+
+    public function voucherType(): BelongsTo
+    {
+        return $this->belongsTo(VoucherType::class);
     }
 }

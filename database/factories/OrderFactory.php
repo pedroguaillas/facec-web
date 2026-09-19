@@ -5,7 +5,9 @@ namespace Database\Factories;
 use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Order\Order;
+use App\Models\VoucherType;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -38,7 +40,7 @@ class OrderFactory extends Factory
             'iva' => 0,
             'discount' => 0,
             'total' => 0,
-            'voucher_type' => 1,
+            'voucher_type_id' => fn () => VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id'),
             'paid' => 0,
             'state' => VoucherStates::SAVED,
             'autorized' => null,

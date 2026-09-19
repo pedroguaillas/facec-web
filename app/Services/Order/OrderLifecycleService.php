@@ -8,6 +8,7 @@ use App\Models\Order\Order;
 use App\Models\Order\OrderItem;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use App\Xml\CreditNoteBuilder;
 use App\Xml\InvoiceBuilder;
 use App\Xml\InvoiceLotBuilder;
@@ -25,6 +26,10 @@ class OrderLifecycleService
     public function process(Order $order, Company $company, bool $send = true): void
     {
         if (! $company->active_voucher) {
+            return;
+        }
+
+        if (! $order->voucherType->requires_electronic) {
             return;
         }
 
@@ -87,9 +92,9 @@ class OrderLifecycleService
             ->where('order_id', $order->id)
             ->get();
 
-        return match ($order->voucher_type) {
-            1 => (new InvoiceBuilder($company, $order, $order_items))->build(),
-            4 => (new CreditNoteBuilder($company, $order, $order_items))->build(),
+        return match ($order->voucherType->slug) {
+            VoucherTypes::VENTA_FACTURA => (new InvoiceBuilder($company, $order, $order_items))->build(),
+            VoucherTypes::VENTA_NOTA_CREDITO => (new CreditNoteBuilder($company, $order, $order_items))->build(),
         };
     }
 

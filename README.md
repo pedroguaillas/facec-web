@@ -102,6 +102,88 @@ docker compose -f compose.prod.yaml --env-file .env.production exec app tail -f 
 docker compose -f compose.prod.yaml --env-file .env.production logs -f app
 ```
 
+### Deploy: catálogo de tipos de comprobante (`voucher_types`) — 2026-09
+
+Refactor que reemplaza la columna entera `voucher_type` de `orders` y
+`shops` por `voucher_type_id` (FK a una tabla catálogo nueva `voucher_types`),
+agrega Nota de Venta/Proforma a Ventas, y mueve la numeración de secuenciales
+a una tabla genérica `emision_point_sequences`. Detalle técnico completo en
+`docs/facturacion-electronica/README.md §0`.
+
+**No requiere ningún paso manual de datos.** Las migraciones son
+autocontenidas: `2026_09_08_090000_create_voucher_types_table` puebla el
+catálogo dentro de su propio `up()` (no depende de correr `db:seed` aparte),
+las migraciones siguientes (`..._add_voucher_type_id_to_orders_table`,
+`..._add_voucher_type_id_to_shops_table`) leen esos IDs recién insertados
+para backfillear cada fila existente antes de eliminar la columna vieja, y
+`2026_09_08_095000_bootstrap_emision_point_sequences_from_emision_points`
+copia los contadores de secuencial que ya tenía cada punto de emisión (para
+que la primera factura/liquidación/etc. emitida después del deploy siga
+donde iba, no reinicie en 1 y choque con un secuencial ya usado ante el
+SRI). El único comando necesario sigue siendo el de siempre:
+
+```bash
+docker compose -f compose.prod.yaml --env-file .env.production exec app php artisan migrate --force
+```
+
+**Esto NO es zero-downtime.** La migración elimina la columna `voucher_type`
+en el mismo paso en que agrega y puebla `voucher_type_id` — no hay una
+ventana intermedia donde ambas columnas convivan de forma útil. El código
+*nuevo* (el que ya lee `voucher_type_id`) no funciona contra el schema
+*viejo*, y viceversa. Como el deploy de este proyecto no es rolling
+(`deployment/deploy.sh` reconstruye `app`, y `queue` se recrea de la misma
+imagen), el orden correcto es:
+
+1. `docker compose -f compose.prod.yaml --env-file .env.production up -d --build` —
+   levanta el código nuevo (`app` y `queue` ya en la imagen nueva).
+2. Inmediatamente, `php artisan migrate --force` (comando de arriba).
+3. Evitar dejar tráfico sirviéndose entre el paso 1 y el 2 contra rutas que
+   toquen `Order`/`Shop` (`orders.store`, `shops.store`, cualquier
+   `orders/{order}/...`) — con schema viejo y código nuevo, esas rutas
+   fallan (columna `voucher_type_id` no existe todavía). Es una ventana de
+   segundos típica de este proyecto (mismo patrón que cualquier otra
+   migración de columna), no algo nuevo introducido por este cambio, pero
+   vale la pena confirmarlo explícitamente por ser un DROP COLUMN.
+
+**Verificación post-deploy:**
+
+```bash
+docker compose -f compose.prod.yaml --env-file .env.production exec app php artisan tinker --execute='
+  dump(App\Models\VoucherType::count()); // esperado: 10
+  dump(App\Models\Order\Order::whereNull("voucher_type_id")->count()); // esperado: 0
+  dump(App\Models\Shop\Shop::whereNull("voucher_type_id")->count()); // esperado: 0
+  dump(App\Models\EmisionPointSequence::count()); // esperado: > 0 si ya había comprobantes emitidos
+'
+```
+
+**Rollback**: ambas migraciones tienen `down()` reversible (recrean la
+columna `voucher_type` int y la rellenan por join a `voucher_types.slug`),
+pero un rollback de schema **sin** volver también al deploy de código
+anterior deja el sistema roto (mismo motivo que el punto 3). No hacer
+rollback de uno sin el otro.
+
+**Breaking change de contrato de API — avisar al frontend (`facec-front-next`)
+antes de este deploy:**
+
+- `POST/PUT /api/orders` y `POST/PUT /api/shops`: el campo `voucher_type`
+  (int) ya no existe, se reemplaza por `voucher_type_id` (FK). El frontend
+  necesita los IDs reales del catálogo — no hay endpoint de lookup expuesto
+  todavía (`GET` sobre `voucher_types`); coordinar si hace falta agregarlo o
+  si el frontend puede resolverlos por slug de otra forma.
+- Respuestas (`OrderResources`, `ShopResources`, dashboard `recentOrders`):
+  `atts.voucher_type` desaparece. `OrderResources` expone `voucher_type_id`
+  plano; `ShopResources` expone `voucher_type_id` + objeto anidado
+  `voucher_type: {slug, name, code_sri}`.
+- Mensajes de validación: la key de error pasa de `voucher_type` a
+  `voucher_type_id` (mismo texto).
+- Ventas suma dos tipos nuevos seleccionables (`venta_nota_venta`,
+  `venta_proforma`, sin ciclo SRI — nunca se firma/envía aunque se mande
+  `send: true`) y un endpoint nuevo `GET orders/{order}/convert-to-invoice`
+  (sin body, `send` opcional por query, default `true`) para clonar una
+  proforma en factura desde el mismo punto de emisión (la proforma original
+  no se modifica ni se bloquea, se puede reconvertir las veces que haga
+  falta).
+
 ### Facturas atascadas en estado `CREADO`
 
 El procesamiento corre por cola (`ProcessVoucherJob`, ver `docs/facturacion-electronica/README.md` §2) con reintento automático (hasta 8 intentos, backoff de 30s a 10min) — un comprobante recién creado puede tardar unos minutos en avanzar solo. Si sigue en `CREADO` después de eso:

@@ -5,28 +5,38 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>
-        @switch($movement->voucher_type)
-        @case(1)
+        @switch($voucherTypeSlug)
+        @case(\App\StaticClasses\VoucherTypes::VENTA_FACTURA)
+        @case(\App\StaticClasses\VoucherTypes::COMPRA_FACTURA)
         FACTURA
         @break
 
-        @case(3)
+        @case(\App\StaticClasses\VoucherTypes::COMPRA_LIQUIDACION_COMPRA)
         LIQUIDACIÓN DE COMPRA DE BIENES Y PRESTACIÓN DE SERVICIOS
         @break
 
-        @case(4)
+        @case(\App\StaticClasses\VoucherTypes::VENTA_NOTA_CREDITO)
         NOTA DE CRÉDITO
         @break
 
-        @case(5)
-        NOTA DE DÉDITO
+        @case(\App\StaticClasses\VoucherTypes::VENTA_NOTA_VENTA)
+        @case(\App\StaticClasses\VoucherTypes::COMPRA_NOTA_VENTA)
+        NOTA DE VENTA
         @break
 
-        @case(6)
+        @case(\App\StaticClasses\VoucherTypes::VENTA_PROFORMA)
+        PROFORMA
+        @break
+
+        @case(\App\StaticClasses\VoucherTypes::COMPRA_NOTA_DEBITO)
+        NOTA DE DÉBITO
+        @break
+
+        @case(\App\StaticClasses\VoucherTypes::GUIA_REMISION)
         GUIA DE REMISIÓN
         @break
 
-        @case(7)
+        @case(\App\StaticClasses\VoucherTypes::RETENCION)
         RETENCIÓN
         @break
 
@@ -42,6 +52,10 @@
             color: #000;
         }
 
+        /* dompdf no resuelve `em` en @page de forma confiable (no hay contexto
+           de font-size fuera del <body>) — con unidades absolutas (cm) el
+           margen sí se aplica. El viejo `html { margin: 1.5em; }` era un
+           intento de compensar eso por otro lado; ya no hace falta. */
         @page {
             margin: 5em 2.5em 3em;
             font-size: 12px;

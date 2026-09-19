@@ -41,10 +41,12 @@ class ShopLcPdfService
         $company->logo_dir = $company->logo_dir ?: 'default.png';
 
         $branch = $this->getBranch($movement->serie);
+        $voucherTypeSlug = $movement->voucherType->slug;
+        $isElectronic = $movement->voucherType->requires_electronic;
 
         $pdf = Pdf::loadView(
             'vouchers/settlementonpurchase',
-            compact('movement', 'branch', 'company', 'movement_items', 'beforeTaxChange')
+            compact('movement', 'branch', 'company', 'movement_items', 'beforeTaxChange', 'voucherTypeSlug', 'isElectronic')
         );
 
         return [$pdf, $movement];

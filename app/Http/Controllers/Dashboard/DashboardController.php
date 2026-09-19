@@ -73,14 +73,14 @@ class DashboardController extends Controller
             $newProvidersThisMonth = Provider::where('created_at', '>=', $startOfMonth)->count();
 
             $recentOrders = Order::join('customers AS c', 'c.id', 'orders.customer_id')
-                ->select('orders.id', 'orders.serie', 'orders.voucher_type', 'orders.date', 'orders.total', 'orders.state', 'c.name AS customer_name')
+                ->select('orders.id', 'orders.serie', 'orders.voucher_type_id', 'orders.date', 'orders.total', 'orders.state', 'c.name AS customer_name')
                 ->latest('orders.created_at')
                 ->take(5)
                 ->get()
                 ->map(fn (Order $order) => [
                     'id' => $order->id,
                     'serie' => $order->serie,
-                    'voucher_type' => $order->voucher_type,
+                    'voucher_type_id' => $order->voucher_type_id,
                     'date' => $order->date,
                     'total' => $order->total,
                     'state' => $order->state,

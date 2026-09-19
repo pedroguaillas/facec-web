@@ -41,6 +41,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::post('orders/lot', [OrderController::class, 'storeLot'])->name('orders.lot.store');
+    Route::get('orders/{order}/convert-to-invoice', [OrderController::class, 'convertToInvoice'])->name('orders.convert-to-invoice');
     Route::get('orders/export/{yearMonth}', [OrderController::class, 'export'])
         ->where('yearMonth', '\d{4}-\d{2}')
         ->name('orders.export');

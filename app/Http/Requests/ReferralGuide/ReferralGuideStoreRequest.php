@@ -18,7 +18,6 @@ class ReferralGuideStoreRequest extends FormRequest
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'carrier_id' => ['required', 'integer', 'exists:carriers,id'],
             'point_id' => ['required', 'integer', 'exists:emision_points,id'],
-            'serie' => ['required', 'string', 'max:17'],
             'address_from' => ['required', 'string', 'max:300'],
             'address_to' => ['required', 'string', 'max:300'],
             'date_start' => ['required', 'date'],

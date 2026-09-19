@@ -3,10 +3,17 @@
 use App\Mail\ShopLcShipped;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
+use App\Models\VoucherType;
 use App\Services\Shop\ShopLcXmlService;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+
+function liquidacionVoucherTypeId(): int
+{
+    return VoucherType::where('slug', VoucherTypes::COMPRA_LIQUIDACION_COMPRA)->value('id');
+}
 
 function callSendShopMail(Shop $shop): void
 {
@@ -19,7 +26,7 @@ test('sendShopMail no intenta enviar ni loggea si el proveedor no tiene correo',
     Log::spy();
 
     $provider = Provider::factory()->create(['email' => null]);
-    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'voucher_type' => 3, 'state' => VoucherStates::AUTHORIZED]);
+    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'voucher_type_id' => liquidacionVoucherTypeId(), 'state' => VoucherStates::AUTHORIZED]);
 
     callSendShopMail($shop);
 
@@ -32,7 +39,7 @@ test('sendShopMail envía el correo si el proveedor sí tiene correo registrado'
     Mail::fake();
 
     $provider = Provider::factory()->create(['email' => 'proveedor@example.com']);
-    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'voucher_type' => 3, 'state' => VoucherStates::AUTHORIZED]);
+    $shop = Shop::factory()->create(['provider_id' => $provider->id, 'voucher_type_id' => liquidacionVoucherTypeId(), 'state' => VoucherStates::AUTHORIZED]);
 
     callSendShopMail($shop);
 

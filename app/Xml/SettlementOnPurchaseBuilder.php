@@ -16,7 +16,7 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
 
     protected function voucherTypeCode(): string
     {
-        return str_pad($this->shop->voucher_type, 2, '0', STR_PAD_LEFT);
+        return str_pad($this->shop->voucherType->code_sri, 2, '0', STR_PAD_LEFT);
     }
 
     protected function accessKeyDate(): \DateTime
@@ -106,6 +106,10 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
             $string .= '</detalle>';
         }
         $string .= '</detalles>';
+
+        $string .= '<infoAdicional>';
+        $string .= '<campoAdicional nombre="RUC Proveedor">'.config('services.order.ruc_proveedor').'</campoAdicional>';
+        $string .= '</infoAdicional>';
 
         $string .= '</liquidacionCompra>';
 

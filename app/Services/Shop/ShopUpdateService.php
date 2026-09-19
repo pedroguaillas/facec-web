@@ -5,6 +5,7 @@ namespace App\Services\Shop;
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopRetentionItem;
 use App\Services\Shop\Retention\RetentionTotalsCalculator;
+use App\StaticClasses\VoucherTypes;
 
 class ShopUpdateService
 {
@@ -25,7 +26,7 @@ class ShopUpdateService
     {
         $taxes = $data['taxes'] ?? [];
 
-        if ($this->shop->voucher_type >= 4 || empty($data['app_retention']) || empty($taxes)) {
+        if ($this->shop->voucherType->slug === VoucherTypes::COMPRA_NOTA_DEBITO || empty($data['app_retention']) || empty($taxes)) {
             return;
         }
 

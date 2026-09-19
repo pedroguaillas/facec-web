@@ -8,6 +8,8 @@ use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
+use App\Models\VoucherType;
+use App\Services\VoucherSequenceService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,7 @@ class OrderStoreService
 
     public function __construct(
         private OrderTotalsCalculator $totalsCalculator,
+        private VoucherSequenceService $sequenceService,
     ) {
         $this->company = Auth::user()->company;
         $this->branch = $this->company->branches()->orderBy('created_at')->first();
@@ -27,28 +30,29 @@ class OrderStoreService
 
     public function createOrder(array $data): Order
     {
-        $orderSaved = DB::transaction(function () use ($data) {
+        $voucherType = VoucherType::findOrFail($data['voucher_type_id']);
+
+        $orderSaved = DB::transaction(function () use ($data, $voucherType) {
             $emisionPoint = EmisionPoint::find($data['point_id']);
 
-            $orderData = $this->prepareOrderData($data, $emisionPoint);
+            $orderData = $this->prepareOrderData($data, $emisionPoint, $voucherType);
             $order = $this->branch->orders()->create($orderData);
 
             $this->createOrderItems($order, $data['products']);
-            $this->updateEmisionPointSequence($emisionPoint, $data['voucher_type']);
             $this->createRepayments($order, $data['repayments'] ?? []);
-            $this->createOrderAditionals($order, $data['aditionals'] ?? []);
+            $this->createOrderAditionals($order, $data['aditionals'] ?? [], $voucherType);
 
             return $order;
         });
 
-        if ($data['send'] ?? false) {
+        if (($data['send'] ?? false) && $voucherType->requires_electronic) {
             $this->sendToSRI($orderSaved);
         }
 
         return $orderSaved;
     }
 
-    protected function prepareOrderData(array $data, EmisionPoint $emisionPoint): array
+    protected function prepareOrderData(array $data, EmisionPoint $emisionPoint, VoucherType $voucherType): array
     {
         $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id'])->toArray();
 
@@ -56,7 +60,7 @@ class OrderStoreService
             $input['guia'] = null;
         }
 
-        $input['serie'] = $this->generateSerie($data['serie'], $emisionPoint, $data['voucher_type']);
+        $input['serie'] = $this->sequenceService->generateSerie($emisionPoint, $voucherType->slug);
 
         $input = array_merge($input, $this->totalsCalculator->calculate(
             $data['products'] ?? [],
@@ -65,15 +69,6 @@ class OrderStoreService
         ));
 
         return $input;
-    }
-
-    protected function generateSerie(string $serieBase, EmisionPoint $emisionPoint, int $voucherType): string
-    {
-        $serie = substr($serieBase, 0, 8);
-        $field = $voucherType == 1 ? 'invoice' : 'creditnote';
-        $sequence = str_pad($emisionPoint->{$field}, 9, '0', STR_PAD_LEFT);
-
-        return "{$serie}{$sequence}";
     }
 
     protected function createOrderItems(Order $order, array $products): void
@@ -111,13 +106,6 @@ class OrderStoreService
         if ($this->company->inventory && ! empty($inventoryItems)) {
             $order->inventories()->createMany($inventoryItems);
         }
-    }
-
-    protected function updateEmisionPointSequence(EmisionPoint $emisionPoint, int $voucherType): void
-    {
-        $field = $voucherType == 1 ? 'invoice' : 'creditnote';
-        $emisionPoint->{$field}++;
-        $emisionPoint->save();
     }
 
     protected function createRepayments(Order $order, array $repayments): void
@@ -163,9 +151,13 @@ class OrderStoreService
         }
     }
 
-    protected function createOrderAditionals(Order $order, array $aditionals): void
+    protected function createOrderAditionals(Order $order, array $aditionals, VoucherType $voucherType): void
     {
-        $aditionals[] = Order::requiredAditional();
+        // "RUC Proveedor" es un requisito del XML del SRI (repayments/reembolso);
+        // no aplica a nota de venta/proforma, que nunca se envían al SRI.
+        if ($voucherType->requires_electronic) {
+            $aditionals[] = Order::requiredAditional();
+        }
 
         $validAditionals = array_filter($aditionals, fn ($aditional) => ! empty($aditional['name']) && ! empty($aditional['description'])
         );

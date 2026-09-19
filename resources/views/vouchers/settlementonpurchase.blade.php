@@ -64,4 +64,5 @@
             </tr>
         </tbody>
     </table>
+    @include('vouchers.theme.rucproveedor')
 @endsection

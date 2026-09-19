@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             MethodOfPaymentSeeder::class,
             SriCategorySeeder::class,
             IvaTaxSeed::class,
+            VoucherTypeSeeder::class,
         ]);
     }
 }
