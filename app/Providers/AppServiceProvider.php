@@ -6,7 +6,9 @@ use App\Models\Company;
 use App\Services\Order\OrderPdfService;
 use App\Services\Shop\Retention\RetentionPdfService;
 use App\Services\Shop\ShopLcPdfService;
+use App\StaticClasses\MovementPartyRegistry;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Relation::morphMap(MovementPartyRegistry::morphMap());
     }
 
     /**

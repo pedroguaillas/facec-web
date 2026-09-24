@@ -5,6 +5,8 @@ namespace App\Http\Requests\Order;
 use App\Models\Customer;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
+use App\StaticClasses\MovementPartyRegistry;
+use App\StaticClasses\PaymentTypes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -18,6 +20,12 @@ class OrderStoreRequest extends FormRequest
 
     public function rules(): array
     {
+        $sourceTable = $this->input('source_type') === MovementPartyRegistry::BANK_ACCOUNT
+            ? 'bank_accounts'
+            : 'cash_register_sessions';
+
+        $paymentTypeContado = PaymentTypes::CONTADO;
+
         return [
             'customer_id' => 'required|integer|exists:customers,id',
             'total' => 'required|numeric',
@@ -54,6 +62,24 @@ class OrderStoreRequest extends FormRequest
             'description' => 'sometimes|nullable|string',
             'guia' => 'sometimes|nullable|string',
             'expiration_days' => 'sometimes|integer',
+            'payment_type' => ['sometimes', 'nullable', 'string', Rule::in([
+                PaymentTypes::CONTADO,
+                PaymentTypes::CREDITO,
+                PaymentTypes::ANTICIPO,
+            ])],
+            'movement_id' => 'sometimes|nullable|integer|exists:movements,id',
+            // Solo aplica si payment_type=CONTADO: a qué banco/caja entra el cobro.
+            'source_type' => [
+                "required_if:payment_type,{$paymentTypeContado}",
+                'nullable',
+                Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION]),
+            ],
+            'source_id' => [
+                "required_if:payment_type,{$paymentTypeContado}",
+                'nullable',
+                'integer',
+                Rule::exists($sourceTable, 'id'),
+            ],
             'date_order' => 'sometimes|nullable|date',
             'serie_order' => 'sometimes|nullable|string',
             'reason' => 'sometimes|nullable|string',

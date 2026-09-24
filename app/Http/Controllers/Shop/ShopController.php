@@ -63,7 +63,11 @@ class ShopController extends Controller
 
     public function store(ShopStoreRequest $request, ShopStoreService $service): JsonResponse
     {
-        $shop = $service->createShop($request->validated());
+        try {
+            $shop = $service->createShop($request->validated());
+        } catch (\RuntimeException $e) {
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json($shop, 201);
     }

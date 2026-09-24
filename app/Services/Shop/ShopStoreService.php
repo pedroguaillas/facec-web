@@ -8,9 +8,15 @@ use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Shop\Shop;
 use App\Models\VoucherType;
+use App\Services\AccountsPayable\AccountsPayableLedgerService;
 use App\Services\Shop\Retention\RetentionTotalsCalculator;
+use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
+use App\StaticClasses\MovementTransactionTypes;
+use App\StaticClasses\MovementTypes;
+use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -37,6 +43,8 @@ class ShopStoreService
             $this->createShopItems($shop, $data['products'] ?? []);
             $this->createRetentionItems($shop, $data);
 
+            app(AccountsPayableLedgerService::class)->registerFromShop($shop);
+
             return $shop;
         });
 
@@ -47,7 +55,7 @@ class ShopStoreService
 
     protected function prepareShopData(array $data, EmisionPoint $emisionPoint): array
     {
-        $except = ['taxes', 'pay_methods', 'app_retention', 'send', 'point_id'];
+        $except = ['taxes', 'pay_methods', 'app_retention', 'send', 'point_id', 'source_type', 'source_id'];
         $inputs = collect($data)->except($except)->toArray();
 
         $voucherType = VoucherType::findOrFail($data['voucher_type_id']);
@@ -65,6 +73,33 @@ class ShopStoreService
             $inputs['serie_retencion'] = app(VoucherSequenceService::class)
                 ->generateSerie($emisionPoint, VoucherTypes::RETENCION);
             $inputs['state_retencion'] = 'CREADO';
+        }
+
+        if (($inputs['payment_type'] ?? null) === PaymentTypes::CREDITO && ! empty($inputs['expiration_days'])) {
+            $inputs['due_date'] = Carbon::parse($inputs['date'])->addDays((int) $inputs['expiration_days']);
+        }
+
+        if (($inputs['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])) {
+            $retencion = 0.0;
+
+            if (! empty($data['app_retention']) && ! empty($data['taxes'])) {
+                $recalculated = (new RetentionTotalsCalculator)->recalculate($data['taxes']);
+                $retencion = array_sum(array_column($recalculated, 'value'));
+            }
+
+            $movement = app(MovementService::class)->create([
+                'branch_id' => $this->branch->id,
+                'date' => $inputs['date'],
+                'type' => MovementTypes::EXPENSE,
+                'transaction_type' => MovementTransactionTypes::PURCHASE_PAYMENT,
+                'source_type' => $data['source_type'],
+                'source_id' => $data['source_id'],
+                'amount' => (float) $inputs['total'] - $retencion,
+                'description' => "Pago compra {$inputs['serie']}",
+                'user_id' => Auth::id(),
+            ]);
+
+            $inputs['movement_id'] = $movement->id;
         }
 
         return $inputs;

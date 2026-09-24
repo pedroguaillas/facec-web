@@ -3,6 +3,8 @@
 namespace App\Models\Shop;
 
 use App\Models\BaseModel;
+use App\Models\Provider;
+use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -62,6 +64,10 @@ class Shop extends BaseModel
         'base15',
         'iva5',
         'iva15',
+        // Clasificación de pago (App\StaticClasses\PaymentTypes)
+        'payment_type',
+        'due_date',
+        'movement_id',
     ];
 
     protected $casts = [
@@ -78,6 +84,7 @@ class Shop extends BaseModel
         'ice' => 'float',
         'sub_total' => 'float',
         'total' => 'float',
+        'due_date' => 'date',
     ];
 
     public function shopitems()
@@ -93,5 +100,15 @@ class Shop extends BaseModel
     public function voucherType(): BelongsTo
     {
         return $this->belongsTo(VoucherType::class);
+    }
+
+    public function provider(): BelongsTo
+    {
+        return $this->belongsTo(Provider::class);
+    }
+
+    public function movement(): BelongsTo
+    {
+        return $this->belongsTo(Movement::class);
     }
 }

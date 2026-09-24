@@ -6,6 +6,8 @@ use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
 use App\Models\Branch;
 use App\Models\Shop\Shop;
 use App\Models\VoucherType;
+use App\StaticClasses\MovementPartyRegistry;
+use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +24,12 @@ class ShopStoreRequest extends FormRequest
 
     public function rules(): array
     {
+        $sourceTable = $this->input('source_type') === MovementPartyRegistry::BANK_ACCOUNT
+            ? 'bank_accounts'
+            : 'cash_register_sessions';
+
+        $paymentTypeContado = PaymentTypes::CONTADO;
+
         return [
             // Cabecera
             'date' => ['required', 'date'],
@@ -44,6 +52,24 @@ class ShopStoreRequest extends FormRequest
             'expiration_days' => ['nullable', 'integer', 'min:0'],
             'paid' => ['nullable', 'boolean'],
             'doc_realeted' => ['nullable', 'string'],
+            'payment_type' => ['nullable', 'string', Rule::in([
+                PaymentTypes::CONTADO,
+                PaymentTypes::CREDITO,
+                PaymentTypes::ANTICIPO,
+            ])],
+            'movement_id' => ['nullable', 'integer', 'exists:movements,id'],
+            // Solo aplica si payment_type=CONTADO: de qué banco/caja sale el pago.
+            'source_type' => [
+                "required_if:payment_type,{$paymentTypeContado}",
+                'nullable',
+                Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION]),
+            ],
+            'source_id' => [
+                "required_if:payment_type,{$paymentTypeContado}",
+                'nullable',
+                'integer',
+                Rule::exists($sourceTable, 'id'),
+            ],
 
             // Bases imponibles
             'sub_total' => ['nullable', 'numeric', 'min:0'],

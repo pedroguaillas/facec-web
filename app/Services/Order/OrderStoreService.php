@@ -9,7 +9,12 @@ use App\Models\EmisionPoint;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
 use App\Models\VoucherType;
+use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
+use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
+use App\StaticClasses\MovementTransactionTypes;
+use App\StaticClasses\MovementTypes;
+use App\StaticClasses\PaymentTypes;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +47,8 @@ class OrderStoreService
             $this->createRepayments($order, $data['repayments'] ?? []);
             $this->createOrderAditionals($order, $data['aditionals'] ?? [], $voucherType);
 
+            app(AccountsReceivableLedgerService::class)->registerFromOrder($order);
+
             return $order;
         });
 
@@ -54,7 +61,7 @@ class OrderStoreService
 
     protected function prepareOrderData(array $data, EmisionPoint $emisionPoint, VoucherType $voucherType): array
     {
-        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id'])->toArray();
+        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id'])->toArray();
 
         if (array_key_exists('guia', $input) && trim($input['guia']) === '') {
             $input['guia'] = null;
@@ -67,6 +74,26 @@ class OrderStoreService
             (float) ($input['discount'] ?? 0),
             $input,
         ));
+
+        if (($input['payment_type'] ?? null) === PaymentTypes::CREDITO && ! empty($input['expiration_days'])) {
+            $input['due_date'] = Carbon::parse($input['date'])->addDays((int) $input['expiration_days']);
+        }
+
+        if (($input['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])) {
+            $movement = app(MovementService::class)->create([
+                'branch_id' => $this->branch->id,
+                'date' => $input['date'],
+                'type' => MovementTypes::INCOME,
+                'transaction_type' => MovementTransactionTypes::SALE_COLLECTION,
+                'source_type' => $data['source_type'],
+                'source_id' => $data['source_id'],
+                'amount' => $input['total'],
+                'description' => "Cobro venta {$input['serie']}",
+                'user_id' => Auth::id(),
+            ]);
+
+            $input['movement_id'] = $movement->id;
+        }
 
         return $input;
     }

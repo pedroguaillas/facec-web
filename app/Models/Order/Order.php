@@ -3,8 +3,10 @@
 namespace App\Models\Order;
 
 use App\Models\BaseModel;
+use App\Models\Customer;
 use App\Models\Inventory;
 use App\Models\Order\Repayment\Repayment;
+use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -82,6 +84,10 @@ class Order extends BaseModel
         'iva15',
         // Envio por lotes
         'lot_id',
+        // Clasificación de pago (App\StaticClasses\PaymentTypes)
+        'payment_type',
+        'due_date',
+        'movement_id',
     ];
 
     protected $casts = [
@@ -101,11 +107,22 @@ class Order extends BaseModel
         'total' => 'float',
         'voucher_type_id' => 'integer',
         'send_mail' => 'boolean',
+        'due_date' => 'date',
     ];
 
     public function voucherType(): BelongsTo
     {
         return $this->belongsTo(VoucherType::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function movement(): BelongsTo
+    {
+        return $this->belongsTo(Movement::class);
     }
 
     public function orderitems()

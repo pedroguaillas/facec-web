@@ -1,8 +1,16 @@
 <?php
 
+use App\Http\Controllers\AccountsPayable\AccountPayableController;
+use App\Http\Controllers\AccountsPayable\AccountPayablePaymentController;
+use App\Http\Controllers\AccountsReceivable\AccountReceivableController;
+use App\Http\Controllers\AccountsReceivable\AccountReceivablePaymentController;
 use App\Http\Controllers\Auth\AuthenticationController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Bank\BankAccountController;
+use App\Http\Controllers\Bank\BankController;
 use App\Http\Controllers\Carrier\CarrierController;
+use App\Http\Controllers\CashRegister\CashRegisterController;
+use App\Http\Controllers\CashRegister\CashRegisterSessionController;
 use App\Http\Controllers\Company\AdminCompanyController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerLookupController;
@@ -21,6 +29,9 @@ use App\Http\Controllers\Settings\EmisionPointController as SettingsEmisionPoint
 use App\Http\Controllers\Shop\RetentionController;
 use App\Http\Controllers\Shop\ShopController;
 use App\Http\Controllers\Shop\ShopLifecycleController;
+use App\Http\Controllers\Treasury\DenominationController;
+use App\Http\Controllers\Treasury\MovementController;
+use App\Http\Controllers\User\UserLookupController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthenticationController::class, 'login']);
@@ -53,10 +64,12 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders/{order}/cancel', [OrderLifecycleController::class, 'cancel'])->name('orders.cancel');
     Route::get('orders/{order}/mail', [OrderLifecycleController::class, 'mail'])->name('orders.mail');
     Route::get('orders/{order}/xml', [OrderLifecycleController::class, 'download'])->name('orders.xml');
+    Route::post('orders/{order}/payments', [AccountReceivablePaymentController::class, 'store'])->name('orders.payments.store');
 
     Route::get('customers/lookup', [CustomerLookupController::class, 'index'])->name('customers.lookup');
     Route::get('products/lookup', [ProductLookupController::class, 'index'])->name('products.lookup');
     Route::get('providers/lookup', [ProviderLookupController::class, 'index'])->name('providers.lookup');
+    Route::get('users/lookup', [UserLookupController::class, 'index'])->name('users.lookup');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
@@ -74,6 +87,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('providers/{provider}', [ProviderController::class, 'edit'])->name('providers.edit');
     Route::put('providers/{provider}', [ProviderController::class, 'update'])->name('providers.update');
     Route::delete('providers/{provider}', [ProviderController::class, 'destroy'])->name('providers.destroy');
+    Route::get('providers/{provider}/account-payable', [AccountPayableController::class, 'index'])->name('providers.account-payable');
 
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
@@ -82,6 +96,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('customers/{customer}', [CustomerController::class, 'edit'])->name('customers.edit');
     Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
     Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+    Route::get('customers/{customer}/account-receivable', [AccountReceivableController::class, 'index'])->name('customers.account-receivable');
 
     Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
     Route::get('shops/create', [ShopController::class, 'create'])->name('shops.create');
@@ -92,6 +107,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process');
     Route::get('shops/{shop}/cancel', [ShopLifecycleController::class, 'cancel'])->name('shops.cancel');
     Route::get('shops/{shop}/xml', [ShopLifecycleController::class, 'download'])->name('shops.xml');
+    Route::post('shops/{shop}/payments', [AccountPayablePaymentController::class, 'store'])->name('shops.payments.store');
     Route::get('retentions/{id}/pdf', [RetentionController::class, 'pdf'])->name('retentions.pdf');
     Route::get('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
     Route::get('retentions/{shop}/mail', [RetentionController::class, 'mail'])->name('retentions.mail');
@@ -140,6 +156,37 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('settings/branches/{branch}/points', [SettingsEmisionPointController::class, 'index'])->name('settings.points.index');
     Route::post('settings/points', [SettingsEmisionPointController::class, 'store'])->name('settings.points.store');
     Route::put('settings/points/{emisionPoint}', [SettingsEmisionPointController::class, 'update'])->name('settings.points.update');
+
+    Route::get('banks', [BankController::class, 'index'])->name('banks.index');
+    Route::post('banks', [BankController::class, 'store'])->name('banks.store');
+    Route::get('banks/{bank}', [BankController::class, 'edit'])->name('banks.edit');
+    Route::put('banks/{bank}', [BankController::class, 'update'])->name('banks.update');
+    Route::delete('banks/{bank}', [BankController::class, 'destroy'])->name('banks.destroy');
+
+    Route::get('bank-accounts', [BankAccountController::class, 'index'])->name('bank-accounts.index');
+    Route::post('bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
+    Route::get('bank-accounts/{bankAccount}', [BankAccountController::class, 'edit'])->name('bank-accounts.edit');
+    Route::put('bank-accounts/{bankAccount}', [BankAccountController::class, 'update'])->name('bank-accounts.update');
+    Route::delete('bank-accounts/{bankAccount}', [BankAccountController::class, 'destroy'])->name('bank-accounts.destroy');
+
+    Route::get('cash-registers', [CashRegisterController::class, 'index'])->name('cash-registers.index');
+    Route::post('cash-registers', [CashRegisterController::class, 'store'])->name('cash-registers.store');
+    Route::get('cash-registers/{cashRegister}', [CashRegisterController::class, 'edit'])->name('cash-registers.edit');
+    Route::put('cash-registers/{cashRegister}', [CashRegisterController::class, 'update'])->name('cash-registers.update');
+    Route::get('cash-registers/{cashRegister}/sessions', [CashRegisterSessionController::class, 'index'])->name('cash-registers.sessions.index');
+    Route::post('cash-registers/{cashRegister}/open', [CashRegisterSessionController::class, 'open'])->name('cash-registers.open');
+    Route::post('cash-registers/{cashRegister}/close', [CashRegisterSessionController::class, 'close'])->name('cash-registers.close');
+    Route::get('cash-register-sessions/{cashRegisterSession}', [CashRegisterSessionController::class, 'show'])->name('cash-register-sessions.show');
+
+    Route::get('denominations', [DenominationController::class, 'index'])->name('denominations.index');
+
+    Route::get('movements', [MovementController::class, 'index'])->name('movements.index');
+    Route::get('movements/{movement}', [MovementController::class, 'show'])->name('movements.show');
+    Route::post('movements/deposit', [MovementController::class, 'deposit'])->name('movements.deposit');
+    Route::post('movements/withdraw', [MovementController::class, 'withdraw'])->name('movements.withdraw');
+    Route::post('movements/transfer', [MovementController::class, 'transfer'])->name('movements.transfer');
+    Route::post('movements/other', [MovementController::class, 'other'])->name('movements.other');
+    Route::post('movements/{movement}/complete', [MovementController::class, 'complete'])->name('movements.complete');
 });
 
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {

@@ -67,7 +67,11 @@ class OrderController extends Controller
 
     public function store(OrderStoreRequest $request, OrderStoreService $service): JsonResponse
     {
-        $order = $service->createOrder($request->validated());
+        try {
+            $order = $service->createOrder($request->validated());
+        } catch (RuntimeException $e) {
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json($order, 201);
     }
