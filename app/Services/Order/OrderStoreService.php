@@ -75,8 +75,11 @@ class OrderStoreService
             $input,
         ));
 
-        if (($input['payment_type'] ?? null) === PaymentTypes::CREDITO && ! empty($input['expiration_days'])) {
-            $input['due_date'] = Carbon::parse($input['date'])->addDays((int) $input['expiration_days']);
+        if (in_array($input['payment_type'] ?? null, [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO], true) && ! empty($input['due_date'])) {
+            $orderDate = Carbon::parse($input['date']);
+            $dueDate = Carbon::parse($input['due_date']);
+            $input['expiration_days'] = $orderDate->diffInDays($dueDate);
+            $input['due_date'] = $dueDate;
         }
 
         if (($input['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])) {

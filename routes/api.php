@@ -88,6 +88,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::put('providers/{provider}', [ProviderController::class, 'update'])->name('providers.update');
     Route::delete('providers/{provider}', [ProviderController::class, 'destroy'])->name('providers.destroy');
     Route::get('providers/{provider}/account-payable', [AccountPayableController::class, 'index'])->name('providers.account-payable');
+    Route::post('providers/{provider}/account-payable/opening-balance', [AccountPayableController::class, 'openingBalance'])->name('providers.account-payable.opening-balance');
+    Route::get('providers/{provider}/advances', [AccountPayableController::class, 'advances'])->name('providers.advances.index');
+    Route::post('providers/{provider}/advances', [AccountPayableController::class, 'storeAdvance'])->name('providers.advances.store');
 
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
@@ -97,6 +100,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
     Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
     Route::get('customers/{customer}/account-receivable', [AccountReceivableController::class, 'index'])->name('customers.account-receivable');
+    Route::post('customers/{customer}/account-receivable/opening-balance', [AccountReceivableController::class, 'openingBalance'])->name('customers.account-receivable.opening-balance');
+    Route::get('customers/{customer}/advances', [AccountReceivableController::class, 'advances'])->name('customers.advances.index');
+    Route::post('customers/{customer}/advances', [AccountReceivableController::class, 'storeAdvance'])->name('customers.advances.store');
 
     Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
     Route::get('shops/create', [ShopController::class, 'create'])->name('shops.create');

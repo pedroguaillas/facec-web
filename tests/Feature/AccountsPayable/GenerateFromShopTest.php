@@ -47,7 +47,7 @@ function payableShopPayload(Branch $branch, Provider $provider, array $overrides
         'point_id' => $emisionPoint->id,
         'serie' => '001-001-000123',
         'total' => 100,
-        'expiration_days' => 30,
+        'due_date' => now()->addDays(30)->format('Y-m-d'),
         'payment_type' => PaymentTypes::CREDITO,
     ], $overrides);
 }
@@ -68,7 +68,8 @@ test('factura de compra a crédito genera un movimiento en cuentas por pagar', f
         ->and((float) $movement->haber)->toBe(100.0)
         ->and((float) $movement->previous_balance)->toBe(0.0)
         ->and((float) $movement->new_balance)->toBe(100.0)
-        ->and($shop->due_date->format('Y-m-d'))->toBe(now()->addDays(30)->format('Y-m-d'));
+        ->and($shop->due_date->format('Y-m-d'))->toBe(now()->addDays(30)->format('Y-m-d'))
+        ->and($shop->expiration_days)->toBe(30);
 });
 
 test('compra de contado no genera cuenta por pagar, pero sí genera el pago en Treasury', function () {

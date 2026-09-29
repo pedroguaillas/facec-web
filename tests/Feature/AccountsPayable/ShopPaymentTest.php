@@ -40,7 +40,7 @@ function creditShopReadyForPayment(float $total = 100, float $cajaBalance = 500)
         'point_id' => $emisionPoint->id,
         'serie' => '001-001-000123',
         'total' => $total,
-        'expiration_days' => 30,
+        'due_date' => now()->addDays(30)->format('Y-m-d'),
         'payment_type' => PaymentTypes::CREDITO,
     ]);
 

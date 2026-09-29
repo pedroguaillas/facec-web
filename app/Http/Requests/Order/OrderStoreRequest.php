@@ -25,6 +25,8 @@ class OrderStoreRequest extends FormRequest
             : 'cash_register_sessions';
 
         $paymentTypeContado = PaymentTypes::CONTADO;
+        $paymentTypeCredito = PaymentTypes::CREDITO;
+        $paymentTypeAnticipo = PaymentTypes::ANTICIPO;
 
         return [
             'customer_id' => 'required|integer|exists:customers,id',
@@ -67,6 +69,15 @@ class OrderStoreRequest extends FormRequest
                 PaymentTypes::CREDITO,
                 PaymentTypes::ANTICIPO,
             ])],
+            // Fecha de vencimiento. Obligatoria en CREDITO; también en ANTICIPO por si
+            // el anticipo disponible no alcanza a cubrir todo y el resto queda a crédito.
+            // expiration_days (días de plazo) se deriva de esta, no se pide por separado.
+            'due_date' => [
+                "required_if:payment_type,{$paymentTypeCredito},{$paymentTypeAnticipo}",
+                'nullable',
+                'date',
+                'after_or_equal:date',
+            ],
             'movement_id' => 'sometimes|nullable|integer|exists:movements,id',
             // Solo aplica si payment_type=CONTADO: a qué banco/caja entra el cobro.
             'source_type' => [

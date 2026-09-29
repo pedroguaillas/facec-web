@@ -21,6 +21,8 @@ class OrderResources extends JsonResource
                 'serie' => "{$this->voucherType->abbreviation} {$this->serie}",
                 'state' => $this->state,
                 'total' => $this->total,
+                'paid' => $this->paid,
+                'payment_type' => $this->payment_type,
                 'xml' => $this->xml,
                 'send_mail' => $this->send_mail,
                 'extra_detail' => $this->extra_detail,

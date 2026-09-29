@@ -18,12 +18,20 @@
     <table style="margin-top: .5em; border-radius: 0;" class="table-rounded">
         <tbody>
             <tr style="background-color: #e6e6e6;">
-                <th style="width: 375px; background-color: #e6e6e6;">Forma de pago</th>
+                <th style="width: {{ ($isCredito ?? false) ? 225 : 375 }}px; background-color: #e6e6e6;">Forma de pago</th>
                 <th style="width: 70px; background-color: #e6e6e6;">Valor</th>
+                @if($isCredito ?? false)
+                <th style="width: 80px; background-color: #e6e6e6;">Plazo (días)</th>
+                <th style="width: 70px; background-color: #e6e6e6;">Vence</th>
+                @endif
             </tr>
             <tr>
                 <td>{{ $payMethod }}</td>
                 <td style="padding-right: .5em; text-align: right;">{{ number_format($movement->total, 2) }}</td>
+                @if($isCredito ?? false)
+                <td style="text-align: center;">{{ $movement->expiration_days }}</td>
+                <td style="text-align: center;">{{ $dueDate }}</td>
+                @endif
             </tr>
         </tbody>
     </table>

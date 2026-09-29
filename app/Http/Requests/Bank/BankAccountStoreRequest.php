@@ -21,6 +21,7 @@ class BankAccountStoreRequest extends FormRequest
             'bank_id' => ['required', 'integer', Rule::exists('banks', 'id')],
             'account_number' => ['required', 'string', 'max:50', new UniqueBranchScoped('bank_accounts', 'account_number')],
             'type' => ['required', Rule::in(BankAccountTypes::ALL)],
+            'opening_balance' => ['sometimes', 'nullable', 'numeric', 'min:0'],
         ];
     }
 }

@@ -20,6 +20,8 @@ class ShopResources extends JsonResource
                 'date' => $this->date,
                 'serie' => "{$this->voucherType?->abbreviation} {$this->serie}",
                 'total' => $this->total,
+                'paid' => $this->paid,
+                'payment_type' => $this->payment_type,
                 // Retención
                 'serie_retencion' => $this->serie_retencion ? "RET {$this->serie_retencion}" : $this->serie_retencion,
                 'state_retencion' => $this->state_retencion,

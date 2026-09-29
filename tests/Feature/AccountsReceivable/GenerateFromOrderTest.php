@@ -46,7 +46,7 @@ function receivableOrderPayload(Branch $branch, Customer $customer, array $overr
         'voucher_type_id' => VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id'),
         'point_id' => $emisionPoint->id,
         'date' => now()->format('Y-m-d'),
-        'expiration_days' => 30,
+        'due_date' => now()->addDays(30)->format('Y-m-d'),
         'payment_type' => PaymentTypes::CREDITO,
         'products' => [[
             'product_id' => $product->id,
@@ -75,7 +75,8 @@ test('factura de venta a crédito genera un movimiento en cuentas por cobrar', f
         ->and((float) $movement->debe)->toBe(100.0)
         ->and((float) $movement->previous_balance)->toBe(0.0)
         ->and((float) $movement->new_balance)->toBe(100.0)
-        ->and($order->due_date->format('Y-m-d'))->toBe(now()->addDays(30)->format('Y-m-d'));
+        ->and($order->due_date->format('Y-m-d'))->toBe(now()->addDays(30)->format('Y-m-d'))
+        ->and($order->expiration_days)->toBe(30);
 });
 
 test('venta de contado no genera cuenta por cobrar, pero sí genera el cobro en Treasury', function () {

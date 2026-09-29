@@ -29,6 +29,8 @@ class ShopStoreRequest extends FormRequest
             : 'cash_register_sessions';
 
         $paymentTypeContado = PaymentTypes::CONTADO;
+        $paymentTypeCredito = PaymentTypes::CREDITO;
+        $paymentTypeAnticipo = PaymentTypes::ANTICIPO;
 
         return [
             // Cabecera
@@ -58,6 +60,15 @@ class ShopStoreRequest extends FormRequest
                 PaymentTypes::ANTICIPO,
             ])],
             'movement_id' => ['nullable', 'integer', 'exists:movements,id'],
+            // Fecha de vencimiento. Obligatoria en CREDITO; también en ANTICIPO por si
+            // el anticipo disponible no alcanza a cubrir todo y el resto queda a crédito.
+            // expiration_days (días de plazo) se deriva de esta, no se pide por separado.
+            'due_date' => [
+                "required_if:payment_type,{$paymentTypeCredito},{$paymentTypeAnticipo}",
+                'nullable',
+                'date',
+                'after_or_equal:date',
+            ],
             // Solo aplica si payment_type=CONTADO: de qué banco/caja sale el pago.
             'source_type' => [
                 "required_if:payment_type,{$paymentTypeContado}",

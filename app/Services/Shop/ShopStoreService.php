@@ -75,8 +75,11 @@ class ShopStoreService
             $inputs['state_retencion'] = 'CREADO';
         }
 
-        if (($inputs['payment_type'] ?? null) === PaymentTypes::CREDITO && ! empty($inputs['expiration_days'])) {
-            $inputs['due_date'] = Carbon::parse($inputs['date'])->addDays((int) $inputs['expiration_days']);
+        if (in_array($inputs['payment_type'] ?? null, [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO], true) && ! empty($inputs['due_date'])) {
+            $shopDate = Carbon::parse($inputs['date']);
+            $dueDate = Carbon::parse($inputs['due_date']);
+            $inputs['expiration_days'] = $shopDate->diffInDays($dueDate);
+            $inputs['due_date'] = $dueDate;
         }
 
         if (($inputs['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])) {

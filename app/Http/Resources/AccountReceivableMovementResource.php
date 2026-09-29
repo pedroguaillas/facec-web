@@ -11,6 +11,10 @@ class AccountReceivableMovementResource extends JsonResource
     private const TYPE_LABELS = [
         AccountsReceivableMovementTypes::FACTURA => 'Factura',
         AccountsReceivableMovementTypes::NOTA_CREDITO => 'Nota de crédito',
+        AccountsReceivableMovementTypes::PAGO => 'Abono',
+        AccountsReceivableMovementTypes::SALDO_INICIAL => 'Saldo inicial',
+        AccountsReceivableMovementTypes::ANTICIPO => 'Anticipo',
+        AccountsReceivableMovementTypes::APLICACION_ANTICIPO => 'Aplicación de anticipo',
     ];
 
     /**

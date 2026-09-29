@@ -5,6 +5,7 @@ namespace App\Xml;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\Repayment\Repayment;
 use App\Models\Order\Repayment\RepaymentTax;
+use App\StaticClasses\PaymentTypes;
 use App\Xml\Concerns\HasItemTaxes;
 
 class InvoiceBuilder extends BaseVoucherBuilder
@@ -108,6 +109,12 @@ class InvoiceBuilder extends BaseVoucherBuilder
         $string .= '<pago>';
         $string .= '<formaPago>'.str_pad($order->pay_method, 2, '0', STR_PAD_LEFT).'</formaPago>';
         $string .= "<total>{$order->total}</total>";
+
+        if ($order->payment_type === PaymentTypes::CREDITO && $order->expiration_days > 0) {
+            $string .= "<plazo>{$order->expiration_days}</plazo>";
+            $string .= '<unidadTiempo>dias</unidadTiempo>';
+        }
+
         $string .= '</pago>';
         $string .= '</pagos>';
 

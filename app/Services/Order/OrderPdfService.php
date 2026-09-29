@@ -9,6 +9,7 @@ use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
 use App\Models\Order\Repayment\Repayment;
+use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -109,7 +110,12 @@ class OrderPdfService
 
     private function withPayMethodData($movement, array $data): array
     {
-        $data['payMethod'] = MethodOfPayment::where('code', $movement->pay_method)->value('description');
+        $payMethodDescription = MethodOfPayment::where('code', $movement->pay_method)->value('description');
+        $data['payMethod'] = str_pad($movement->pay_method, 2, '0', STR_PAD_LEFT)." - {$payMethodDescription}";
+        // Columnas de plazo solo en factura, no en nota de venta (comparten esta partial).
+        $data['isCredito'] = $movement->voucherType->slug === VoucherTypes::VENTA_FACTURA
+            && $movement->payment_type === PaymentTypes::CREDITO;
+        $data['dueDate'] = $movement->due_date?->format('d/m/Y');
         $data['repayments'] = Repayment::selectRaw('identification, sequential, date, SUM(base) base, SUM(iva) iva')
             ->join('repayment_taxes AS rt', 'repayments.id', 'repayment_id')
             ->where('order_id', $movement->id)

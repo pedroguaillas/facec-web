@@ -7,10 +7,15 @@ use App\Http\Requests\Bank\BankAccountStoreRequest;
 use App\Http\Requests\Bank\BankAccountUpdateRequest;
 use App\Http\Resources\BankAccountResources;
 use App\Models\Treasury\BankAccount;
+use App\Services\Treasury\MovementService;
+use App\StaticClasses\MovementPartyRegistry;
+use App\StaticClasses\MovementTransactionTypes;
+use App\StaticClasses\MovementTypes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class BankAccountController extends Controller
 {
@@ -30,14 +35,33 @@ class BankAccountController extends Controller
     public function store(BankAccountStoreRequest $request): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
+        $openingBalance = (float) ($request->validated('opening_balance') ?? 0);
 
-        $account = BankAccount::create([
-            ...$request->validated(),
-            'branch_id' => $branch->id,
-            'balance' => 0,
-        ]);
+        $account = DB::transaction(function () use ($request, $branch, $openingBalance) {
+            $account = BankAccount::create([
+                ...collect($request->validated())->except('opening_balance')->toArray(),
+                'branch_id' => $branch->id,
+                'balance' => 0,
+            ]);
 
-        return response()->json($account, 201);
+            if ($openingBalance > 0) {
+                app(MovementService::class)->create([
+                    'branch_id' => $branch->id,
+                    'date' => now()->format('Y-m-d'),
+                    'type' => MovementTypes::INCOME,
+                    'transaction_type' => MovementTransactionTypes::OPENING_BALANCE,
+                    'source_type' => MovementPartyRegistry::BANK_ACCOUNT,
+                    'source_id' => $account->id,
+                    'amount' => $openingBalance,
+                    'description' => 'Saldo inicial',
+                    'user_id' => Auth::id(),
+                ]);
+            }
+
+            return $account;
+        });
+
+        return response()->json($account->fresh(), 201);
     }
 
     public function edit(BankAccount $bankAccount): JsonResponse

@@ -11,6 +11,10 @@ class AccountPayableMovementResource extends JsonResource
     private const TYPE_LABELS = [
         AccountsPayableMovementTypes::FACTURA => 'Factura',
         AccountsPayableMovementTypes::RETENCION => 'Retención',
+        AccountsPayableMovementTypes::PAGO => 'Abono',
+        AccountsPayableMovementTypes::SALDO_INICIAL => 'Saldo inicial',
+        AccountsPayableMovementTypes::ANTICIPO => 'Anticipo',
+        AccountsPayableMovementTypes::APLICACION_ANTICIPO => 'Aplicación de anticipo',
     ];
 
     /**
