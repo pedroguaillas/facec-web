@@ -6,12 +6,16 @@ use App\Jobs\ProcessVoucherJob;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\EmisionPoint;
+use App\Models\Product\Product;
 use App\Models\Shop\Shop;
 use App\Models\VoucherType;
 use App\Services\AccountsPayable\AccountsPayableLedgerService;
+use App\Services\Product\InventoryLedgerService;
+use App\Services\Product\WarehouseResolver;
 use App\Services\Shop\Retention\RetentionTotalsCalculator;
 use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
+use App\StaticClasses\InventoryMovementTypes;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
@@ -123,6 +127,32 @@ class ShopStoreService
         ], $products);
 
         $shop->shopitems()->createMany($items);
+
+        if (! $this->company->inventory) {
+            return;
+        }
+
+        $warehouse = app(WarehouseResolver::class)->forBranch($this->branch);
+        $ledger = app(InventoryLedgerService::class);
+
+        foreach ($products as $product) {
+            $productModel = Product::find($product['product_id']);
+
+            // Servicios no tienen stock que sumar.
+            if (! $productModel || $productModel->type_product === Product::TYPE_SERVICE) {
+                continue;
+            }
+
+            $ledger->registerMovement(
+                $productModel,
+                $warehouse,
+                InventoryMovementTypes::PURCHASE,
+                (float) $product['quantity'],
+                $shop->date,
+                modelId: $shop->id,
+                price: (float) $product['price'],
+            );
+        }
     }
 
     protected function createRetentionItems(Shop $shop, array $data): void

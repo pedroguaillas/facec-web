@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AccountsPayable\AccountPayableController;
 use App\Http\Controllers\AccountsPayable\AccountPayablePaymentController;
+use App\Http\Controllers\AccountsPayable\OverdueController as AccountPayableOverdueController;
 use App\Http\Controllers\AccountsReceivable\AccountReceivableController;
 use App\Http\Controllers\AccountsReceivable\AccountReceivablePaymentController;
+use App\Http\Controllers\AccountsReceivable\OverdueController as AccountReceivableOverdueController;
 use App\Http\Controllers\Auth\AuthenticationController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Bank\BankAccountController;
@@ -19,6 +21,8 @@ use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Order\OrderLifecycleController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductLookupController;
+use App\Http\Controllers\Product\ProductPresentationController;
+use App\Http\Controllers\Product\ProviderProductCodeController;
 use App\Http\Controllers\Provider\ProviderController;
 use App\Http\Controllers\Provider\ProviderLookupController;
 use App\Http\Controllers\ReferralGuide\ReferralGuideController;
@@ -79,8 +83,13 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('products/{product}', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+    Route::get('products/{product}/presentations', [ProductPresentationController::class, 'index'])->name('products.presentations.index');
+    Route::post('products/{product}/presentations', [ProductPresentationController::class, 'store'])->name('products.presentations.store');
+    Route::put('products/{product}/presentations/{presentation}', [ProductPresentationController::class, 'update'])->name('products.presentations.update');
+    Route::delete('products/{product}/presentations/{presentation}', [ProductPresentationController::class, 'destroy'])->name('products.presentations.destroy');
 
     Route::get('providers', [ProviderController::class, 'index'])->name('providers.index');
+    Route::get('providers/overdue', [AccountPayableOverdueController::class, 'index'])->name('providers.overdue');
     Route::get('providers/create', [ProviderController::class, 'create'])->name('providers.create');
     Route::get('providers/resolve/{identification}', [ProviderController::class, 'resolve'])->name('providers.resolve');
     Route::post('providers', [ProviderController::class, 'store'])->name('providers.store');
@@ -91,8 +100,12 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('providers/{provider}/account-payable/opening-balance', [AccountPayableController::class, 'openingBalance'])->name('providers.account-payable.opening-balance');
     Route::get('providers/{provider}/advances', [AccountPayableController::class, 'advances'])->name('providers.advances.index');
     Route::post('providers/{provider}/advances', [AccountPayableController::class, 'storeAdvance'])->name('providers.advances.store');
+    Route::get('providers/{provider}/product-codes', [ProviderProductCodeController::class, 'index'])->name('providers.product-codes.index');
+    Route::post('providers/{provider}/product-codes', [ProviderProductCodeController::class, 'store'])->name('providers.product-codes.store');
+    Route::delete('providers/{provider}/product-codes/{productCode}', [ProviderProductCodeController::class, 'destroy'])->name('providers.product-codes.destroy');
 
     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::get('customers/overdue', [AccountReceivableOverdueController::class, 'index'])->name('customers.overdue');
     Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
     Route::get('customers/resolve/{identification}', [CustomerController::class, 'resolve'])->name('customers.resolve');
     Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');

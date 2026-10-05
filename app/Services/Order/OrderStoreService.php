@@ -8,10 +8,14 @@ use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
+use App\Models\Product\Product;
 use App\Models\VoucherType;
 use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
+use App\Services\Product\InventoryLedgerService;
+use App\Services\Product\WarehouseResolver;
 use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
+use App\StaticClasses\InventoryMovementTypes;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
@@ -107,34 +111,41 @@ class OrderStoreService
             return;
         }
 
-        $orderItems = [];
-        $inventoryItems = [];
-
-        foreach ($products as $product) {
-            $orderItems[] = [
-                'product_id' => $product['product_id'],
-                'quantity' => $product['quantity'],
-                'price' => $product['price'],
-                'discount' => $product['discount'],
-                'ice' => $product['ice'] ?? 0,
-                'iva' => $product['iva'],
-            ];
-
-            if ($this->company->inventory) {
-                $inventoryItems[] = [
-                    'product_id' => $product['product_id'],
-                    'quantity' => $product['quantity'],
-                    'price' => $product['price'],
-                    'type' => 'Venta',
-                    'date' => Carbon::today()->format('Y-m-d'),
-                ];
-            }
-        }
+        $orderItems = array_map(fn ($product) => [
+            'product_id' => $product['product_id'],
+            'quantity' => $product['quantity'],
+            'price' => $product['price'],
+            'discount' => $product['discount'],
+            'ice' => $product['ice'] ?? 0,
+            'iva' => $product['iva'],
+        ], $products);
 
         $order->orderitems()->createMany($orderItems);
 
-        if ($this->company->inventory && ! empty($inventoryItems)) {
-            $order->inventories()->createMany($inventoryItems);
+        if (! $this->company->inventory) {
+            return;
+        }
+
+        $warehouse = app(WarehouseResolver::class)->forBranch($this->branch);
+        $ledger = app(InventoryLedgerService::class);
+
+        foreach ($products as $product) {
+            $productModel = Product::find($product['product_id']);
+
+            // Servicios no tienen stock que descontar.
+            if (! $productModel || $productModel->type_product === Product::TYPE_SERVICE) {
+                continue;
+            }
+
+            $ledger->registerMovement(
+                $productModel,
+                $warehouse,
+                InventoryMovementTypes::SALE,
+                (float) $product['quantity'],
+                Carbon::today()->format('Y-m-d'),
+                modelId: $order->id,
+                price: (float) $product['price'],
+            );
         }
     }
 

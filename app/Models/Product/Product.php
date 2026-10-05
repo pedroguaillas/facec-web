@@ -29,6 +29,7 @@ class Product extends BaseModel
     protected $fillable = [
         'branch_id',
         'category_id',
+        'parent_product_id',
         'code',
         'type_product',
         'name',
@@ -71,6 +72,21 @@ class Product extends BaseModel
     public function inventories()
     {
         return $this->hasMany(Inventory::class);
+    }
+
+    public function presentations()
+    {
+        return $this->hasMany(ProductPresentation::class);
+    }
+
+    public function parentProduct()
+    {
+        return $this->belongsTo(self::class, 'parent_product_id');
+    }
+
+    public function variants()
+    {
+        return $this->hasMany(self::class, 'parent_product_id');
     }
 
     public function orderItems()
