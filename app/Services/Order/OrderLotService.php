@@ -11,6 +11,7 @@ use App\Models\Order\Lot;
 use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
+use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
 use App\Models\VoucherType;
 use App\StaticClasses\VoucherStates;
@@ -120,7 +121,7 @@ class OrderLotService
     /** @param  array<int, string>  $codes */
     private function resolveProducts(array $codes): array
     {
-        $products = Product::select('products.id', 'products.code', 'iva_taxes.percentage', 'iva_taxes.code AS iva')
+        $products = Product::select('products.id', 'products.code', 'products.differentiated_iva', 'iva_taxes.percentage', 'iva_taxes.code AS iva')
             ->join('iva_taxes', 'products.iva', 'iva_taxes.code')
             ->whereIn('products.code', $codes)
             ->where('products.branch_id', $this->branch->id)->get();
@@ -147,13 +148,21 @@ class OrderLotService
         $orderItems = [];
 
         $facturaVoucherTypeId = VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id');
+        $appliesDifferentiatedIva = app(DifferentiatedIvaService::class)->appliesTo($this->company, $date);
+        $differentiatedIvaPercentage = (int) IvaTax::where('code', DifferentiatedIvaService::DIFFERENTIATED_IVA_CODE)->value('percentage');
 
         foreach ($excelData as $productData) {
             $customer = array_values(array_filter($customers, fn ($item) => $item->identication === $productData[0]));
             $product = array_values(array_filter($products, fn ($item) => $item->code === $productData[2]));
 
             $subTotal = $productData[3] * $productData[4];
-            $product = $product[0];
+            $product = clone $product[0];
+
+            if ($appliesDifferentiatedIva && $product->differentiated_iva && (int) $product->iva === DifferentiatedIvaService::GENERAL_IVA_CODE) {
+                $product->iva = DifferentiatedIvaService::DIFFERENTIATED_IVA_CODE;
+                $product->percentage = $differentiatedIvaPercentage;
+            }
+
             $iva = $subTotal * $product->percentage * 0.01;
 
             $input = [

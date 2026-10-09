@@ -6,9 +6,11 @@ use App\Models\AccountsReceivable\AccountReceivableMovement;
 use App\Models\AccountsReceivable\CustomerAdvance;
 use App\Models\Customer;
 use App\Models\Order\Order;
+use App\Services\SubscriptionGate;
 use App\StaticClasses\AccountsReceivableMovementTypes;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -170,6 +172,8 @@ class AccountsReceivableLedgerService
      */
     public function registerOpeningBalance(Customer $customer, float $amount, ?string $date = null): AccountReceivableMovement
     {
+        app(SubscriptionGate::class)->ensureFinancieroAccess(Auth::user()->company);
+
         $exists = AccountReceivableMovement::where('customer_id', $customer->id)
             ->where('type', AccountsReceivableMovementTypes::SALDO_INICIAL)
             ->exists();

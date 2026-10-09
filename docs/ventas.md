@@ -199,7 +199,9 @@ se confunda con un comprobante electrónico real.
 `null`, `:24`), sus ítems con `percentage` de IVA resuelto por join, los
 adicionales, los productos y el cliente. `OrderController::create`/`edit`
 adjuntan además `emisionData()` (puntos de emisión, métodos de pago, tarifas
-IVA activas, flag `tourism`) para poblar el formulario.
+IVA activas, `differentiated_iva` + `holiday` — ver §3.1) para poblar el formulario. Para RIMPE Negocio
+Popular (`rimpe = 2`) `ivaTaxes` trae solo el código 0, y store/update
+rechazan con 422 (`products.N.iva`) cualquier otro código — ver `docs/productos.md`.
 
 ### Carga por lote (`OrderController::storeLot` → `OrderLotService::store`)
 
@@ -245,6 +247,35 @@ existe agrupación de envío por lote (ver §5.2).
 
 ## 3. Validaciones y reglas de negocio
 
+### 3.1 IVA diferenciado (8%) en feriados
+
+`App\Services\Order\DifferentiatedIvaService` — el backend decide la tarifa,
+lo que mande el front no cuenta.
+
+- **Empresa**: `companies.base8 = true` la identifica como contribuyente que
+  vende con IVA diferenciado (turismo). `tourism_from`/`tourism_to` quedaron
+  sin uso: los reemplaza la tabla `holidays`.
+- **Feriados**: tabla global `holidays` (`name`, `starts_at`, `ends_at`, ambos
+  inclusive), CRUD admin en `admin/holidays` (`AdminHolidayController`).
+- **Producto**: `products.differentiated_iva` marca qué productos/servicios
+  usan el 8% (no todos). Solo se puede marcar si la empresa tiene `base8` (422
+  si no).
+- **Al vender** (factura y proforma — store, update, conversión proforma →
+  factura y carga por lote): si la empresa tiene `base8` y la **fecha de la
+  venta** cae en un feriado, los ítems marcados que vienen con la tarifa
+  general (código 4, 15%) se graban con código 8; fuera de eso, un ítem que
+  venga con 8 vuelve a 4. Ítems con otras tarifas (0%, 5%) no cambian. La
+  nota de crédito no pasa por esto: replica el IVA de la factura.
+- **Tarifa 8** en `iva_taxes`: `state = inactive` a propósito (no se ofrece al
+  crear productos); el cálculo y el XML (`codigoPorcentaje` 8) la usan igual.
+- `orders/create` y `orders/{id}` devuelven `differentiated_iva` (bool, feriado
+  vigente hoy para la empresa) y `holiday` (`{id, name, starts_at, ends_at}` o
+  `null`), y `holidays` (feriados que terminan desde hace 1 mes en adelante,
+  vacío sin `base8`) para que el front decida el 8% según la fecha elegida.
+  Los ítems de `orders/{id}` traen `differentiated_iva` y `products/create|edit`
+  trae `base8`.
+- `OrderExport` agrega columnas "Gra 8%" / "IVA 8%" si la empresa tiene `base8`.
+
 ### `OrderStoreRequest` (`app/Http/Requests/Order/OrderStoreRequest.php`)
 
 - `authorize()` retorna `true` sin comprobar propiedad del recurso (`:11`).
@@ -284,7 +315,8 @@ existe agrupación de envío por lote (ver §5.2).
 
 Join con `customers`, orden por `created_at` desc, paginación configurable
 (`paginate`, default 15). Filtros: `search` (LIKE sobre `serie` y nombre del
-cliente, con escape de `%`/`_` — `:35`) y `date` (`whereDate`). Devuelve
+cliente, con escape de `%`/`_` — `:35`), `date` (`whereDate`) y `state`
+(uno o varios separados por coma, ej. `?state=DEVUELTA,NO AUTORIZADO`). Devuelve
 `OrderResources` (id + `atts` + `customer`, `app/Http/Resources/OrderResources.php`).
 
 ## 4. Endpoints principales

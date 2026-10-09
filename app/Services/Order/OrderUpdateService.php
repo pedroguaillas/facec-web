@@ -6,16 +6,23 @@ use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
 use App\StaticClasses\VoucherStates;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class OrderUpdateService
 {
     public function __construct(
         private OrderTotalsCalculator $totalsCalculator,
+        private DifferentiatedIvaService $differentiatedIvaService,
     ) {}
 
     public function updateOrder(Order $order, array $data): Order
     {
+        if (in_array($order->voucherType->slug, DifferentiatedIvaService::VOUCHER_SLUGS, true)) {
+            $data['products'] = $this->differentiatedIvaService
+                ->applyToItems(Auth::user()->company, $order->date, $data['products'] ?? []);
+        }
+
         DB::transaction(function () use ($order, $data) {
             $input = collect($data)->except(['id', 'products', 'send', 'aditionals', 'serie'])->toArray();
 

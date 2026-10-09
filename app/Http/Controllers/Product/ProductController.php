@@ -42,7 +42,7 @@ class ProductController extends Controller
             ->when($request->filled('type'), function ($query) use ($request) {
                 $query->ofType((int) $request->input('type'));
             })
-            ->selectRaw('products.id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.tourism')
+            ->selectRaw('products.id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.differentiated_iva')
             ->latest('products.created_at')
             ->paginate($paginate)
             ->withQueryString();
@@ -138,7 +138,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @return array{ivaTaxes: Collection, iceCataloges: Collection|array, sriCategories: Collection|array, transport: bool}
+     * @return array{ivaTaxes: Collection, iceCataloges: Collection|array, sriCategories: Collection|array, transport: bool, base8: bool}
      */
     private function createEditData(): array
     {
@@ -148,11 +148,14 @@ class ProductController extends Controller
             'ivaTaxes' => IvaTax::query()
                 ->where('state', 'active')
                 ->when(! $company->base5, fn ($q) => $q->where('code', '<>', 5))
-                ->selectRaw("code AS value, CONCAT(percentage, '%') AS label")
+                ->when($company->isNegocioPopular(), fn ($q) => $q->whereIn('code', Company::NEGOCIO_POPULAR_IVA_CODES))
+                ->selectRaw("code AS value, CONCAT(percentage, '%') AS label, percentage")
                 ->get(),
             'iceCataloges' => $company->ice ? IceCataloge::get(['code', 'description']) : [],
             'sriCategories' => $this->sriCategoriesFor($company),
             'transport' => $company->transport,
+            // Habilita el check "IVA diferenciado (8% en feriados)".
+            'base8' => (bool) $company->base8,
         ];
     }
 

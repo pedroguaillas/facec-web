@@ -31,7 +31,7 @@ arrastra el **global scope de sucursal** (ver §7.3) y `SoftDeletes`.
 | `ice` | integer, nullable | Código de catálogo ICE (`ice_cataloges.code`) |
 | `irbpnr` | integer, nullable | Impuesto a botellas plásticas (IRBPNR) |
 | `stock` | integer, nullable | Campo informativo — ver §2 (no refleja el stock real) |
-| `tourism` | boolean (cast) | Marca producto de turismo/reembolso |
+| `differentiated_iva` | boolean (cast) | Se factura con IVA diferenciado (8%) en feriados (ex `tourism`). Solo marcable si la empresa tiene `base8` — ver `docs/ventas.md` §3.1 |
 | `entry/active/inventory_account_id` | integer, nullable | Cuentas contables (no usadas en el flujo FE) |
 
 `code` mide 25 por el manual de Facturación Electrónica del SRI
@@ -125,8 +125,20 @@ pagina. La respuesta pasa por `ProductResources` (§ estructura anidada
 Devuelven los catálogos que necesita el formulario, **condicionados a flags
 de la empresa**:
 
-- `ivaTaxes`: solo `state = active`; si la empresa **no** tiene `base5`, se
-  excluye el código 5 (IVA 5%).
+- `ivaTaxes` (`{value, label, percentage}`, `percentage` numérico): solo
+  `state = active`; si la empresa **no** tiene `base5`, se excluye el código 5
+  (IVA 5%). Si es RIMPE Negocio Popular (`rimpe = 2`, `Company::isNegocioPopular()`)
+  solo viene el código 0 (`Company::NEGOCIO_POPULAR_IVA_CODES`), y store/update
+  rechazan con 422 (`iva`) cualquier otro código (decisión de negocio, 2026-10-08).
+  Productos y ventas existentes con otra tarifa **no se migran** en datos
+  históricos: la empresa pudo no ser Negocio Popular cuando se registraron.
+  - **Cambio de régimen a Negocio Popular** (`PUT settings` del cliente o
+    `PUT admin/companies/{company}`): exige `confirm_iva_change: true`; sin él
+    responde 422 en `confirm_iva_change` con la cantidad de productos
+    afectados. Confirmado, `CompanyService::update` cambia **todos** los
+    productos de la empresa (todas sus sucursales) a IVA 0% en la misma
+    transacción. Ventas ya emitidas no se tocan. Salir de Negocio Popular no
+    cambia productos.
 - `iceCataloges`: solo si `company->ice`.
 - `sriCategories`: solo si `company->transport || company->base5`.
 - `transport`: bandera de la empresa.

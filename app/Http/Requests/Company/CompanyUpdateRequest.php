@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Company;
 
+use App\Models\Company;
+use App\Services\CompanyService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class CompanyUpdateRequest extends FormRequest
 {
@@ -15,6 +18,15 @@ class CompanyUpdateRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $blankable = ['sign_valid_from', 'sign_valid_to', 'pass_cert'];
+
+        // Desde FormData los booleanos llegan como "true"/"false".
+        $booleans = ['base5', 'base8', 'ice', 'transport', 'repayment', 'printf', 'guia_in_invoice', 'import_in_invoice', 'import_in_invoices'];
+
+        $this->merge(
+            collect($this->only($booleans))
+                ->map(fn ($value) => is_string($value) ? filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $value : $value)
+                ->all()
+        );
 
         $this->merge(
             collect($this->only($blankable))
@@ -32,7 +44,9 @@ class CompanyUpdateRequest extends FormRequest
             'company' => ['sometimes', 'string', 'max:300'],
             'economic_activity' => ['sometimes', 'string', 'max:300'],
             'accounting' => ['sometimes'],
-            'rimpe' => ['sometimes', 'nullable', 'integer'],
+            'rimpe' => ['sometimes', 'nullable', 'integer', Rule::in([0, 1, Company::RIMPE_NEGOCIO_POPULAR])],
+            // Confirmación explícita para pasar a Negocio Popular (cambia todos los productos a IVA 0%).
+            'confirm_iva_change' => ['sometimes'],
             'retention_agent' => ['sometimes', 'nullable', 'integer'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:15'],
             'enviroment_type' => ['sometimes', 'integer', 'in:1,2'],
@@ -60,12 +74,44 @@ class CompanyUpdateRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                if ($validator->errors()->isNotEmpty() || ! $this->filled('rimpe')) {
+                    return;
+                }
+
+                $routeCompany = $this->route('company');
+                $company = $routeCompany instanceof Company ? $routeCompany : $this->user()->company;
+                $companyService = app(CompanyService::class);
+
+                if (! $company instanceof Company || ! $companyService->becomesNegocioPopular($company, $this->input('rimpe'))) {
+                    return;
+                }
+
+                if (! $this->boolean('confirm_iva_change')) {
+                    $products = $companyService->countProductsOutsideNegocioPopularIva($company);
+
+                    $validator->errors()->add(
+                        'confirm_iva_change',
+                        "Al pasar a RIMPE Negocio Popular, {$products} producto(s) cambiarán a IVA 0%. Confirme el cambio para continuar."
+                    );
+                }
+            },
+        ];
+    }
+
     public function messages(): array
     {
         return [
             'ruc.digits' => 'El RUC debe tener 13 dígitos.',
             'ruc.unique' => 'Este RUC ya pertenece a otra empresa.',
             'decimal.max' => 'El máximo de decimales permitido es 6.',
+            'rimpe.in' => 'El régimen RIMPE seleccionado no es válido.',
         ];
     }
 }

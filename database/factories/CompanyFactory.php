@@ -2,10 +2,54 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
+use App\StaticClasses\PlanTypes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CompanyFactory extends Factory
 {
+    /**
+     * Empresas de prueba arrancan con plan financiero activo por defecto —
+     * así el grueso de los tests (cartera, anticipos, pagos) no necesita
+     * preocuparse del gating. Los tests que SÍ prueban el gating usan
+     * ->withoutSubscription() o ->plan(...) explícitamente.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Company $company) {
+            if ($company->subscriptions()->exists()) {
+                return;
+            }
+
+            $company->subscriptions()->create([
+                'plan' => PlanTypes::FINANCIERO,
+                'started_at' => now()->subDay(),
+                'ended_at' => now()->addYear(),
+                'amount' => 0,
+            ]);
+        });
+    }
+
+    public function withoutSubscription(): static
+    {
+        return $this->afterCreating(function (Company $company) {
+            $company->subscriptions()->delete();
+        });
+    }
+
+    public function plan(string $plan): static
+    {
+        return $this->afterCreating(function (Company $company) use ($plan) {
+            $company->subscriptions()->delete();
+            $company->subscriptions()->create([
+                'plan' => $plan,
+                'started_at' => now()->subDay(),
+                'ended_at' => now()->addYear(),
+                'amount' => 0,
+            ]);
+        });
+    }
+
     public function definition(): array
     {
         return [

@@ -4,6 +4,7 @@ namespace App\Services\AccountsPayable;
 
 use App\Models\AccountsPayable\ProviderAdvance;
 use App\Models\Provider;
+use App\Services\SubscriptionGate;
 use App\Services\Treasury\MovementService;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
@@ -21,6 +22,8 @@ class AccountsPayableAdvanceService
 
     public function register(Provider $provider, float $amount, string $sourceType, int $sourceId, ?string $date = null): ProviderAdvance
     {
+        app(SubscriptionGate::class)->ensureFinancieroAccess(Auth::user()->company);
+
         $date ??= now()->format('Y-m-d');
 
         return DB::transaction(function () use ($provider, $amount, $sourceType, $sourceId, $date) {

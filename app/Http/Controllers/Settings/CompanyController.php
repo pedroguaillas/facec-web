@@ -5,12 +5,29 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Company\CompanyUpdateRequest;
 use App\Models\Company;
+use App\Services\CompanyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyController extends Controller
 {
+    /**
+     * Permisos que el cliente puede editar desde su configuración (tab
+     * Permisos). `accounting` y `retention_agent` van en el tab general.
+     */
+    const CLIENT_PERMISSIONS = [
+        'base5',
+        'base8',
+        'ice',
+        'transport',
+        'repayment',
+        'printf',
+        'guia_in_invoice',
+        'import_in_invoice',
+        'import_in_invoices',
+    ];
+
     public function edit(): JsonResponse
     {
         $company = Auth::user()->company;
@@ -33,11 +50,11 @@ class CompanyController extends Controller
         ]);
     }
 
-    public function update(CompanyUpdateRequest $request): JsonResponse
+    public function update(CompanyUpdateRequest $request, CompanyService $companyService): JsonResponse
     {
         $company = Auth::user()->company;
 
-        $data = $request->safe()->only(['accounting', 'rimpe', 'retention_agent']);
+        $data = $request->safe()->only(['accounting', 'rimpe', 'retention_agent', ...self::CLIENT_PERMISSIONS]);
 
         if ($request->hasFile('logo')) {
             $filename = $company->ruc.'.'.$request->file('logo')->getClientOriginalExtension();
@@ -59,9 +76,7 @@ class CompanyController extends Controller
             $data['accounting'] = filter_var($request->input('accounting'), FILTER_VALIDATE_BOOLEAN);
         }
 
-        $company->update($data);
-
-        return response()->json($this->present($company->fresh()), 200);
+        return response()->json($this->present($companyService->update($company, $data)), 200);
     }
 
     /**

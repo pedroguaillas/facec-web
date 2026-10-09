@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Order;
 
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
+use App\Services\SubscriptionGate;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,6 +27,10 @@ class OrderStoreRequest extends FormRequest
             : 'cash_register_sessions';
 
         $paymentTypeContado = PaymentTypes::CONTADO;
+        // Caja/banco solo con plan financiero: con FACTURADOR la venta/compra al
+        // contado no toca tesorería (lo decide el plan, no el front).
+        $sourceRequired = $this->input('payment_type') === $paymentTypeContado
+            && app(SubscriptionGate::class)->hasFinancieroAccess($this->user()->company);
         $paymentTypeCredito = PaymentTypes::CREDITO;
         $paymentTypeAnticipo = PaymentTypes::ANTICIPO;
 
@@ -44,7 +50,10 @@ class OrderStoreRequest extends FormRequest
             'products.*.quantity' => 'required|numeric',
             'products.*.price' => 'required|numeric',
             'products.*.discount' => 'required|numeric',
-            'products.*.iva' => 'required',
+            'products.*.iva' => [
+                'required',
+                Rule::when($this->user()->company?->isNegocioPopular() ?? false, Rule::in(Company::NEGOCIO_POPULAR_IVA_CODES)),
+            ],
             'aditionals' => 'present|array',
             'repayments' => 'sometimes|array',
             'sub_total' => 'sometimes|numeric',
@@ -81,12 +90,12 @@ class OrderStoreRequest extends FormRequest
             'movement_id' => 'sometimes|nullable|integer|exists:movements,id',
             // Solo aplica si payment_type=CONTADO: a qué banco/caja entra el cobro.
             'source_type' => [
-                "required_if:payment_type,{$paymentTypeContado}",
+                Rule::requiredIf($sourceRequired),
                 'nullable',
                 Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION]),
             ],
             'source_id' => [
-                "required_if:payment_type,{$paymentTypeContado}",
+                Rule::requiredIf($sourceRequired),
                 'nullable',
                 'integer',
                 Rule::exists($sourceTable, 'id'),
@@ -129,5 +138,15 @@ class OrderStoreRequest extends FormRequest
             ->where('type_product', Product::TYPE_SERVICE)
             ->whereIn('aux_cod', $transportAuxCodes)
             ->exists();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'products.*.iva.in' => 'Como contribuyente RIMPE Negocio Popular solo puede usar IVA 0%.',
+        ];
     }
 }

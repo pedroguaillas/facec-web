@@ -2,12 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Company extends Model
 {
     use HasFactory;
+
+    /** Valor de `rimpe` para contribuyentes RIMPE Negocio Popular. */
+    const RIMPE_NEGOCIO_POPULAR = 2;
+
+    /**
+     * Códigos de IVA permitidos para Negocio Popular: solo tarifa 0%, ni
+     * "no objeto" ni "exento" (decisión de negocio, 2026-10-08).
+     */
+    const NEGOCIO_POPULAR_IVA_CODES = [0];
 
     /**
      * Nunca serializar la contraseña del certificado de firma electrónica.
@@ -89,5 +102,73 @@ class Company extends Model
     public function branches()
     {
         return $this->hasMany(Branch::class);
+    }
+
+    /**
+     * Usuario principal de la empresa: el primero vinculado en company_users
+     * (el que se crea junto con la empresa en el alta del admin).
+     *
+     * @return HasOneThrough<User, CompanyUser, $this>
+     */
+    public function user(): HasOneThrough
+    {
+        return $this->hasOneThrough(User::class, CompanyUser::class, 'level_id', 'id', 'id', 'user_id')
+            ->select(['users.id', 'users.user', 'users.email'])
+            ->without('type')
+            ->orderBy('company_users.id');
+    }
+
+    public function isNegocioPopular(): bool
+    {
+        return $this->rimpe === self::RIMPE_NEGOCIO_POPULAR;
+    }
+
+    /**
+     * @return HasMany<Subscription, $this>
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /**
+     * Plan vigente hoy (started_at <= hoy <= ended_at); si hay más de uno, el
+     * de started_at más reciente.
+     *
+     * @return HasOne<Subscription, $this>
+     */
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->ofMany([
+            'started_at' => 'max',
+            'id' => 'max',
+        ], function (Builder $query) {
+            $query->whereDate('started_at', '<=', now())
+                ->whereDate('ended_at', '>=', now());
+        });
+    }
+
+    /**
+     * Última suscripción de la empresa, vigente o ya vencida (null solo si
+     * nunca tuvo plan). La usa el listado admin para mostrar siempre el plan
+     * y su vencimiento.
+     *
+     * @return HasOne<Subscription, $this>
+     */
+    public function lastSubscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->ofMany([
+            'started_at' => 'max',
+            'id' => 'max',
+        ]);
+    }
+
+    /**
+     * Plan vigente hoy, o null si no tiene ninguno activo (plan vencido sin
+     * renovar, por ejemplo). Siempre consulta la base, no usa la relación cargada.
+     */
+    public function currentSubscription(): ?Subscription
+    {
+        return $this->subscription()->first();
     }
 }

@@ -22,6 +22,7 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
         protected string $year,
         protected string $month,
         protected bool $companyBase5,
+        protected bool $companyBase8 = false,
     ) {
         $dateToCheck = Carbon::parse("{$this->year}-{$this->month}-01");
         $this->beforeTaxChange = $dateToCheck->isBefore(Carbon::parse('2024-04-01'));
@@ -38,7 +39,7 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
             ->join('voucher_types AS vt', 'vt.id', 'orders.voucher_type_id')
             ->select(
                 'vt.name AS voucher_type_name', 'date', 'authorization', 'serie',
-                'no_iva', 'base0', 'base5', $baseField, 'iva5',
+                'no_iva', 'base0', 'base5', 'base8', $baseField, 'iva5', 'iva8',
                 $ivaField, 'total', 'orders.state', 'identication', 'c.name'
             )
             ->whereYear('date', $this->year)
@@ -63,10 +64,18 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
             $headings[] = 'Gra 5%';
         }
 
+        if ($this->companyBase8) {
+            $headings[] = 'Gra 8%';
+        }
+
         $headings[] = 'Gra '.($this->beforeTaxChange ? '12%' : '15%');
 
         if ($this->hasBase5) {
             $headings[] = 'IVA 5%';
+        }
+
+        if ($this->companyBase8) {
+            $headings[] = 'IVA 8%';
         }
 
         $headings[] = 'IVA '.($this->beforeTaxChange ? '12%' : '15%');
@@ -93,10 +102,18 @@ class OrderExport implements FromQuery, WithColumnFormatting, WithHeadings, With
             $row[] = $order->base5;
         }
 
+        if ($this->companyBase8) {
+            $row[] = $order->base8;
+        }
+
         $row[] = $this->beforeTaxChange ? $order->base12 : $order->base15;
 
         if ($this->hasBase5) {
             $row[] = $order->iva5;
+        }
+
+        if ($this->companyBase8) {
+            $row[] = $order->iva8;
         }
 
         $row[] = $this->beforeTaxChange ? $order->iva : $order->iva15;

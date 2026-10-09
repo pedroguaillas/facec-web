@@ -6,9 +6,11 @@ use App\Models\AccountsPayable\AccountPayableMovement;
 use App\Models\AccountsPayable\ProviderAdvance;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
+use App\Services\SubscriptionGate;
 use App\StaticClasses\AccountsPayableMovementTypes;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
 /**
@@ -180,6 +182,8 @@ class AccountsPayableLedgerService
      */
     public function registerOpeningBalance(Provider $provider, float $amount, ?string $date = null): AccountPayableMovement
     {
+        app(SubscriptionGate::class)->ensureFinancieroAccess(Auth::user()->company);
+
         $exists = AccountPayableMovement::where('provider_id', $provider->id)
             ->where('type', AccountsPayableMovementTypes::SALDO_INICIAL)
             ->exists();

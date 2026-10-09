@@ -15,6 +15,7 @@ use App\Models\VoucherType;
 use App\StaticClasses\AccountsReceivableMovementTypes;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
+use App\StaticClasses\PlanTypes;
 use App\StaticClasses\VoucherTypes;
 
 /**
@@ -104,3 +105,22 @@ test('no se puede abonar una venta que no es a crédito', function () {
 
     $response->assertStatus(422);
 });
+
+test('se puede abonar a una venta a crédito existente aunque el plan haya bajado a facturador o esté vencido', function (array $subscription) {
+    [$branch, $order, $account] = creditOrderReadyForPayment(100);
+
+    $company = $branch->company;
+    $company->subscriptions()->delete();
+    $company->subscriptions()->create($subscription);
+
+    test()->postJson(route('orders.payments.store', $order), [
+        'amount' => 40,
+        'source_type' => MovementPartyRegistry::BANK_ACCOUNT,
+        'source_id' => $account->id,
+    ])->assertCreated();
+
+    expect((float) $order->fresh()->paid)->toBe(40.0);
+})->with([
+    'facturador vigente' => fn () => ['plan' => PlanTypes::FACTURADOR, 'started_at' => now()->subDay(), 'ended_at' => now()->addMonth()],
+    'plan vencido' => fn () => ['plan' => PlanTypes::FINANCIERO, 'started_at' => now()->subMonths(2), 'ended_at' => now()->subDay()],
+]);

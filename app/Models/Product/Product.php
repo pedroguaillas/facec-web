@@ -44,14 +44,15 @@ class Product extends BaseModel
         'active_account_id',
         'inventory_account_id',
         'stock',
-        'tourism',
+        // IVA diferenciado (8%) en feriados — ver DifferentiatedIvaService
+        'differentiated_iva',
         // Obligatorio productos con el IVA 5%
         'aux_cod',
     ];
 
     protected $casts = [
         'price1' => 'float',
-        'tourism' => 'boolean',
+        'differentiated_iva' => 'boolean',
     ];
 
     public function branch()

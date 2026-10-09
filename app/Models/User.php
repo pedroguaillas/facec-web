@@ -72,6 +72,9 @@ class User extends Authenticatable
         return $this->hasMany(CompanyUser::class);
     }
 
+    /**
+     * @return HasOneThrough<Company, CompanyUser, $this>
+     */
     public function company(): HasOneThrough
     {
         return $this->hasOneThrough(

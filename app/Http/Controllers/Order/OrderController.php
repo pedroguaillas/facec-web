@@ -9,10 +9,13 @@ use App\Http\Requests\Order\OrderStoreRequest;
 use App\Http\Requests\Order\OrderUpdateRequest;
 use App\Http\Resources\OrderResources;
 use App\Models\Branch;
+use App\Models\Company;
+use App\Models\Holiday;
 use App\Models\MethodOfPayment;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
 use App\Models\VoucherType;
+use App\Services\Order\DifferentiatedIvaService;
 use App\Services\Order\OrderLotService;
 use App\Services\Order\OrderPdfService;
 use App\Services\Order\OrderProformaToInvoiceService;
@@ -20,7 +23,7 @@ use App\Services\Order\OrderShowService;
 use App\Services\Order\OrderStoreService;
 use App\Services\Order\OrderUpdateService;
 use App\StaticClasses\VoucherTypes;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,6 +54,9 @@ class OrderController extends Controller
             })
             ->when($request->filled('date'), function ($query) use ($request) {
                 $query->whereDate('orders.date', $request->input('date'));
+            })
+            ->when($request->filled('state'), function ($query) use ($request) {
+                $query->whereIn('orders.state', explode(',', (string) $request->input('state')));
             })
             ->paginate($paginate)
             ->withQueryString();
@@ -130,17 +136,19 @@ class OrderController extends Controller
         $branch = $company->branches()->orderBy('created_at')->first();
 
         return Excel::download(
-            new OrderExport($branch->id, $year, $month, (bool) $company->base5),
+            new OrderExport($branch->id, $year, $month, (bool) $company->base5, (bool) $company->base8),
             "ventas-{$yearMonth}.xlsx"
         );
     }
 
     /**
-     * @return array{points: Collection, voucherTypes: Collection, methodOfPayments: Collection, tourism: bool, ivaTaxes: Collection}
+     * @return array{points: Collection, voucherTypes: Collection, methodOfPayments: Collection, differentiated_iva: bool, holiday: Holiday|null, holidays: EloquentCollection<int, Holiday>, ivaTaxes: Collection}
      */
     private function emisionData(): array
     {
         $company = Auth::user()->company;
+        $differentiatedIvaService = app(DifferentiatedIvaService::class);
+        $holiday = $differentiatedIvaService->holidayFor($company, now());
 
         return [
             'points' => Branch::selectRaw("branches.id AS branch_id, LPAD(store, 3, '0') AS store, ep.id, LPAD(point, 3, '0') AS point, recognition")
@@ -153,21 +161,15 @@ class OrderController extends Controller
             'methodOfPayments' => MethodOfPayment::query()
                 ->whereNotIn('code', [15, 17, 18, 21])
                 ->get(),
-            'tourism' => $this->isTourism($company),
+            // IVA diferenciado (8%) vigente hoy: el backend lo aplica solo a
+            // los productos marcados `differentiated_iva` (DifferentiatedIvaService).
+            'differentiated_iva' => $holiday !== null,
+            'holiday' => $holiday,
+            'holidays' => $differentiatedIvaService->upcomingHolidaysFor($company),
             'ivaTaxes' => IvaTax::query()
                 ->where('state', 'active')
+                ->when($company->isNegocioPopular(), fn ($q) => $q->whereIn('code', Company::NEGOCIO_POPULAR_IVA_CODES))
                 ->get(['code', 'percentage']),
         ];
-    }
-
-    private function isTourism($company): bool
-    {
-        if (! $company->base8 || $company->tourism_from === null || $company->tourism_to === null) {
-            return false;
-        }
-
-        $now = Carbon::now();
-
-        return $now->isAfter($company->tourism_from) && $now->isBefore($company->tourism_to);
     }
 }

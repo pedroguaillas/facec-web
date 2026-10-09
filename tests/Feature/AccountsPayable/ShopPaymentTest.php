@@ -16,6 +16,7 @@ use App\StaticClasses\AccountsPayableMovementTypes;
 use App\StaticClasses\CashRegisterStatuses;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
+use App\StaticClasses\PlanTypes;
 use App\StaticClasses\VoucherTypes;
 
 /**
@@ -112,3 +113,22 @@ test('no se puede abonar una compra que no es a crédito', function () {
 
     $response->assertStatus(422);
 });
+
+test('se puede abonar a una compra a crédito existente aunque el plan haya bajado a facturador o esté vencido', function (array $subscription) {
+    [$branch, $shop, $session] = creditShopReadyForPayment(100);
+
+    $company = $branch->company;
+    $company->subscriptions()->delete();
+    $company->subscriptions()->create($subscription);
+
+    test()->postJson(route('shops.payments.store', $shop), [
+        'amount' => 40,
+        'source_type' => MovementPartyRegistry::CASH_REGISTER_SESSION,
+        'source_id' => $session->id,
+    ])->assertCreated();
+
+    expect((float) $shop->fresh()->paid)->toBe(40.0);
+})->with([
+    'facturador vigente' => fn () => ['plan' => PlanTypes::FACTURADOR, 'started_at' => now()->subDay(), 'ended_at' => now()->addMonth()],
+    'plan vencido' => fn () => ['plan' => PlanTypes::FINANCIERO, 'started_at' => now()->subMonths(2), 'ended_at' => now()->subDay()],
+]);

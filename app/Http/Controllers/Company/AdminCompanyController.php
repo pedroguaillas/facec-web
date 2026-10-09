@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Company\AssignSubscriptionRequest;
 use App\Http\Requests\Company\CompanyStoreRequest;
 use App\Http\Requests\Company\CompanyUpdateRequest;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\CompanyService;
+use App\Services\SubscriptionService;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +21,7 @@ class AdminCompanyController extends Controller
     public function __construct(
         private UserService $userService,
         private CompanyService $companyService,
+        private SubscriptionService $subscriptionService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -34,11 +37,18 @@ class AdminCompanyController extends Controller
     public function store(CompanyStoreRequest $request): JsonResponse
     {
         return DB::transaction(function () use ($request) {
-            $companyData = $request->safe()->except(['user', 'password', 'email']);
+            $companyData = $request->safe()->except(['user', 'password', 'email', 'user_type_id', 'plan', 'plan_ends_at', 'plan_amount']);
             $userData = $request->safe()->only(['user', 'password', 'email', 'user_type_id']);
 
             $company = $this->companyService->create($companyData);
             $user = $this->userService->create($userData);
+
+            $subscription = $this->subscriptionService->assignPlan(
+                $company,
+                $request->validated('plan'),
+                $request->validated('plan_ends_at'),
+                $request->filled('plan_amount') ? (float) $request->validated('plan_amount') : null,
+            );
 
             $user->companyusers()->create([
                 'level' => 'owner',
@@ -49,6 +59,7 @@ class AdminCompanyController extends Controller
                 'message' => 'Registro de empresa exitoso.',
                 'user' => $user,
                 'company' => $company,
+                'subscription' => $subscription,
             ], 201);
         });
     }
@@ -99,5 +110,29 @@ class AdminCompanyController extends Controller
         $updatedCompany = $this->companyService->update($company, $request->validated());
 
         return response()->json($updatedCompany);
+    }
+
+    public function subscriptions(Company $company): JsonResponse
+    {
+        return response()->json([
+            'company' => $company->only(['id', 'ruc', 'company']),
+            'current' => $company->currentSubscription(),
+            'history' => $company->subscriptions()
+                ->orderByDesc('started_at')
+                ->orderByDesc('id')
+                ->get(),
+        ]);
+    }
+
+    public function assignSubscription(AssignSubscriptionRequest $request, Company $company): JsonResponse
+    {
+        $subscription = $this->subscriptionService->assignPlan(
+            $company,
+            $request->validated('plan'),
+            $request->validated('ends_at'),
+            $request->filled('amount') ? (float) $request->validated('amount') : null,
+        );
+
+        return response()->json($subscription, 201);
     }
 }

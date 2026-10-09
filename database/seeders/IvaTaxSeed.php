@@ -33,6 +33,13 @@ class IvaTaxSeed extends Seeder
                 'percentage' => 15,
                 'state' => 'active',
             ],
+            [
+                'code' => 8,
+                'percentage' => 8,
+                // IVA diferenciado (feriados): no se ofrece al crear productos,
+                // lo aplica DifferentiatedIvaService al vender.
+                'state' => 'inactive',
+            ],
         ]);
     }
 }

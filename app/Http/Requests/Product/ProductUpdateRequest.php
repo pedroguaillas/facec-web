@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Product;
 
 use App\Models\Branch;
+use App\Models\Company;
 use App\Models\Product\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,10 +35,17 @@ class ProductUpdateRequest extends FormRequest
             'type_product' => 'required|integer|in:1,2',
             'name' => 'required|string|max:300',
             'price1' => 'required|numeric|min:0',
-            'iva' => 'required|integer|exists:iva_taxes,code',
+            'iva' => [
+                'required',
+                'integer',
+                'exists:iva_taxes,code',
+                Rule::when($company->isNegocioPopular(), Rule::in(Company::NEGOCIO_POPULAR_IVA_CODES)),
+            ],
             'ice' => 'nullable|integer|exists:ice_cataloges,code',
             'aux_cod' => 'nullable|string|max:10',
             'stock' => 'nullable|integer|min:0',
+            // Solo empresas con IVA diferenciado (`base8`) pueden marcarlo.
+            'differentiated_iva' => ['sometimes', 'boolean', Rule::prohibitedIf(! $company->base8 && $this->boolean('differentiated_iva'))],
         ];
     }
 
@@ -67,6 +75,8 @@ class ProductUpdateRequest extends FormRequest
             'price1.numeric' => 'El precio debe ser un número',
             'iva.required' => 'El IVA es obligatorio',
             'iva.exists' => 'El IVA seleccionado no es válido',
+            'differentiated_iva.prohibited' => 'La empresa no está habilitada para IVA diferenciado (8%).',
+            'iva.in' => 'Como contribuyente RIMPE Negocio Popular solo puede usar IVA 0%.',
             'ice.exists' => 'El ICE seleccionado no es válido',
         ];
     }

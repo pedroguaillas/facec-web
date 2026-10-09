@@ -6,6 +6,7 @@ use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
 use App\Models\Branch;
 use App\Models\Shop\Shop;
 use App\Models\VoucherType;
+use App\Services\SubscriptionGate;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
@@ -29,6 +30,10 @@ class ShopStoreRequest extends FormRequest
             : 'cash_register_sessions';
 
         $paymentTypeContado = PaymentTypes::CONTADO;
+        // Caja/banco solo con plan financiero: con FACTURADOR la venta/compra al
+        // contado no toca tesorería (lo decide el plan, no el front).
+        $sourceRequired = $this->input('payment_type') === $paymentTypeContado
+            && app(SubscriptionGate::class)->hasFinancieroAccess($this->user()->company);
         $paymentTypeCredito = PaymentTypes::CREDITO;
         $paymentTypeAnticipo = PaymentTypes::ANTICIPO;
 
@@ -71,12 +76,12 @@ class ShopStoreRequest extends FormRequest
             ],
             // Solo aplica si payment_type=CONTADO: de qué banco/caja sale el pago.
             'source_type' => [
-                "required_if:payment_type,{$paymentTypeContado}",
+                Rule::requiredIf($sourceRequired),
                 'nullable',
                 Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION]),
             ],
             'source_id' => [
-                "required_if:payment_type,{$paymentTypeContado}",
+                Rule::requiredIf($sourceRequired),
                 'nullable',
                 'integer',
                 Rule::exists($sourceTable, 'id'),

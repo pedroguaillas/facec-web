@@ -26,7 +26,7 @@ class ProductResources extends JsonResource
                 'ice' => $this->ice,
                 'irbpnr' => $this->irbpnr,
                 'stock' => $this->stock,
-                'tourism' => $this->tourism,
+                'differentiated_iva' => $this->differentiated_iva,
             ],
             'iva' => [
                 'code' => $this->iva_code,

@@ -17,6 +17,7 @@ use App\Http\Controllers\Company\AdminCompanyController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerLookupController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Holiday\AdminHolidayController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Order\OrderLifecycleController;
 use App\Http\Controllers\Product\ProductController;
@@ -54,9 +55,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
-    Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
-    Route::post('orders/lot', [OrderController::class, 'storeLot'])->name('orders.lot.store');
-    Route::get('orders/{order}/convert-to-invoice', [OrderController::class, 'convertToInvoice'])->name('orders.convert-to-invoice');
+    Route::post('orders', [OrderController::class, 'store'])->name('orders.store')->middleware('subscription.active');
+    Route::post('orders/lot', [OrderController::class, 'storeLot'])->name('orders.lot.store')->middleware('subscription.active');
+    Route::get('orders/{order}/convert-to-invoice', [OrderController::class, 'convertToInvoice'])->name('orders.convert-to-invoice')->middleware('subscription.active');
     Route::get('orders/export/{yearMonth}', [OrderController::class, 'export'])
         ->where('yearMonth', '\d{4}-\d{2}')
         ->name('orders.export');
@@ -64,7 +65,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::put('orders/{order}', [OrderController::class, 'update'])->name('orders.update');
     Route::get('orders/{order}/pdf', [OrderController::class, 'pdf'])->name('orders.pdf');
     Route::get('orders/{order}/printf', [OrderController::class, 'printf'])->name('orders.printf');
-    Route::get('orders/{order}/process', [OrderLifecycleController::class, 'process'])->name('orders.process');
+    Route::get('orders/{order}/process', [OrderLifecycleController::class, 'process'])->name('orders.process')->middleware('subscription.active');
     Route::get('orders/{order}/cancel', [OrderLifecycleController::class, 'cancel'])->name('orders.cancel');
     Route::get('orders/{order}/mail', [OrderLifecycleController::class, 'mail'])->name('orders.mail');
     Route::get('orders/{order}/xml', [OrderLifecycleController::class, 'download'])->name('orders.xml');
@@ -119,27 +120,27 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 
     Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
     Route::get('shops/create', [ShopController::class, 'create'])->name('shops.create');
-    Route::post('shops', [ShopController::class, 'store'])->name('shops.store');
+    Route::post('shops', [ShopController::class, 'store'])->name('shops.store')->middleware('subscription.active');
     Route::get('shops/{shop}', [ShopController::class, 'edit'])->name('shops.edit');
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
     Route::get('shops/{shop}/pdf', [ShopController::class, 'pdf'])->name('shops.pdf');
-    Route::get('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process');
+    Route::get('shops/{shop}/process', [ShopLifecycleController::class, 'process'])->name('shops.process')->middleware('subscription.active');
     Route::get('shops/{shop}/cancel', [ShopLifecycleController::class, 'cancel'])->name('shops.cancel');
     Route::get('shops/{shop}/xml', [ShopLifecycleController::class, 'download'])->name('shops.xml');
     Route::post('shops/{shop}/payments', [AccountPayablePaymentController::class, 'store'])->name('shops.payments.store');
     Route::get('retentions/{id}/pdf', [RetentionController::class, 'pdf'])->name('retentions.pdf');
-    Route::get('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process');
+    Route::get('retentions/{shop}/process', [RetentionController::class, 'process'])->name('retentions.process')->middleware('subscription.active');
     Route::get('retentions/{shop}/mail', [RetentionController::class, 'mail'])->name('retentions.mail');
     Route::get('retentions/{shop}/cancel', [RetentionController::class, 'cancel'])->name('retentions.cancel');
     Route::get('retentions/{shop}/xml', [RetentionController::class, 'download'])->name('retentions.xml');
 
     Route::get('referralguides', [ReferralGuideController::class, 'index'])->name('referralguides.index');
     Route::get('referralguides/create', [ReferralGuideController::class, 'create'])->name('referralguides.create');
-    Route::post('referralguides', [ReferralGuideController::class, 'store'])->name('referralguides.store');
+    Route::post('referralguides', [ReferralGuideController::class, 'store'])->name('referralguides.store')->middleware('subscription.active');
     Route::get('referralguides/{referralguide}', [ReferralGuideController::class, 'show'])->name('referralguides.show');
     Route::put('referralguides/{referralguide}', [ReferralGuideController::class, 'update'])->name('referralguides.update');
     Route::get('referralguides/{id}/pdf', [ReferralGuideController::class, 'pdf'])->name('referralguides.pdf');
-    Route::get('referralguides/{referralguide}/process', [ReferralGuideLifecycleController::class, 'process'])->name('referralguides.process');
+    Route::get('referralguides/{referralguide}/process', [ReferralGuideLifecycleController::class, 'process'])->name('referralguides.process')->middleware('subscription.active');
     Route::get('referralguides/{referralguide}/xml', [ReferralGuideLifecycleController::class, 'download'])->name('referralguides.xml');
 
     Route::get('carriers', [CarrierController::class, 'index'])->name('carriers.index');
@@ -215,4 +216,11 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('users/check-availability', [AdminCompanyController::class, 'checkAvailability'])->name('admin.users.check-availability');
     Route::get('companies/{id}/edit', [AdminCompanyController::class, 'edit'])->name('admin.companies.edit');
     Route::put('companies/{company}', [AdminCompanyController::class, 'update'])->name('admin.companies.update');
+    Route::get('companies/{company}/subscriptions', [AdminCompanyController::class, 'subscriptions'])->name('admin.companies.subscriptions');
+    Route::post('companies/{company}/subscription', [AdminCompanyController::class, 'assignSubscription'])->name('admin.companies.subscription');
+
+    Route::get('holidays', [AdminHolidayController::class, 'index'])->name('admin.holidays.index');
+    Route::post('holidays', [AdminHolidayController::class, 'store'])->name('admin.holidays.store');
+    Route::put('holidays/{holiday}', [AdminHolidayController::class, 'update'])->name('admin.holidays.update');
+    Route::delete('holidays/{holiday}', [AdminHolidayController::class, 'destroy'])->name('admin.holidays.destroy');
 });

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckRoleMiddleware;
+use App\Http\Middleware\EnsureActiveSubscription;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -27,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => CheckRoleMiddleware::class,
+            'subscription.active' => EnsureActiveSubscription::class,
         ]);
 
         // Caddy termina TLS y reenvía a `app` por HTTP dentro de la red de
@@ -97,6 +100,16 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage(),
                     'error' => 'Recurso no encontrador.',
                 ], Response::HTTP_NOT_FOUND);
+            }
+        });
+
+        $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'succes' => false,
+                    'message' => $e->getMessage(),
+                    'error' => $e->getMessage(),
+                ], $e->getStatusCode(), $e->getHeaders());
             }
         });
 

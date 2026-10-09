@@ -13,6 +13,7 @@ use App\Models\VoucherType;
 use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
 use App\Services\Product\InventoryLedgerService;
 use App\Services\Product\WarehouseResolver;
+use App\Services\SubscriptionGate;
 use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
 use App\StaticClasses\InventoryMovementTypes;
@@ -41,6 +42,11 @@ class OrderStoreService
     {
         $voucherType = VoucherType::findOrFail($data['voucher_type_id']);
 
+        if (in_array($voucherType->slug, DifferentiatedIvaService::VOUCHER_SLUGS, true)) {
+            $data['products'] = app(DifferentiatedIvaService::class)
+                ->applyToItems($this->company, $data['date'], $data['products'] ?? []);
+        }
+
         $orderSaved = DB::transaction(function () use ($data, $voucherType) {
             $emisionPoint = EmisionPoint::find($data['point_id']);
 
@@ -65,7 +71,7 @@ class OrderStoreService
 
     protected function prepareOrderData(array $data, EmisionPoint $emisionPoint, VoucherType $voucherType): array
     {
-        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id'])->toArray();
+        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id', 'without_source'])->toArray();
 
         if (array_key_exists('guia', $input) && trim($input['guia']) === '') {
             $input['guia'] = null;
@@ -79,6 +85,10 @@ class OrderStoreService
             $input,
         ));
 
+        if (in_array($input['payment_type'] ?? null, [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO], true)) {
+            app(SubscriptionGate::class)->ensureFinancieroAccess($this->company);
+        }
+
         if (in_array($input['payment_type'] ?? null, [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO], true) && ! empty($input['due_date'])) {
             $orderDate = Carbon::parse($input['date']);
             $dueDate = Carbon::parse($input['due_date']);
@@ -86,7 +96,8 @@ class OrderStoreService
             $input['due_date'] = $dueDate;
         }
 
-        if (($input['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])) {
+        if (($input['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])
+            && app(SubscriptionGate::class)->hasFinancieroAccess($this->company)) {
             $movement = app(MovementService::class)->create([
                 'branch_id' => $this->branch->id,
                 'date' => $input['date'],
