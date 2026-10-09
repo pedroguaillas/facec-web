@@ -8,6 +8,7 @@ use App\Http\Controllers\AccountsReceivable\AccountReceivablePaymentController;
 use App\Http\Controllers\AccountsReceivable\OverdueController as AccountReceivableOverdueController;
 use App\Http\Controllers\Auth\AuthenticationController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Bank\BankAccountController;
 use App\Http\Controllers\Bank\BankController;
 use App\Http\Controllers\Carrier\CarrierController;
@@ -40,8 +41,16 @@ use App\Http\Controllers\User\UserLookupController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthenticationController::class, 'login']);
+Route::get('register/sri/{ruc}', [RegistrationController::class, 'resolveRuc'])
+    ->middleware('throttle:20,1')
+    ->name('register.sri');
+Route::get('email/verify/{id}/{hash}', [RegistrationController::class, 'verify'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
 
 Route::middleware('throttle:6,1')->group(function () {
+    Route::post('register', [RegistrationController::class, 'register'])->name('register');
+    Route::post('email/resend', [RegistrationController::class, 'resend'])->name('verification.resend');
     Route::post('password/forgot', [PasswordController::class, 'forgot'])->name('password.forgot');
     Route::post('password/reset', [PasswordController::class, 'reset'])->name('password.reset');
 });

@@ -11,37 +11,42 @@ class RegisterRequest extends FormRequest
         return true;
     }
 
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'user_type_id' => $this->user_type_id ?? 2,
-        ]);
-    }
-
+    /**
+     * @return array<string, array<int, string>>
+     */
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:4'],
-            'user' => ['required', 'string', 'unique:users,user'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'min:6'],
-            'user_type_id' => ['required', 'exists:user_types,id'],
+            // Un RUC solo puede registrarse una vez: una prueba gratuita por RUC.
+            'ruc' => ['required', 'string', 'digits:13', 'unique:companies,ruc'],
+            // Dirección del establecimiento 001 (dirEstablecimiento en el XML).
+            'address' => ['required', 'string', 'max:300'],
+            'phone' => ['nullable', 'string', 'max:15'],
+            'user' => ['required', 'string', 'alpha_dash', 'min:4', 'max:50', 'unique:users,user'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function messages(): array
     {
         return [
-            'name.required' => 'El nombre es obligatorio.',
-            'name.min' => 'El nombre debe tener al menos 4 caracteres.',
+            'ruc.required' => 'El número de RUC es obligatorio.',
+            'ruc.digits' => 'El RUC debe tener exactamente 13 dígitos numéricos.',
+            'ruc.unique' => 'Este RUC ya está registrado. Si es tuyo, inicia sesión o recupera tu contraseña.',
+            'address.required' => 'La dirección del establecimiento es obligatoria.',
             'user.required' => 'El usuario es obligatorio.',
-            'user.unique' => 'Este nombre de usuario ya está en uso.',
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.email' => 'El formato del correo electrónico no es válido.',
-            'email.unique' => 'Este correo electrónico ya está registrado.',
+            'user.alpha_dash' => 'El usuario solo puede tener letras, números, guiones y guiones bajos.',
+            'user.unique' => 'Este usuario ya está en uso.',
+            'email.required' => 'El correo es obligatorio.',
+            'email.email' => 'El correo no es válido.',
+            'email.unique' => 'Este correo ya está registrado.',
             'password.required' => 'La contraseña es obligatoria.',
-            'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
-            'user_type_id.exists' => 'El tipo de usuario seleccionado no es válido.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed' => 'Las contraseñas no coinciden.',
         ];
     }
 }

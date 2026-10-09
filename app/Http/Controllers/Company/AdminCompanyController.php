@@ -42,6 +42,8 @@ class AdminCompanyController extends Controller
 
             $company = $this->companyService->create($companyData);
             $user = $this->userService->create($userData);
+            // El admin responde por el correo: no pasa por la verificación del registro público.
+            $user->forceFill(['email_verified_at' => now()])->save();
 
             $subscription = $this->subscriptionService->assignPlan(
                 $company,

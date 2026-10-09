@@ -74,6 +74,35 @@ todos los tokens Sanctum excepto el que hizo la request**
 (`$user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete()`)
 — cierra otras sesiones activas sin desloguear al usuario actual.
 
+## 2.1 Registro público y verificación de correo
+
+"Prueba gratis" (decisión de negocio, 2026-10-08) — `RegistrationController` +
+`RegistrationService`:
+
+- `POST /api/register` (público, `throttle:6,1`): `{ruc, address, phone?, user,
+  email, password, password_confirmation}`. La razón social sale del SRI
+  (`SriResolveNameService`), no del formulario; RUC inexistente o SRI caído →
+  422 en `ruc`. **Una prueba por RUC** (`ruc` único en `companies`).
+  En una transacción crea: empresa (`enviroment_type` 2 producción, `decimal` 6),
+  usuario cliente dueño, sucursal 001 matriz con `address`, consumidor final,
+  punto de emisión 001 y plan `GRATUITO` por 1 mes (`docs/planes.md`). Después
+  envía el correo de verificación (`App\Mail\VerifyEmail`). Responde 201
+  `{succes, message, email}` — **sin token**.
+- `GET /api/register/sri/{ruc}` (público, `throttle:20,1`): `{ruc, company}` —
+  solo la razón social, para mostrarla en el formulario. Mismas validaciones y
+  mensajes de `ruc` que `POST register` (422); SRI caído → 422 en `ruc`.
+- `GET /api/email/verify/{id}/{hash}` (firmado, 24 h): el enlace del correo
+  apunta directo al backend (`APP_URL` debe ser la URL pública); marca
+  `email_verified_at` y redirige a `FRONTEND_URL/login?verified=1` (o `=0` si el
+  hash no corresponde; firma inválida/vencida → 403).
+- `POST /api/email/resend` `{user}` (`throttle:6,1`): reenvía el correo; responde
+  igual exista o no el usuario.
+- **Login exige correo verificado**: si `email_verified_at` es null → 403
+  `{succes:false, error:'email_unverified', message, email}`, sin token.
+  Usuarios previos se marcaron verificados con la migración
+  `2026_10_08_191503_verify_existing_users_emails`; los que crea el admin
+  (`POST admin/companies`) nacen verificados.
+
 ## 3. Validación de contraseña
 
 `Illuminate\Validation\Rules\Password::min(8)` en `reset` y `change`. No hay

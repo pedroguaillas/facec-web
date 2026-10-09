@@ -23,6 +23,15 @@ class AuthenticationController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
+        if ($user->email_verified_at === null) {
+            return response()->json([
+                'succes' => false,
+                'error' => 'email_unverified',
+                'message' => 'Confirma tu correo para iniciar sesión. Revisa tu bandeja de entrada o solicita un nuevo enlace.',
+                'email' => $user->email,
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         $response = [
             'token' => $user->createToken('AUTH_TOKEN')->plainTextToken,
             'token_type' => 'bearer',

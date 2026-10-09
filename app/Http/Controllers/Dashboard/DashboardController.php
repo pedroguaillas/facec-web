@@ -124,6 +124,8 @@ class DashboardController extends Controller
             'active' => $active,
             'expired' => $expired,
             'certExpiration' => $certExpiration,
+            // Tiene .p12 cargado; `certExpiration` puede ser null aunque lo tenga (datos viejos sin fecha).
+            'hasCert' => (bool) $company?->cert_dir,
             'income' => $income,
             'expenses' => $expenses,
             'counts' => [

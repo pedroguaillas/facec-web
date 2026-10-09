@@ -64,6 +64,21 @@ test('el dashboard cuenta comprobantes pendientes y rechazados en el SRI', funct
         ]);
 });
 
+test('el dashboard informa si la empresa tiene certificado cargado', function () {
+    $branch = dashboardBranch();
+    $branch->company->update(['cert_dir' => null, 'sign_valid_to' => null]);
+
+    $this->getJson(route('dashboard'))->assertOk()->assertJsonPath('hasCert', false);
+
+    $branch->company->update(['cert_dir' => 'empresa.p12', 'sign_valid_to' => null]);
+    auth()->user()->unsetRelation('company');
+
+    $this->getJson(route('dashboard'))
+        ->assertOk()
+        ->assertJsonPath('hasCert', true)
+        ->assertJsonPath('certExpiration', null);
+});
+
 test('el dashboard devuelve sri en cero sin comprobantes pendientes', function () {
     dashboardBranch();
 

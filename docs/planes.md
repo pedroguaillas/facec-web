@@ -35,6 +35,11 @@ Tabla `subscriptions` — **historial**, no un campo en `companies`:
 - `GET /api/admin/companies/{company}/subscriptions` → `{ company: {id, ruc, company}, current, history }` (`history` ordenado del más reciente al más antiguo).
 - `POST /api/admin/companies/{company}/subscription` — `{ plan, ends_at, amount }` (`ends_at` y `amount` opcionales solo para `GRATUITO`) → cambia/renueva el plan, 201 con la nueva suscripción.
 
+### Registro público (prueba gratuita)
+
+`POST /api/register` asigna `GRATUITO` por 1 mes a la empresa nueva — una prueba
+por RUC. Detalle en `docs/auth.md` §2.1.
+
 ### Login
 
 `POST /api/login` agrega a `permissions` (solo usuarios cliente):
