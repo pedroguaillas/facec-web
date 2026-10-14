@@ -22,6 +22,12 @@
                 <td class="relleno" colspan="2">Obligado a llevar contabilidad</td>
                 <td class="align-middle">{{ $company->accounting ? 'SI' : 'NO' }}</td>
             </tr>
+            @if($company->artisan_number)
+            <tr>
+                <td class="relleno" colspan="2">Artesano Calificado Nro.</td>
+                <td class="align-middle">{{ $company->artisan_number }}</td>
+            </tr>
+            @endif
             @if($voucherTypeSlug !== \App\StaticClasses\VoucherTypes::VENTA_NOTA_CREDITO)
 
             @if($company->retention_agent)

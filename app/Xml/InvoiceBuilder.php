@@ -129,8 +129,11 @@ class InvoiceBuilder extends BaseVoucherBuilder
         }
 
         // Info adicional
-        if ($additionals->count()) {
+        $artisan = $this->artisanAdditional();
+
+        if ($additionals->count() || $artisan !== '') {
             $string .= '<infoAdicional>';
+            $string .= $artisan;
             foreach ($additionals as $additional) {
                 $string .= "<campoAdicional nombre=\"{$additional->name}\">{$additional->description}</campoAdicional>";
             }

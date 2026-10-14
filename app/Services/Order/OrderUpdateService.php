@@ -45,8 +45,18 @@ class OrderUpdateService
         return $order->fresh();
     }
 
+    /**
+     * Las líneas se recrean; el código/descripción propios (factura
+     * recurrente) se conservan por producto, porque el formulario de edición
+     * no los manda.
+     */
     protected function updateOrderItems(Order $order, array $products): void
     {
+        $overrides = OrderItem::where('order_id', $order->id)
+            ->where(fn ($query) => $query->whereNotNull('code')->orWhereNotNull('description'))
+            ->get(['product_id', 'code', 'description'])
+            ->keyBy('product_id');
+
         OrderItem::where('order_id', $order->id)->delete();
 
         if (empty($products)) {
@@ -55,6 +65,8 @@ class OrderUpdateService
 
         $items = array_map(fn ($product) => [
             'product_id' => $product['product_id'],
+            'code' => $overrides[$product['product_id']]->code ?? null,
+            'description' => $overrides[$product['product_id']]->description ?? null,
             'quantity' => $product['quantity'],
             'price' => $product['price'],
             'discount' => $product['discount'],

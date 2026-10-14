@@ -21,8 +21,18 @@ class BankAccountUpdateRequest extends FormRequest
 
         return [
             'bank_id' => ['required', 'integer', Rule::exists('banks', 'id')],
-            'account_number' => ['required', 'string', 'max:50', new UniqueBranchScoped('bank_accounts', 'account_number', $bankAccountId)],
+            'account_number' => ['required', 'string', 'regex:/^\d+$/', 'max:50', new UniqueBranchScoped('bank_accounts', 'account_number', $bankAccountId)],
             'type' => ['required', Rule::in(BankAccountTypes::ALL)],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'account_number.regex' => 'El número de cuenta solo debe contener dígitos.',
         ];
     }
 }

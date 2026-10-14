@@ -10,6 +10,8 @@ use App\Models\Provider;
 use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\Shop\Shop;
 use App\Models\VoucherType;
+use App\Services\Dashboard\BusinessHealthService;
+use App\Services\SubscriptionGate;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
@@ -34,6 +36,9 @@ class DashboardController extends Controller
         VoucherStates::RETURNED,
         VoucherStates::REJECTED,
     ];
+
+    /** Días hacia atrás que cuenta la sección "Comprobantes en el SRI". */
+    const SRI_WINDOW_DAYS = 30;
 
     public function index(): JsonResponse
     {
@@ -144,12 +149,23 @@ class DashboardController extends Controller
     }
 
     /**
+     * "Salud de tu negocio": solo planes con financiero (GRATUITO/FINANCIERO).
+     */
+    public function health(SubscriptionGate $gate, BusinessHealthService $healthService): JsonResponse
+    {
+        $company = Auth::user()->company;
+        $gate->ensureFinancieroAccess($company);
+
+        return response()->json($healthService->summary($company));
+    }
+
+    /**
      * Conteo de comprobantes electrónicos de la empresa según su estado en el SRI:
      * ventas (factura y N/C), liquidaciones de compra, retenciones y guías.
      * `by_type` desglosa por listado del front para que cada número coincida
-     * con su lista.
+     * con su lista. Solo cuenta los emitidos desde `since` (hoy - 30 días).
      *
-     * @return array{pending: int, rejected: int, oldest_pending_date: ?string, by_type: array<string, array{pending: int, rejected: int}>}
+     * @return array{since: string, pending: int, rejected: int, oldest_pending_date: ?string, by_type: array<string, array{pending: int, rejected: int}>}
      */
     private function sriStatus(): array
     {
@@ -177,6 +193,12 @@ class DashboardController extends Controller
             'retentions' => ['query' => Shop::query(), 'state' => 'state_retencion', 'date' => 'date_retention'],
             'referralguides' => ['query' => ReferralGuide::query(), 'state' => 'state', 'date' => 'date'],
         ];
+
+        $since = Carbon::today(config('app.timezone'))->subDays(self::SRI_WINDOW_DAYS)->toDateString();
+
+        foreach ($sources as $type => $source) {
+            $sources[$type]['query'] = $source['query']->whereDate($source['date'], '>=', $since);
+        }
 
         $pending = 0;
         $rejected = 0;
@@ -209,6 +231,7 @@ class DashboardController extends Controller
         }
 
         return [
+            'since' => $since,
             'pending' => $pending,
             'rejected' => $rejected,
             'oldest_pending_date' => $oldestPendingDates === [] ? null : min($oldestPendingDates),

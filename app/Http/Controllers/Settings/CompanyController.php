@@ -14,7 +14,7 @@ class CompanyController extends Controller
 {
     /**
      * Permisos que el cliente puede editar desde su configuración (tab
-     * Permisos). `accounting` y `retention_agent` van en el tab general.
+     * Permisos). `accounting`, `retention_agent` y `artisan_number` van en el tab general.
      */
     const CLIENT_PERMISSIONS = [
         'base5',
@@ -54,7 +54,7 @@ class CompanyController extends Controller
     {
         $company = Auth::user()->company;
 
-        $data = $request->safe()->only(['accounting', 'rimpe', 'retention_agent', ...self::CLIENT_PERMISSIONS]);
+        $data = $request->safe()->only(['accounting', 'rimpe', 'retention_agent', 'artisan_number', ...self::CLIENT_PERMISSIONS]);
 
         if ($request->hasFile('logo')) {
             $filename = $company->ruc.'.'.$request->file('logo')->getClientOriginalExtension();

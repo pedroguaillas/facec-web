@@ -20,6 +20,7 @@ class MovementResources extends JsonResource
                 'date' => $this->date?->format('Y-m-d'),
                 'type' => $this->type,
                 'transaction_type' => $this->transaction_type,
+                'category' => $this->category,
                 'amount' => $this->amount,
                 'previous_balance' => $this->previous_balance,
                 'new_balance' => $this->new_balance,
@@ -33,6 +34,11 @@ class MovementResources extends JsonResource
             'source' => $this->whenLoaded('source', fn () => $this->morphResource($this->source, $this->source_type)),
             'destination_type' => $this->destination_type,
             'destination' => $this->whenLoaded('destination', fn () => $this->morphResource($this->destination, $this->destination_type)),
+            'origin' => $this->whenLoaded('origin', fn () => $this->origin && $this->origin_type ? [
+                'type' => $this->origin_type,
+                'id' => $this->origin_id,
+                'number' => $this->origin->serie,
+            ] : null),
             'user_id' => $this->user_id,
         ];
     }

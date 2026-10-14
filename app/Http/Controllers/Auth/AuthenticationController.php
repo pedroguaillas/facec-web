@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Services\EmisionPointService;
-use App\StaticClasses\PlanTypes;
+use App\Services\SubscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -42,8 +42,6 @@ class AuthenticationController extends Controller
         if (! $user->isAdmin() && $user->company) {
             $company = $user->company;
             $this->emisionPointService->checkAndCreateFirstPoint($company);
-            $subscription = $company->currentSubscription();
-
             $response['permissions'] = [
                 'inventory' => $company->inventory,
                 'decimal' => $company->decimal,
@@ -51,9 +49,7 @@ class AuthenticationController extends Controller
                 'guia_in_invoice' => $company->guia_in_invoice,
                 'import_in_invoice' => $company->import_in_invoice,
                 'import_in_invoices' => $company->import_in_invoices,
-                'plan' => $subscription?->plan,
-                'plan_ends_at' => $subscription?->ended_at?->toDateString(),
-                'financiero' => $subscription !== null && in_array($subscription->plan, PlanTypes::FINANCIERO_LEVEL, true),
+                ...app(SubscriptionService::class)->planSummary($company),
             ];
         }
 

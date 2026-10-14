@@ -32,7 +32,7 @@ class OrderShowService
     {
         return OrderItem::join('products', 'product_id', 'products.id')
             ->join('iva_taxes AS it', 'it.code', 'order_items.iva')
-            ->selectRaw('order_items.id,quantity,price,discount,order_items.ice,products.name,products.ice AS codice,product_id,products.differentiated_iva,it.code AS iva,it.percentage')
+            ->selectRaw('order_items.id,quantity,price,discount,order_items.ice,COALESCE(order_items.description, products.name) AS name,COALESCE(order_items.code, products.code) AS code,order_items.code AS custom_code,order_items.description AS custom_description,products.ice AS codice,product_id,products.differentiated_iva,it.code AS iva,it.percentage')
             ->where('order_id', $orderId)
             ->get()
             ->map(function ($item) {

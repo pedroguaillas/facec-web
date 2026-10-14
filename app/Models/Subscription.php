@@ -22,12 +22,14 @@ class Subscription extends Model
         'started_at',
         'ended_at',
         'amount',
+        'is_trial',
     ];
 
     protected $casts = [
         'started_at' => 'date:Y-m-d',
         'ended_at' => 'date:Y-m-d',
         'amount' => 'float',
+        'is_trial' => 'boolean',
     ];
 
     public function company(): BelongsTo

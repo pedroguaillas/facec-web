@@ -3,6 +3,7 @@
 namespace App\Services\Treasury;
 
 use App\Models\Treasury\Movement;
+use App\StaticClasses\MovementCategories;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementStatuses;
 use App\StaticClasses\MovementTypes;
@@ -26,6 +27,9 @@ class MovementService
         return DB::transaction(function () use ($data) {
             $movement = Movement::create([
                 ...$data,
+                'category' => array_key_exists('category', $data)
+                    ? $data['category']
+                    : MovementCategories::automaticFor($data['transaction_type']),
                 'status' => $this->resolveInitialStatus($data),
             ]);
 

@@ -5,6 +5,7 @@ namespace App\Services\AccountsReceivable;
 use App\Models\AccountsReceivable\AccountReceivableMovement;
 use App\Models\Order\Order;
 use App\Services\Treasury\MovementService;
+use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
@@ -40,6 +41,8 @@ class AccountsReceivablePaymentService
                 'transaction_type' => MovementTransactionTypes::SALE_COLLECTION,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                'origin_type' => MovementPartyRegistry::ORDER,
+                'origin_id' => $order->id,
                 'amount' => $amount,
                 'description' => "Abono factura {$order->serie}",
                 'user_id' => Auth::id(),

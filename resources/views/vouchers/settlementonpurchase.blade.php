@@ -64,5 +64,5 @@
             </tr>
         </tbody>
     </table>
-    @include('vouchers.theme.rucproveedor')
+    @include('vouchers.theme.rucproveedor', ['showArtisan' => true])
 @endsection

@@ -47,10 +47,18 @@ por RUC. Detalle en `docs/auth.md` §2.1.
 ```json
 "plan": "FINANCIERO",          // null si no tiene plan vigente
 "plan_ends_at": "2026-11-08",  // null si no tiene plan vigente
-"financiero": true             // plan ∈ FINANCIERO_LEVEL
+"financiero": true,            // plan ∈ FINANCIERO_LEVEL
+"financiero_trial_available": false
 ```
 
-Es una foto al momento del login: si el admin cambia el plan o vence el trial, el front no se entera hasta el próximo login. El backend igual valida en cada operación.
+Es una foto al momento del login; para refrescarla sin re-login el front usa `GET /api/subscription/current`. El backend igual valida en cada operación.
+
+### Prueba del plan Financiero (cliente)
+
+- `GET /api/subscription/current` → `{plan, plan_ends_at, financiero, financiero_trial_available, needs_finance_setup}`. `needs_finance_setup`: con financiero, la sucursal aún no tiene caja GENERAL.
+- `POST /api/subscription/financiero-trial` → 201 `{succes, permissions:{plan, plan_ends_at, financiero, financiero_trial_available}, trial_ends_at, needs_finance_setup}`; 422 `{succes:false, message}` si ya la usó, si ya tiene FINANCIERO/GRATUITO o si no tiene plan vigente.
+- Solo sobre un FACTURADOR vigente, una vez por empresa (`subscriptions.is_trial`). Crea FINANCIERO de hoy a hoy+30 **sin cerrar** el FACTURADOR: el plan vigente es el de `started_at` más reciente, así que al vencer la prueba la empresa vuelve sola al FACTURADOR con su misma fecha de fin (o queda sin plan si este venció mientras tanto). Los datos financieros (cajas, cartera) se conservan; con FACTURADOR quedan de solo lectura/abonos según §4.2.
+- Si el admin asigna un plan durante la prueba, `assignPlan` cierra ambas (comportamiento normal de cambio de plan).
 
 ## 4. Gate
 
@@ -97,7 +105,64 @@ Ambos lanzan `App\Exceptions\PlanRequiredException`, que se renderiza sola como 
 
 No extiende `RuntimeException` a propósito: los controllers atrapan `RuntimeException` y la convierten en 422 genérico; el front necesita distinguir `error` para mostrar el aviso correcto (renovar vs. actualizar plan).
 
-## 5. Puntos de mejora
+## 5. Salud de tu negocio (`GET /api/dashboard/health`)
+
+Solo planes con financiero (`ensureFinancieroAccess`: FACTURADOR → 403
+`plan_required`, vencido → 403 `subscription_expired`).
+`App\Services\Dashboard\BusinessHealthService`:
+
+- **cashflow** (30 días): `cash` = saldo de `bank_accounts` + sesiones de caja
+  `ABIERTA`; `receivable`/`payable` = pendiente con vencimiento ≤ hoy+30
+  (incluye vencido y saldos iniciales); `projected = cash + receivable - payable`;
+  `weeks` = 4 tramos (0-6, 7-13, 14-20, 21-30 días), el 1º incluye vencido y
+  saldos iniciales.
+- **Pendiente por documento**: ventas = `total - paid - NC aplicadas`
+  (ledger `NOTA_CREDITO`, que no actualiza `paid`), sin `ANULADO`; compras =
+  `total - paid - retenciones`. Solo `CREDITO`/`ANTICIPO`. Saldos iniciales
+  (`SALDO_INICIAL`) no tienen vencimiento.
+- **aging** (CxC): `buckets`/`counts` `current`, `d1_30`, `d31_60`, `d61_90`,
+  `d90_plus` y `no_due` (saldos iniciales); `to_collect` = top 5 clientes por
+  monto vencido + saldo inicial (`days_overdue` null si solo tiene saldo inicial).
+- **sri_reserve** (estimado): general = mensual; RIMPE emprendedor = semestral
+  (ene-jun / jul-dic); Negocio Popular = todo null.
+  `estimated = max(0, iva_sales - iva_purchases - iva_withheld) + iva_retained`;
+  `rent_retained` aparte (formulario 103). `iva_sales` = facturas − N/C
+  `AUTORIZADO`; `iva_purchases` = compras factura/liquidación/nota de débito;
+  `iva_withheld` = `orders.iva_retention` (hoy sin uso → 0); `iva_retained` /
+  `rent_retained` = `shop_retention_items` código 2 / 1 por `date_retention`.
+  `due_date`: mes siguiente al período, día según 9no dígito del RUC (1→10 …
+  9→26, 0→28), corrido al siguiente hábil por fin de semana o `holidays`.
+
+## 5.1 Movimientos (`GET /api/movements/summary`)
+
+Vista unificada de caja/banco. Resumen solo con financiero (mismo 403 que §5);
+el listado `GET /api/movements` no está bloqueado.
+
+- `movements.category` (`App\StaticClasses\MovementCategories`): automática al
+  crear (`COBRO_VENTA`/`ANTICIPO_CLIENTE` → `VENTAS`, `PAGO_COMPRA`/
+  `ANTICIPO_PROVEEDOR` → `COMPRAS`); internos y saldo inicial → null. `OTRO`
+  la recibe en `POST movements/other` o después con
+  `PATCH movements/{id}/category` (solo `OTRO`; la categoría debe corresponder
+  al `type`, `MovementCategories::BY_TYPE`).
+- `origin` (`origin_type` `order`|`shop` + `origin_id`): venta/compra de contado
+  y abonos. Abonos anteriores a la migración quedan sin origen.
+- Listado: filtros `date_from`, `date_to`, `direction` (`in`/`out`, excluye
+  `MovementTransactionTypes::NON_OPERATING`), `transaction_type` (coma),
+  `category` (`SIN_CLASIFICAR` = null); orden `date desc, id desc`.
+- Catálogo fijo (`GET movements/categories` → `{category, type, group}`):
+  grupo `NEGOCIO` (ventas, compras, sueldos, IESS, arriendo, servicios
+  básicos, transporte, publicidad, comisiones bancarias, impuestos, otros) y
+  `FINANCIAMIENTO` (aporte/retiro del dueño, préstamo recibido/pago). Sin
+  categoría cuenta como negocio.
+- Resumen (sin fechas = mes en curso), solo `COMPLETADO` sin internos ni saldo
+  inicial: `income`/`expense`/`net` = **solo negocio** (lo que dejó el
+  negocio); `financing` = aportes, retiros, préstamos y su `net` (no es
+  ganancia ni pérdida); `cash_change = net + financing.net`; `internal` =
+  depósitos, retiros, transferencias y apertura/cierre de caja; `pending`
+  aparte; `by_category` con `group`; `accounts` = saldo actual (caja = sesión
+  abierta, 0 si cerrada).
+
+## 6. Puntos de mejora
 
 - El plan en el front se refresca solo al re-loguear — si se necesita en vivo, agregar un endpoint `GET` del plan propio o incluirlo en algún endpoint que el front ya consulte periódicamente.
 - No hay aviso/notificación de plan por vencer (job/email) — importante ahora que todos los planes vencen y bloquean emisión.

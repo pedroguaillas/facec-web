@@ -18,6 +18,7 @@ class CashRegisterUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'responsible_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'uses_sessions' => ['sometimes', 'boolean'],
         ];
     }
 }

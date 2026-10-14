@@ -30,6 +30,12 @@ class CashRegisterFactory extends Factory
         ];
     }
 
+    /** Caja con apertura y cierre (arqueo) por sesión. */
+    public function withSessions(): self
+    {
+        return $this->state(fn () => ['uses_sessions' => true]);
+    }
+
     public function general(): self
     {
         return $this->state(fn () => [

@@ -159,6 +159,21 @@ de `VoucherLifecycleService`.
 > y se detiene ahí (nunca llega a `SIGNED`) — es el comportamiento esperado
 > para empresas sin certificado configurado aún, no es un bug.
 
+### Artesano calificado (`companies.artisan_number`)
+
+El esquema del SRI no tiene etiqueta para artesanos (a diferencia de
+`agenteRetencion`/`contribuyenteRimpe` en `<infoTributaria>`), así que si la
+empresa tiene `artisan_number`, `BaseVoucherBuilder::artisanAdditional()`
+agrega `<campoAdicional nombre="Artesano Calificado">Nro. X</campoAdicional>`
+como **primer** campo de `<infoAdicional>` en factura, nota de crédito y
+liquidación de compra (guía y retención no lo llevan). El RIDE lo muestra en
+el bloque del emisor y como primera fila de "Información adicional"
+(`adiinfopayment` / `rucproveedor` con `showArtisan` en liquidación). Se edita desde configuración de empresa
+(`PUT /settings`); vacío = no es artesano.
+
+> Límite SRI: 15 campos adicionales por comprobante — con artesano el usuario
+> puede usar 14. La factura normal no valida ese máximo todavía.
+
 ## 2. Procesamiento asíncrono (colas)
 
 Los 4 tipos de comprobante (Ventas, Compras, Guía de Remisión, Retención)

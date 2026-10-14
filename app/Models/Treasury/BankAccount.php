@@ -22,6 +22,9 @@ class BankAccount extends BaseModel
         'balance' => 'float',
     ];
 
+    /**
+     * @return BelongsTo<Bank, $this>
+     */
     public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class);

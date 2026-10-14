@@ -24,6 +24,7 @@ function dashboardBranch(): Branch
 }
 
 test('el dashboard cuenta comprobantes pendientes y rechazados en el SRI', function () {
+    $this->travelTo('2026-10-09 10:00');
     $branch = dashboardBranch();
     $voucherTypeId = fn (string $slug) => VoucherType::where('slug', $slug)->value('id');
 
@@ -43,7 +44,7 @@ test('el dashboard cuenta comprobantes pendientes y rechazados en el SRI', funct
     Shop::factory()->create(['branch_id' => $branch->id,
         'state' => VoucherStates::SAVED,
         'state_retencion' => VoucherStates::SENDED,
-        'date_retention' => '2026-08-20',
+        'date_retention' => '2026-09-10',
     ]);
 
     // Otra empresa: no debe contarse.
@@ -52,9 +53,10 @@ test('el dashboard cuenta comprobantes pendientes y rechazados en el SRI', funct
     $this->getJson(route('dashboard'))
         ->assertOk()
         ->assertJsonPath('sri', [
+            'since' => '2026-09-09',
             'pending' => 3,
             'rejected' => 2,
-            'oldest_pending_date' => '2026-08-20',
+            'oldest_pending_date' => '2026-09-10',
             'by_type' => [
                 'orders' => ['pending' => 2, 'rejected' => 1],
                 'shops' => ['pending' => 0, 'rejected' => 1],
@@ -105,4 +107,45 @@ test('el listado de ventas filtra por uno o varios estados', function () {
     $this->getJson(route('orders.index', ['state' => VoucherStates::RETURNED.','.VoucherStates::REJECTED]))
         ->assertOk()
         ->assertJsonCount(2, 'data');
+});
+
+test('el dashboard solo cuenta comprobantes de los últimos 30 días', function () {
+    $this->travelTo('2026-10-09 22:00');
+    $branch = dashboardBranch();
+
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::SIGNED, 'date' => '2026-09-08']);
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::RETURNED, 'date' => '2026-08-01']);
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::SIGNED, 'date' => '2026-09-09']);
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::REJECTED, 'date' => '2026-10-09']);
+    Shop::factory()->create(['branch_id' => $branch->id,
+        'state' => VoucherStates::SAVED,
+        'state_retencion' => VoucherStates::SENDED,
+        'date' => '2026-10-01',
+        'date_retention' => '2026-09-01',
+    ]);
+
+    $this->getJson(route('dashboard'))
+        ->assertOk()
+        ->assertJsonPath('sri.since', '2026-09-09')
+        ->assertJsonPath('sri.pending', 1)
+        ->assertJsonPath('sri.rejected', 1)
+        ->assertJsonPath('sri.oldest_pending_date', '2026-09-09')
+        ->assertJsonPath('sri.by_type.orders', ['pending' => 1, 'rejected' => 1])
+        ->assertJsonPath('sri.by_type.retentions', ['pending' => 0, 'rejected' => 0]);
+});
+
+test('el listado de ventas filtra desde una fecha', function () {
+    $branch = dashboardBranch();
+
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::SIGNED, 'date' => '2026-09-08']);
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::SIGNED, 'date' => '2026-09-09']);
+    Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::RETURNED, 'date' => '2026-10-01']);
+
+    $this->getJson(route('orders.index', ['date_from' => '2026-09-09']))
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+
+    $this->getJson(route('orders.index', ['date_from' => '2026-09-09', 'state' => VoucherStates::SIGNED]))
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
 });

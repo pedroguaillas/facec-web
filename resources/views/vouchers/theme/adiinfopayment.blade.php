@@ -1,9 +1,16 @@
-    @if(count($orderaditionals) > 0)
+    @php($artisanNumber = $company->artisan_number ?? null)
+    @if(count($orderaditionals) > 0 || $artisanNumber)
     <table style="padding-bottom: .7em; border-radius: 0;" class="table-rounded">
         <tbody>
             <tr style="background-color: #e6e6e6;">
                 <th style="padding: .5em 0em; background-color: #e6e6e6;" class="align-middle" colspan="2">INFORMACIÓN ADICIONAL</th>
             </tr>
+            @if($artisanNumber)
+            <tr>
+                <td style="padding: .3em .3em; width: 100px;">Artesano Calificado</td>
+                <td style="padding: .3em .3em; width: 354px">Nro. {{ $artisanNumber }}</td>
+            </tr>
+            @endif
             @foreach($orderaditionals as $orderaditional)
             <tr>
                 <td style="padding: .3em .3em; width: 100px;">{{ $orderaditional->name }}</td>

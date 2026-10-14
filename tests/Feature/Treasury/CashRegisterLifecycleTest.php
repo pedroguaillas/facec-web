@@ -57,7 +57,7 @@ test('abrir caja chica toma el saldo inicial de la caja general y lo descuenta d
     ]);
     $generalSession = app(CashRegisterOpeningService::class)->open($general, 1000, $user);
 
-    $petty = CashRegister::factory()->create([
+    $petty = CashRegister::factory()->withSessions()->create([
         'branch_id' => $branch->id,
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::PETTY,
@@ -79,7 +79,7 @@ test('abrir caja chica sin saldo suficiente en la caja general lanza excepcion',
     ]);
     app(CashRegisterOpeningService::class)->open($general, 100, $user);
 
-    $petty = CashRegister::factory()->create([
+    $petty = CashRegister::factory()->withSessions()->create([
         'branch_id' => $branch->id,
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::PETTY,
@@ -92,7 +92,7 @@ test('abrir caja chica sin saldo suficiente en la caja general lanza excepcion',
 test('abrir caja chica sin caja general con sesion activa lanza excepcion', function () {
     [$branch, $user] = cashRegisterActingAsCompany();
 
-    $petty = CashRegister::factory()->create([
+    $petty = CashRegister::factory()->withSessions()->create([
         'branch_id' => $branch->id,
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::PETTY,
@@ -126,7 +126,7 @@ test('cerrar caja chica regresa todo el saldo a la caja general', function () {
     ]);
     $generalSession = app(CashRegisterOpeningService::class)->open($general, 1000, $user);
 
-    $petty = CashRegister::factory()->create([
+    $petty = CashRegister::factory()->withSessions()->create([
         'branch_id' => $branch->id,
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::PETTY,
@@ -165,7 +165,7 @@ test('las denominaciones de apertura y cierre quedan separadas por momento', fun
     ]);
     app(CashRegisterOpeningService::class)->open($general, 1000, $user);
 
-    $petty = CashRegister::factory()->create([
+    $petty = CashRegister::factory()->withSessions()->create([
         'branch_id' => $branch->id,
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::PETTY,

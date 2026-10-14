@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Treasury;
 
+use App\StaticClasses\MovementCategories;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentMethods;
@@ -27,12 +28,23 @@ class MovementOtherRequest extends FormRequest
             'source_type' => ['required', Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION])],
             'source_id' => ['required', 'integer', Rule::exists($sourceTable, 'id')],
             'type' => ['required', Rule::in(MovementTypes::ALL)],
+            'category' => ['sometimes', 'nullable', Rule::in(MovementCategories::forType($this->input('type')))],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'date' => ['sometimes', 'date'],
             'payment_method' => ['sometimes', Rule::in(PaymentMethods::ALL)],
             'receipt_number' => ['sometimes', 'nullable', 'string', 'max:49'],
             'description' => ['sometimes', 'nullable', 'string'],
             'receipt' => ['sometimes', 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'category.in' => 'La categoría no corresponde al tipo de movimiento.',
         ];
     }
 }

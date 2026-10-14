@@ -55,6 +55,9 @@ class OrderController extends Controller
             ->when($request->filled('date'), function ($query) use ($request) {
                 $query->whereDate('orders.date', $request->input('date'));
             })
+            ->when($request->filled('date_from'), function ($query) use ($request) {
+                $query->whereDate('orders.date', '>=', $request->input('date_from'));
+            })
             ->when($request->filled('state'), function ($query) use ($request) {
                 $query->whereIn('orders.state', explode(',', (string) $request->input('state')));
             })

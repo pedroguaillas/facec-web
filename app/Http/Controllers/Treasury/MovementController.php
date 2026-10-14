@@ -3,20 +3,27 @@
 namespace App\Http\Controllers\Treasury;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Treasury\MovementCategoryRequest;
 use App\Http\Requests\Treasury\MovementDepositRequest;
 use App\Http\Requests\Treasury\MovementOtherRequest;
+use App\Http\Requests\Treasury\MovementSummaryRequest;
 use App\Http\Requests\Treasury\MovementTransferRequest;
 use App\Http\Requests\Treasury\MovementWithdrawRequest;
 use App\Http\Resources\MovementResources;
 use App\Models\Treasury\BankAccount;
 use App\Models\Treasury\CashRegisterSession;
 use App\Models\Treasury\Movement;
+use App\Services\SubscriptionGate;
 use App\Services\Treasury\BankTransferService;
 use App\Services\Treasury\DepositService;
 use App\Services\Treasury\MovementService;
+use App\Services\Treasury\MovementSummaryService;
 use App\Services\Treasury\WithdrawalService;
+use App\StaticClasses\MovementCategories;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
+use App\StaticClasses\MovementTypes;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,7 +35,7 @@ class MovementController extends Controller
     {
         $paginate = (int) $request->input('paginate', 15);
 
-        $movements = Movement::with(['source', 'destination'])
+        $movements = Movement::with(['source', 'destination', 'origin'])
             ->when(
                 $request->filled('source_type') && $request->filled('source_id'),
                 fn ($query) => $query->where('source_type', $request->input('source_type'))
@@ -50,7 +57,26 @@ class MovementController extends Controller
                 }),
             )
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->input('status')))
-            ->latest('date')
+            ->when($request->filled('date_from'), fn ($query) => $query->whereDate('date', '>=', $request->input('date_from')))
+            ->when($request->filled('date_to'), fn ($query) => $query->whereDate('date', '<=', $request->input('date_to')))
+            ->when(
+                // Entradas/salidas reales de la empresa: los movimientos internos
+                // (depósito, retiro, transferencia, apertura/cierre de caja) y el
+                // saldo inicial no son ni una ni otra.
+                in_array($request->input('direction'), ['in', 'out'], true),
+                fn ($query) => $query
+                    ->where('type', $request->input('direction') === 'in' ? MovementTypes::INCOME : MovementTypes::EXPENSE)
+                    ->whereNotIn('transaction_type', MovementTransactionTypes::NON_OPERATING),
+            )
+            ->when(
+                $request->filled('transaction_type'),
+                fn ($query) => $query->whereIn('transaction_type', explode(',', (string) $request->input('transaction_type'))),
+            )
+            ->when($request->filled('category'), fn ($query) => $request->input('category') === MovementCategories::UNCLASSIFIED
+                ? $query->whereNull('category')
+                : $query->where('category', $request->input('category')))
+            ->orderByDesc('date')
+            ->orderByDesc('id')
             ->paginate($paginate)
             ->withQueryString();
 
@@ -59,7 +85,53 @@ class MovementController extends Controller
 
     public function show(Movement $movement): JsonResponse
     {
-        return response()->json(new MovementResources($movement->load(['source', 'destination'])));
+        return response()->json(new MovementResources($movement->load(['source', 'destination', 'origin'])));
+    }
+
+    /**
+     * Catálogo fijo de categorías: tipo de movimiento que la admite y grupo
+     * (NEGOCIO / FINANCIAMIENTO).
+     */
+    public function categories(): JsonResponse
+    {
+        return response()->json(MovementCategories::catalog());
+    }
+
+    /**
+     * Resumen de la vista "Movimientos": solo planes con financiero.
+     */
+    public function summary(MovementSummaryRequest $request, SubscriptionGate $gate, MovementSummaryService $service): JsonResponse
+    {
+        $gate->ensureFinancieroAccess(Auth::user()->company);
+
+        $from = $request->filled('date_from')
+            ? CarbonImmutable::parse($request->validated('date_from'))
+            : CarbonImmutable::now()->startOfMonth();
+        $to = $request->filled('date_to')
+            ? CarbonImmutable::parse($request->validated('date_to'))
+            : $from->endOfMonth();
+
+        return response()->json($service->summary(
+            $from,
+            $to,
+            $request->validated('party_type'),
+            $request->filled('party_id') ? (int) $request->validated('party_id') : null,
+        ));
+    }
+
+    /**
+     * Clasifica un movimiento suelto (OTRO); los demás tienen categoría
+     * automática o son internos.
+     */
+    public function updateCategory(MovementCategoryRequest $request, Movement $movement): JsonResponse
+    {
+        if ($movement->transaction_type !== MovementTransactionTypes::OTHER) {
+            return response()->json(['succes' => false, 'message' => 'Solo se puede clasificar un movimiento manual (OTRO).'], 422);
+        }
+
+        $movement->update(['category' => $request->validated('category')]);
+
+        return response()->json(new MovementResources($movement->load(['source', 'destination', 'origin'])));
     }
 
     public function deposit(MovementDepositRequest $request, DepositService $service): JsonResponse
@@ -134,6 +206,7 @@ class MovementController extends Controller
                 'branch_id' => $branchId,
                 'type' => $request->validated('type'),
                 'transaction_type' => MovementTransactionTypes::OTHER,
+                'category' => $request->validated('category'),
                 'source_type' => $request->validated('source_type'),
                 'source_id' => $request->validated('source_id'),
                 'amount' => (float) $request->validated('amount'),

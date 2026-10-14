@@ -17,10 +17,13 @@ class Movement extends BaseModel
         'date',
         'type',
         'transaction_type',
+        'category',
         'source_type',
         'source_id',
         'destination_type',
         'destination_id',
+        'origin_type',
+        'origin_id',
         'amount',
         'previous_balance',
         'new_balance',
@@ -45,6 +48,14 @@ class Movement extends BaseModel
     }
 
     public function destination(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    /**
+     * Venta o compra que generó el movimiento (alias `order`/`shop` del morph map).
+     */
+    public function origin(): MorphTo
     {
         return $this->morphTo();
     }

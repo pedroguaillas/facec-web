@@ -245,6 +245,48 @@ Igual que antes del refactor, **no hay un flujo de "lote" a nivel SRI**: cada
 `Order` se firma/envía/autoriza individualmente vía `ProcessVoucherJob`, no
 existe agrupación de envío por lote (ver §5.2).
 
+### Facturas recurrentes (`RecurringInvoiceController` → `RecurringInvoiceService`)
+
+Plantilla (`recurring_invoices` + `recurring_invoice_items`) que se emite sola
+cada período. Solo factura.
+
+- **Calendario** (`RecurringSchedule`): `start_at` (fecha y hora) + n períodos, a la misma hora
+  (`RecurringFrequencies`: SEMANAL, MENSUAL, BIMESTRAL, TRIMESTRAL, SEMESTRAL,
+  ANUAL); los meses no desbordan (31 → 28/feb → 31/mar). Al crear/reanudar,
+  `next_run_at` = primera emisión desde el inicio de hoy (una hora de hoy ya
+  pasada sale en el siguiente minuto; los días anteriores no se emiten).
+  Fin por `end_date` o `max_occurrences` → `FINALIZADA`.
+- **Corrida**: comando `invoices:recurring` cada minuto (`routes/console.php`;
+  en producción el servicio `scheduler` de `compose.prod.yaml`) encola
+  `EmitRecurringInvoiceJob` por plantilla `ACTIVA` con `next_run_at <= ahora`;
+  las que tienen `last_error` se reintentan cada hora.
+- **Emisión**: arma el payload de `orders.store` y usa `OrderStoreService`
+  como el creador de la plantilla (o el usuario principal si ya no está en
+  la empresa). Fecha = hoy; período = última fecha vencida (si el servidor
+  estuvo caído se emite solo una, no las atrasadas). Marcadores `{mes}`,
+  `{año}`, `{periodo}`, `{fecha}` en descripción e info adicional. Precio
+  fijo de la plantilla. `auto_send` → se envía al SRI (el correo al cliente
+  sale con el flujo normal al autorizar).
+- **Historial** (`recurring_invoice_runs`): único por plantilla + período —
+  nunca se factura dos veces el mismo período. Si falla (plan vencido, caja
+  cerrada, NP con IVA ≠ 0) queda `ERROR` con el mensaje y se reintenta cada
+  hora (mismo registro, `attempts`++).
+- **Pago**: CREDITO (`due_days`, requiere plan financiero) o CONTADO; con plan
+  financiero el contado cobra en `source_type` `bank_account` o
+  `cash_register` (se usa su sesión abierta al emitir).
+- **Emitir ahora** (`POST recurring-invoices/{id}/emit`): emite el período
+  vencido o el próximo por adelantado, y avanza el calendario.
+- No se puede eliminar si ya emitió: se pausa.
+- **Código/descripción por período**: cada línea de la plantilla acepta
+  `code`/`description` con marcadores (además `{mm}` = mes en 2 dígitos), p.
+  ej. `AC{mm}{año}` → `AC102026`. Se guardan en `order_items.code` /
+  `order_items.description` (null = los del producto) y los usan el XML, el
+  PDF y el detalle — un solo producto en vez de uno por mes. Límites SRI: 25
+  / 300 caracteres, validados con el mes más largo. Editar la factura
+  conserva esos textos por producto. La venta normal no los acepta
+  (`OrderStoreRequest` no los valida); una N/C hecha desde esa factura sale
+  con el nombre del producto.
+
 ## 3. Validaciones y reglas de negocio
 
 ### 3.1 IVA diferenciado (8%) en feriados

@@ -17,7 +17,7 @@ class CompanyUpdateRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $blankable = ['sign_valid_from', 'sign_valid_to', 'pass_cert'];
+        $blankable = ['sign_valid_from', 'sign_valid_to', 'pass_cert', 'artisan_number'];
 
         // Desde FormData los booleanos llegan como "true"/"false".
         $booleans = ['base5', 'base8', 'ice', 'transport', 'repayment', 'printf', 'guia_in_invoice', 'import_in_invoice', 'import_in_invoices'];
@@ -48,6 +48,7 @@ class CompanyUpdateRequest extends FormRequest
             // Confirmación explícita para pasar a Negocio Popular (cambia todos los productos a IVA 0%).
             'confirm_iva_change' => ['sometimes'],
             'retention_agent' => ['sometimes', 'nullable', 'integer'],
+            'artisan_number' => ['sometimes', 'nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9\-\/\. ]+$/'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:15'],
             'enviroment_type' => ['sometimes', 'integer', 'in:1,2'],
             'active' => ['sometimes', 'boolean'],
@@ -112,6 +113,7 @@ class CompanyUpdateRequest extends FormRequest
             'ruc.unique' => 'Este RUC ya pertenece a otra empresa.',
             'decimal.max' => 'El máximo de decimales permitido es 6.',
             'rimpe.in' => 'El régimen RIMPE seleccionado no es válido.',
+            'artisan_number.regex' => 'El número de calificación artesanal solo admite letras, números, guiones, puntos y barras.',
         ];
     }
 }

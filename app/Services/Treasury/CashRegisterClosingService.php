@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Cierre de una caja chica/otro: todo su saldo regresa a la sesión activa de
- * la caja general. La caja "general" nunca se cierra.
+ * la caja general. La caja "general" nunca se cierra, ni las cajas sin
+ * apertura/cierre (`uses_sessions` false: una sola sesión siempre abierta).
  */
 class CashRegisterClosingService
 {
@@ -31,6 +32,10 @@ class CashRegisterClosingService
     {
         if ($cashRegister->type === CashRegisterTypes::GENERAL) {
             throw new \RuntimeException('La caja general no se puede cerrar.');
+        }
+
+        if (! $cashRegister->uses_sessions) {
+            throw new \RuntimeException('Esta caja no usa apertura y cierre. Actívalo en la configuración de la caja.');
         }
 
         $session = $cashRegister->activeSession;

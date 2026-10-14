@@ -5,6 +5,7 @@ namespace App\Services\AccountsPayable;
 use App\Models\AccountsPayable\AccountPayableMovement;
 use App\Models\Shop\Shop;
 use App\Services\Treasury\MovementService;
+use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
@@ -40,6 +41,8 @@ class AccountsPayablePaymentService
                 'transaction_type' => MovementTransactionTypes::PURCHASE_PAYMENT,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                'origin_type' => MovementPartyRegistry::SHOP,
+                'origin_id' => $shop->id,
                 'amount' => $amount,
                 'description' => "Abono compra {$shop->serie}",
                 'user_id' => Auth::id(),

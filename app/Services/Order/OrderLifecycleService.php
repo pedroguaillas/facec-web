@@ -88,7 +88,7 @@ class OrderLifecycleService
 
         $order_items = OrderItem::join('products AS p', 'p.id', 'product_id')
             ->join('iva_taxes AS it', 'it.code', 'order_items.iva')
-            ->selectRaw('quantity,price,discount,order_items.ice AS valice,p.code AS codeproduct,aux_cod,name,it.code AS iva,it.percentage,p.ice AS codice')
+            ->selectRaw('quantity,price,discount,order_items.ice AS valice,COALESCE(order_items.code, p.code) AS codeproduct,aux_cod,COALESCE(order_items.description, p.name) AS name,it.code AS iva,it.percentage,p.ice AS codice')
             ->where('order_id', $order->id)
             ->get();
 

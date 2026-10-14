@@ -27,6 +27,7 @@ use App\Http\Controllers\Product\ProductPresentationController;
 use App\Http\Controllers\Product\ProviderProductCodeController;
 use App\Http\Controllers\Provider\ProviderController;
 use App\Http\Controllers\Provider\ProviderLookupController;
+use App\Http\Controllers\RecurringInvoice\RecurringInvoiceController;
 use App\Http\Controllers\ReferralGuide\ReferralGuideController;
 use App\Http\Controllers\ReferralGuide\ReferralGuideLifecycleController;
 use App\Http\Controllers\Settings\BranchController as SettingsBranchController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Settings\EmisionPointController as SettingsEmisionPoint
 use App\Http\Controllers\Shop\RetentionController;
 use App\Http\Controllers\Shop\ShopController;
 use App\Http\Controllers\Shop\ShopLifecycleController;
+use App\Http\Controllers\Subscription\SubscriptionController;
 use App\Http\Controllers\Treasury\DenominationController;
 use App\Http\Controllers\Treasury\MovementController;
 use App\Http\Controllers\User\UserLookupController;
@@ -59,9 +61,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthenticationController::class, 'logout']);
     Route::post('password/change', [PasswordController::class, 'update'])->name('password.change');
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('dashboard/health', [DashboardController::class, 'health'])->name('dashboard.health');
 });
 
 Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
+    Route::get('subscription/current', [SubscriptionController::class, 'current'])->name('subscription.current');
+    Route::post('subscription/financiero-trial', [SubscriptionController::class, 'startFinancieroTrial'])->name('subscription.financiero-trial');
+
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store')->middleware('subscription.active');
@@ -79,6 +85,16 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders/{order}/mail', [OrderLifecycleController::class, 'mail'])->name('orders.mail');
     Route::get('orders/{order}/xml', [OrderLifecycleController::class, 'download'])->name('orders.xml');
     Route::post('orders/{order}/payments', [AccountReceivablePaymentController::class, 'store'])->name('orders.payments.store');
+
+    Route::get('recurring-invoices', [RecurringInvoiceController::class, 'index'])->name('recurring-invoices.index');
+    Route::post('recurring-invoices', [RecurringInvoiceController::class, 'store'])->name('recurring-invoices.store');
+    Route::get('recurring-invoices/{recurringInvoice}', [RecurringInvoiceController::class, 'edit'])->name('recurring-invoices.edit');
+    Route::put('recurring-invoices/{recurringInvoice}', [RecurringInvoiceController::class, 'update'])->name('recurring-invoices.update');
+    Route::delete('recurring-invoices/{recurringInvoice}', [RecurringInvoiceController::class, 'destroy'])->name('recurring-invoices.destroy');
+    Route::post('recurring-invoices/{recurringInvoice}/pause', [RecurringInvoiceController::class, 'pause'])->name('recurring-invoices.pause');
+    Route::post('recurring-invoices/{recurringInvoice}/resume', [RecurringInvoiceController::class, 'resume'])->name('recurring-invoices.resume');
+    Route::post('recurring-invoices/{recurringInvoice}/emit', [RecurringInvoiceController::class, 'emit'])->name('recurring-invoices.emit')->middleware('subscription.active');
+    Route::get('recurring-invoices/{recurringInvoice}/history', [RecurringInvoiceController::class, 'history'])->name('recurring-invoices.history');
 
     Route::get('customers/lookup', [CustomerLookupController::class, 'index'])->name('customers.lookup');
     Route::get('products/lookup', [ProductLookupController::class, 'index'])->name('products.lookup');
@@ -210,7 +226,10 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('denominations', [DenominationController::class, 'index'])->name('denominations.index');
 
     Route::get('movements', [MovementController::class, 'index'])->name('movements.index');
+    Route::get('movements/categories', [MovementController::class, 'categories'])->name('movements.categories');
+    Route::get('movements/summary', [MovementController::class, 'summary'])->name('movements.summary');
     Route::get('movements/{movement}', [MovementController::class, 'show'])->name('movements.show');
+    Route::patch('movements/{movement}/category', [MovementController::class, 'updateCategory'])->name('movements.category');
     Route::post('movements/deposit', [MovementController::class, 'deposit'])->name('movements.deposit');
     Route::post('movements/withdraw', [MovementController::class, 'withdraw'])->name('movements.withdraw');
     Route::post('movements/transfer', [MovementController::class, 'transfer'])->name('movements.transfer');

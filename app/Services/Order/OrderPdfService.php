@@ -86,6 +86,7 @@ class OrderPdfService
     {
         return OrderItem::join('products', 'products.id', 'product_id')
             ->select('products.*', 'order_items.*')
+            ->selectRaw('COALESCE(order_items.code, products.code) AS code, COALESCE(order_items.description, products.name) AS name')
             ->where('order_id', $id)
             ->get();
     }

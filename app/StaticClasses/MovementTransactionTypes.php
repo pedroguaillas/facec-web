@@ -49,4 +49,19 @@ class MovementTransactionTypes
         self::CUSTOMER_ADVANCE,
         self::PROVIDER_ADVANCE,
     ];
+
+    /** Dinero movido entre cajas/cuentas propias: no es ingreso ni gasto. */
+    const INTERNAL = [
+        self::DEPOSIT,
+        self::WITHDRAWAL,
+        self::TRANSFER,
+        self::CASH_REGISTER_OPENING,
+        self::CASH_REGISTER_CLOSING,
+    ];
+
+    /** Fuera de ingresos/gastos reales: los internos más el saldo inicial. */
+    const NON_OPERATING = [
+        ...self::INTERNAL,
+        self::OPENING_BALANCE,
+    ];
 }

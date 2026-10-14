@@ -108,6 +108,7 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
         $string .= '</detalles>';
 
         $string .= '<infoAdicional>';
+        $string .= $this->artisanAdditional();
         $string .= '<campoAdicional nombre="RUC Proveedor">'.config('services.order.ruc_proveedor').'</campoAdicional>';
         $string .= '</infoAdicional>';
 

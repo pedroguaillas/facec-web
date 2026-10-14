@@ -19,7 +19,12 @@ class CashRegister extends BaseModel
         'name',
         'responsible_id',
         'type',
+        'uses_sessions',
         'status',
+    ];
+
+    protected $casts = [
+        'uses_sessions' => 'boolean',
     ];
 
     public function responsible(): BelongsTo
@@ -32,6 +37,9 @@ class CashRegister extends BaseModel
         return $this->hasMany(CashRegisterSession::class);
     }
 
+    /**
+     * @return HasOne<CashRegisterSession, $this>
+     */
     public function activeSession(): HasOne
     {
         return $this->hasOne(CashRegisterSession::class)->where('status', CashRegisterStatuses::OPEN);

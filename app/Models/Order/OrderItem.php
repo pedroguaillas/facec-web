@@ -20,6 +20,8 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id', 'product_id',
+        // Código/descripción propios de la línea (null = los del producto).
+        'code', 'description',
         'quantity', 'price',
         'discount', 'iva', 'ice',
     ];

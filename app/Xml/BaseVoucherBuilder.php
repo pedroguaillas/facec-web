@@ -70,6 +70,20 @@ abstract class BaseVoucherBuilder
     }
 
     /**
+     * Campo adicional con el Nro. de calificación artesanal de la empresa.
+     * El esquema del SRI no tiene etiqueta propia para artesanos (como sí la
+     * tiene RIMPE), así que va en <infoAdicional>. Vacío si no es artesano.
+     */
+    protected function artisanAdditional(): string
+    {
+        $number = trim((string) $this->company->artisan_number);
+
+        return $number === ''
+            ? ''
+            : '<campoAdicional nombre="Artesano Calificado">Nro. '.htmlspecialchars($number, ENT_XML1).'</campoAdicional>';
+    }
+
+    /**
      * Algoritmo módulo 11 para el dígito verificador de la clave de acceso SRI.
      */
     final protected function generaDigitoModulo11(string $cadena): int

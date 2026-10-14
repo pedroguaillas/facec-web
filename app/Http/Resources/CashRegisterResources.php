@@ -17,6 +17,7 @@ class CashRegisterResources extends JsonResource
             'atts' => [
                 'name' => $this->name,
                 'type' => $this->type,
+                'uses_sessions' => (bool) $this->uses_sessions,
                 'status' => $this->status,
             ],
             'responsible' => [

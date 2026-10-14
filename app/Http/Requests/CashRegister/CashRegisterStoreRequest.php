@@ -20,7 +20,8 @@ class CashRegisterStoreRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:100'],
-            'responsible_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            // Sin responsable, queda el usuario que crea la caja.
+            'responsible_id' => ['sometimes', 'integer', Rule::exists('users', 'id')],
             'type' => [
                 'required',
                 Rule::in(CashRegisterTypes::ALL),
@@ -29,6 +30,9 @@ class CashRegisterStoreRequest extends FormRequest
                     [Rule::unique('cash_registers', 'type')->where('branch_id', $branch?->id)],
                 ),
             ],
+            'uses_sessions' => ['sometimes', 'boolean'],
+            // Saldo con el que arranca una caja sin apertura/cierre (se abre sola).
+            'initial_balance' => ['sometimes', 'numeric', 'min:0', Rule::prohibitedIf($this->boolean('uses_sessions'))],
         ];
     }
 

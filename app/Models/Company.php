@@ -61,6 +61,9 @@ class Company extends Model
         'rimpe',
         'inventory',
 
+        // Nro. de calificación artesanal; va como campo adicional en el XML
+        'artisan_number',
+
         // Metodo de pago
         'pay_method',
 

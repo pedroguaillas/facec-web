@@ -9,6 +9,7 @@ use App\Models\EmisionPoint;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
+use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
 use App\Services\Product\InventoryLedgerService;
@@ -17,6 +18,7 @@ use App\Services\SubscriptionGate;
 use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
 use App\StaticClasses\InventoryMovementTypes;
+use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
@@ -52,6 +54,11 @@ class OrderStoreService
 
             $orderData = $this->prepareOrderData($data, $emisionPoint, $voucherType);
             $order = $this->branch->orders()->create($orderData);
+
+            if ($order->movement_id) {
+                Movement::whereKey($order->movement_id)
+                    ->update(['origin_type' => MovementPartyRegistry::ORDER, 'origin_id' => $order->id]);
+            }
 
             $this->createOrderItems($order, $data['products']);
             $this->createRepayments($order, $data['repayments'] ?? []);
@@ -124,6 +131,9 @@ class OrderStoreService
 
         $orderItems = array_map(fn ($product) => [
             'product_id' => $product['product_id'],
+            // Solo la factura recurrente los manda; OrderStoreRequest no los acepta.
+            'code' => $product['code'] ?? null,
+            'description' => $product['description'] ?? null,
             'quantity' => $product['quantity'],
             'price' => $product['price'],
             'discount' => $product['discount'],

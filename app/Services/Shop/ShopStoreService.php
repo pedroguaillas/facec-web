@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Product\Product;
 use App\Models\Shop\Shop;
+use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use App\Services\AccountsPayable\AccountsPayableLedgerService;
 use App\Services\Product\InventoryLedgerService;
@@ -17,6 +18,7 @@ use App\Services\SubscriptionGate;
 use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
 use App\StaticClasses\InventoryMovementTypes;
+use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
@@ -44,6 +46,11 @@ class ShopStoreService
 
             $inputs = $this->prepareShopData($data, $emisionPoint);
             $shop = $this->branch->shops()->create($inputs);
+
+            if ($shop->movement_id) {
+                Movement::whereKey($shop->movement_id)
+                    ->update(['origin_type' => MovementPartyRegistry::SHOP, 'origin_id' => $shop->id]);
+            }
 
             $this->createShopItems($shop, $data['products'] ?? []);
             $this->createRetentionItems($shop, $data);

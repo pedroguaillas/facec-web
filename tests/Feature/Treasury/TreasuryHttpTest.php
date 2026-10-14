@@ -86,6 +86,7 @@ test('flujo completo via api: crear caja general, abrirla, depositar a banco y c
         'name' => 'Caja General',
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::GENERAL,
+        'uses_sessions' => true,
     ]);
     $generalId = $generalResponse->assertCreated()->json('id');
 
@@ -96,6 +97,7 @@ test('flujo completo via api: crear caja general, abrirla, depositar a banco y c
         'name' => 'Caja Chica',
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::PETTY,
+        'uses_sessions' => true,
     ]);
     $pettyId = $pettyResponse->assertCreated()->json('id');
 
@@ -161,6 +163,7 @@ test('el edit de caja incluye la sesion activa para saber si esta abierta', func
         'name' => 'Caja General',
         'responsible_id' => $user->id,
         'type' => CashRegisterTypes::GENERAL,
+        'uses_sessions' => true,
     ])->assertCreated()->json('id');
 
     $this->getJson(route('cash-registers.edit', $cashRegisterId))
@@ -238,4 +241,37 @@ test('el filtro party_type/party_id de movimientos trae origen y destino', funct
     ]))->assertOk()->json('data');
 
     expect($byParty)->toHaveCount(2);
+});
+
+test('el numero de cuenta bancaria solo acepta digitos', function (string $accountNumber) {
+    [$branch] = treasuryHttpActingAsCompany();
+
+    $bank = Bank::factory()->create(['branch_id' => $branch->id]);
+    $bankAccount = BankAccount::factory()->for($bank)->create(['branch_id' => $branch->id]);
+
+    $payload = [
+        'bank_id' => $bank->id,
+        'account_number' => $accountNumber,
+        'type' => BankAccountTypes::CHECKING,
+    ];
+
+    $this->postJson(route('bank-accounts.store'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['account_number' => 'El número de cuenta solo debe contener dígitos.']);
+
+    $this->putJson(route('bank-accounts.update', $bankAccount), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['account_number' => 'El número de cuenta solo debe contener dígitos.']);
+})->with(['letras' => '09757868u', 'guiones' => '2200-1234-56', 'espacios' => '2200 123456']);
+
+test('el numero de cuenta bancaria conserva ceros a la izquierda', function () {
+    [$branch] = treasuryHttpActingAsCompany();
+
+    $bank = Bank::factory()->create(['branch_id' => $branch->id]);
+
+    $this->postJson(route('bank-accounts.store'), [
+        'bank_id' => $bank->id,
+        'account_number' => '0012345678',
+        'type' => BankAccountTypes::SAVINGS,
+    ])->assertCreated()->assertJsonPath('account_number', '0012345678');
 });

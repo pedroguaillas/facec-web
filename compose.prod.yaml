@@ -72,6 +72,26 @@ services:
         healthcheck:
             disable: true
 
+    scheduler:
+        image: facec-web-app:latest
+        restart: unless-stopped
+        env_file:
+            - .env.production
+        volumes:
+            - storage-app:/var/www/html/storage/app
+        networks:
+            - app
+        depends_on:
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        # Tareas programadas (routes/console.php): facturas recurrentes, cada
+        # minuto. Solo encola jobs — los procesa el worker `queue`.
+        command: php artisan schedule:work
+        healthcheck:
+            disable: true
+
     go-signer:
         build:
             context: ./go-signer
