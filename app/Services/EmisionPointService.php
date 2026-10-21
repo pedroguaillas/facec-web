@@ -15,11 +15,104 @@ use Illuminate\Support\Facades\DB;
 
 class EmisionPointService
 {
+    /**
+     * Columnas legacy de `emision_points` que el frontend de Configuración
+     * sigue usando como contrato, y el tipo de comprobante cuya secuencia
+     * real (`emision_point_sequences.next_number`) representan.
+     *
+     * @var array<string, string>
+     */
+    public const LEGACY_SEQUENCE_COLUMNS = [
+        'invoice' => VoucherTypes::VENTA_FACTURA,
+        'creditnote' => VoucherTypes::VENTA_NOTA_CREDITO,
+        'retention' => VoucherTypes::RETENCION,
+        'referralguide' => VoucherTypes::GUIA_REMISION,
+        'settlementonpurchase' => VoucherTypes::COMPRA_LIQUIDACION_COMPRA,
+    ];
+
     public function __construct(private BranchService $branchService) {}
 
-    public function create(array $attributes)
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function create(array $attributes): EmisionPoint
     {
-        return EmisionPoint::create($attributes);
+        return DB::transaction(function () use ($attributes) {
+            $emisionPoint = EmisionPoint::create($attributes);
+            $this->syncSequences($emisionPoint, $attributes);
+
+            return $this->withSequences($emisionPoint);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(EmisionPoint $emisionPoint, array $attributes): EmisionPoint
+    {
+        return DB::transaction(function () use ($emisionPoint, $attributes) {
+            $emisionPoint->update($attributes);
+            $this->syncSequences($emisionPoint, $attributes);
+
+            return $this->withSequences($emisionPoint);
+        });
+    }
+
+    /**
+     * Reemplaza los valores de las columnas legacy por el `next_number` real
+     * de `emision_point_sequences`, que es lo que usa VoucherSequenceService
+     * al emitir. Sin fila de secuencia se deja el valor legacy (la primera
+     * reserva la crea en 1).
+     */
+    public function withSequences(EmisionPoint $emisionPoint): EmisionPoint
+    {
+        $nextNumbers = EmisionPointSequence::query()
+            ->join('voucher_types', 'voucher_types.id', '=', 'emision_point_sequences.voucher_type_id')
+            ->where('emision_point_id', $emisionPoint->id)
+            ->whereIn('voucher_types.slug', self::LEGACY_SEQUENCE_COLUMNS)
+            ->pluck('emision_point_sequences.next_number', 'voucher_types.slug');
+
+        foreach (self::LEGACY_SEQUENCE_COLUMNS as $column => $slug) {
+            if ($nextNumbers->has($slug)) {
+                $emisionPoint->setAttribute($column, (int) $nextNumbers[$slug]);
+            }
+        }
+
+        return $emisionPoint;
+    }
+
+    /**
+     * Escribe en `emision_point_sequences` los secuenciales enviados con el
+     * nombre de columna legacy. Debe invocarse dentro de una transacción.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function syncSequences(EmisionPoint $emisionPoint, array $attributes): void
+    {
+        foreach (self::LEGACY_SEQUENCE_COLUMNS as $column => $slug) {
+            if (! array_key_exists($column, $attributes)) {
+                continue;
+            }
+
+            $voucherTypeId = VoucherType::where('slug', $slug)->value('id');
+
+            $sequence = EmisionPointSequence::where('emision_point_id', $emisionPoint->id)
+                ->where('voucher_type_id', $voucherTypeId)
+                ->lockForUpdate()
+                ->first();
+
+            $nextNumber = (int) $attributes[$column];
+
+            if ($sequence === null) {
+                EmisionPointSequence::create([
+                    'emision_point_id' => $emisionPoint->id,
+                    'voucher_type_id' => $voucherTypeId,
+                    'next_number' => $nextNumber,
+                ]);
+            } elseif ($sequence->next_number !== $nextNumber) {
+                $sequence->update(['next_number' => $nextNumber]);
+            }
+        }
     }
 
     public function getByAttributes(array $attributes = [], array $with = [], array $columns = ['*'])

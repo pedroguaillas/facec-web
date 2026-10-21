@@ -13,14 +13,14 @@ use Illuminate\Support\Facades\Auth;
 
 class EmisionPointController extends Controller
 {
-    public function index(Branch $branch): JsonResponse
+    public function index(Branch $branch, EmisionPointService $service): JsonResponse
     {
         abort_unless($branch->company_id === Auth::user()->company->id, 403);
 
         $points = $branch->emisionPoints()->get([
             'id', 'point', 'invoice', 'creditnote', 'retention',
             'referralguide', 'settlementonpurchase', 'recognition',
-        ]);
+        ])->each(fn (EmisionPoint $point) => $service->withSequences($point));
 
         return response()->json($points, 200);
     }
@@ -32,9 +32,9 @@ class EmisionPointController extends Controller
         return response()->json($emisionPoint, 201);
     }
 
-    public function update(EmisionPointUpdateRequest $request, EmisionPoint $emisionPoint): JsonResponse
+    public function update(EmisionPointUpdateRequest $request, EmisionPoint $emisionPoint, EmisionPointService $service): JsonResponse
     {
-        $emisionPoint->update($request->validated());
+        $emisionPoint = $service->update($emisionPoint, $request->validated());
 
         return response()->json($emisionPoint, 200);
     }
