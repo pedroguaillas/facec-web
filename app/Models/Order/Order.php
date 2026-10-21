@@ -11,6 +11,7 @@ use App\Models\VoucherType;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Order extends BaseModel
 {
@@ -140,8 +141,8 @@ class Order extends BaseModel
         return $this->hasMany(OrderAditional::class);
     }
 
-    public function inventories()
+    public function inventories(): MorphMany
     {
-        return $this->hasMany(Inventory::class, 'model_id', 'id');
+        return $this->morphMany(Inventory::class, 'model');
     }
 }

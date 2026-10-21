@@ -19,6 +19,9 @@ use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerLookupController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Holiday\AdminHolidayController;
+use App\Http\Controllers\Inventory\InventoryOperationController;
+use App\Http\Controllers\Inventory\InventoryReportController;
+use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Order\OrderLifecycleController;
 use App\Http\Controllers\Product\ProductController;
@@ -114,6 +117,26 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::put('products/{product}/presentations/{presentation}', [ProductPresentationController::class, 'update'])->name('products.presentations.update');
     Route::delete('products/{product}/presentations/{presentation}', [ProductPresentationController::class, 'destroy'])->name('products.presentations.destroy');
 
+    Route::middleware('inventory.enabled')->group(function () {
+        Route::get('products/{product}/kardex', [InventoryReportController::class, 'kardex'])->name('products.kardex');
+        Route::get('products/{product}/kardex/export', [InventoryReportController::class, 'kardexExport'])->name('products.kardex.export');
+
+        Route::get('warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
+        Route::post('warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+        Route::put('warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
+        Route::delete('warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
+
+        Route::get('inventory/stock', [InventoryReportController::class, 'stock'])->name('inventory.stock');
+        Route::get('inventory/stock/export', [InventoryReportController::class, 'stockExport'])->name('inventory.stock.export');
+        Route::get('inventory/valuation', [InventoryReportController::class, 'valuation'])->name('inventory.valuation');
+        Route::get('inventory/valuation/export', [InventoryReportController::class, 'valuationExport'])->name('inventory.valuation.export');
+        Route::get('inventory/cost-of-sales', [InventoryReportController::class, 'costOfSales'])->name('inventory.cost-of-sales');
+        Route::get('inventory/cost-of-sales/export', [InventoryReportController::class, 'costOfSalesExport'])->name('inventory.cost-of-sales.export');
+        Route::post('inventory/opening-balance', [InventoryOperationController::class, 'openingBalance'])->name('inventory.opening-balance');
+        Route::post('inventory/adjustments', [InventoryOperationController::class, 'adjustment'])->name('inventory.adjustments');
+        Route::post('inventory/transfers', [InventoryOperationController::class, 'transfer'])->name('inventory.transfers');
+    });
+
     Route::get('providers', [ProviderController::class, 'index'])->name('providers.index');
     Route::get('providers/overdue', [AccountPayableOverdueController::class, 'index'])->name('providers.overdue');
     Route::get('providers/create', [ProviderController::class, 'create'])->name('providers.create');
@@ -145,6 +168,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 
     Route::get('shops', [ShopController::class, 'index'])->name('shops.index');
     Route::get('shops/create', [ShopController::class, 'create'])->name('shops.create');
+    Route::get('shops/export/{yearMonth}', [ShopController::class, 'export'])
+        ->where('yearMonth', '\d{4}-\d{2}')
+        ->name('shops.export');
     Route::post('shops', [ShopController::class, 'store'])->name('shops.store')->middleware('subscription.active');
     Route::get('shops/{shop}', [ShopController::class, 'edit'])->name('shops.edit');
     Route::put('shops/{shop}', [ShopController::class, 'update'])->name('shops.update');

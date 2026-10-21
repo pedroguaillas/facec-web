@@ -60,6 +60,8 @@ class Company extends Model
         // Agregado las 2 columas el 25 de enero del 2022
         'rimpe',
         'inventory',
+        // Permite salidas que dejen la bodega en negativo (por defecto no).
+        'allow_negative_stock',
 
         // Nro. de calificación artesanal; va como campo adicional en el XML
         'artisan_number',
@@ -87,6 +89,7 @@ class Company extends Model
         'tourism_from' => 'date',
         'tourism_to' => 'date',
         'inventory' => 'boolean',
+        'allow_negative_stock' => 'boolean',
         'ice' => 'boolean',
         'rimpe' => 'integer',
         'sign_valid_to' => 'datetime',

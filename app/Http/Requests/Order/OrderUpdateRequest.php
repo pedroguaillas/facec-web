@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Order;
 
 use App\Models\Company;
+use App\Models\Order\Order;
+use App\Rules\ProductPresentationLinesRule;
 use App\StaticClasses\VoucherStates;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,8 +21,9 @@ class OrderUpdateRequest extends FormRequest
     {
         return [
             'total' => 'required|numeric',
-            'products' => 'present|array',
+            'products' => ['present', 'array', new ProductPresentationLinesRule($this->usedPresentationIds())],
             'products.*.product_id' => 'required|integer|exists:products,id',
+            'products.*.presentation_id' => 'nullable|integer',
             'products.*.quantity' => 'required|numeric',
             'products.*.price' => 'required|numeric',
             'products.*.discount' => 'required|numeric',
@@ -62,5 +65,22 @@ class OrderUpdateRequest extends FormRequest
         return [
             'products.*.iva.in' => 'Como contribuyente RIMPE Negocio Popular solo puede usar IVA 0%.',
         ];
+    }
+
+    /**
+     * Presentaciones que ya tienen las líneas guardadas: se aceptan aunque
+     * después se hayan desactivado.
+     *
+     * @return array<int, int>
+     */
+    private function usedPresentationIds(): array
+    {
+        $order = $this->route('order');
+
+        if (! $order instanceof Order) {
+            return [];
+        }
+
+        return $order->orderitems()->whereNotNull('presentation_id')->pluck('presentation_id')->map(fn ($id) => (int) $id)->all();
     }
 }

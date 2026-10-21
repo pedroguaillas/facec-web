@@ -8,16 +8,14 @@ use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
-use App\Models\Product\Product;
 use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
-use App\Services\Product\InventoryLedgerService;
-use App\Services\Product\WarehouseResolver;
+use App\Services\Product\PresentationLineResolver;
+use App\Services\Product\VoucherInventoryService;
 use App\Services\SubscriptionGate;
 use App\Services\Treasury\MovementService;
 use App\Services\VoucherSequenceService;
-use App\StaticClasses\InventoryMovementTypes;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
@@ -129,45 +127,25 @@ class OrderStoreService
             return;
         }
 
-        $orderItems = array_map(fn ($product) => [
+        $presentations = app(PresentationLineResolver::class)->resolve($products);
+
+        $orderItems = array_map(fn ($product, $presentation) => [
             'product_id' => $product['product_id'],
-            // Solo la factura recurrente los manda; OrderStoreRequest no los acepta.
-            'code' => $product['code'] ?? null,
-            'description' => $product['description'] ?? null,
+            'presentation_id' => $presentation['presentation_id'],
+            'conversion_factor' => $presentation['conversion_factor'],
+            // Solo la factura recurrente manda code/description; si no, los de la presentación.
+            'code' => $product['code'] ?? $presentation['code'],
+            'description' => $product['description'] ?? $presentation['description'],
             'quantity' => $product['quantity'],
             'price' => $product['price'],
             'discount' => $product['discount'],
             'ice' => $product['ice'] ?? 0,
             'iva' => $product['iva'],
-        ], $products);
+        ], $products, $presentations);
 
         $order->orderitems()->createMany($orderItems);
 
-        if (! $this->company->inventory) {
-            return;
-        }
-
-        $warehouse = app(WarehouseResolver::class)->forBranch($this->branch);
-        $ledger = app(InventoryLedgerService::class);
-
-        foreach ($products as $product) {
-            $productModel = Product::find($product['product_id']);
-
-            // Servicios no tienen stock que descontar.
-            if (! $productModel || $productModel->type_product === Product::TYPE_SERVICE) {
-                continue;
-            }
-
-            $ledger->registerMovement(
-                $productModel,
-                $warehouse,
-                InventoryMovementTypes::SALE,
-                (float) $product['quantity'],
-                Carbon::today()->format('Y-m-d'),
-                modelId: $order->id,
-                price: (float) $product['price'],
-            );
-        }
+        app(VoucherInventoryService::class)->syncOrder($order, isNew: true);
     }
 
     protected function createRepayments(Order $order, array $repayments): void

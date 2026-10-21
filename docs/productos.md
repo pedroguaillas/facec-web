@@ -30,7 +30,8 @@ arrastra el **global scope de sucursal** (ver §7.3) y `SoftDeletes`.
 | `iva` | integer | **Código SRI** de tarifa, no el porcentaje. FK lógica a `iva_taxes.code` |
 | `ice` | integer, nullable | Código de catálogo ICE (`ice_cataloges.code`) |
 | `irbpnr` | integer, nullable | Impuesto a botellas plásticas (IRBPNR) |
-| `stock` | integer, nullable | Campo informativo — ver §2 (no refleja el stock real) |
+| `stock` | decimal, nullable | Caché del saldo del kardex — ver §2 |
+| `min_stock` | decimal, nullable | Stock mínimo (reporte de bajo stock) |
 | `differentiated_iva` | boolean (cast) | Se factura con IVA diferenciado (8%) en feriados (ex `tourism`). Solo marcable si la empresa tiene `base8` — ver `docs/ventas.md` §3.1 |
 | `entry/active/inventory_account_id` | integer, nullable | Cuentas contables (no usadas en el flujo FE) |
 
@@ -62,42 +63,11 @@ está en [ventas.md](./facturacion-electronica/ventas.md), aquí no se repite.
 
 ## 2. Inventario y stock
 
-Hay **dos mecanismos distintos** y conviene no confundirlos:
-
-1. **`products.stock`** — un entero editable en el formulario del producto.
-   Se acepta en `store`/`update` y se muestra en `index`/`lookup`, pero
-   **no se descuenta al vender ni se incrementa al comprar** en ningún punto
-   del código (ver §7.1). Es, en la práctica, un dato informativo estático.
-
-2. **Tabla `inventories`** (`App\Models\Inventory`,
-   `app/Models/Inventory.php`) — el libro de movimientos real (kardex).
-   Cada fila es un movimiento tipado (`Inventario inicial`, `Compra`,
-   `Venta`, `Devolución en compra/venta`, `Ajuste ingreso/salida`) con
-   `quantity`, `price`, `date` y `model_id` (id de la compra o venta que lo
-   originó). Relación: `Product hasMany Inventory`
-   (`app/Models/Product/Product.php:60`) y `Order hasMany Inventory` por
-   `model_id` (`app/Models/Order/Order.php:106`).
-
-Los movimientos de venta se crean en
-`app/Services/Order/OrderStoreService.php:98-113`, **solo si la empresa tiene
-inventario activo** (`company->inventory`), dentro de la misma transacción
-que la orden (`OrderStoreService.php:30`):
-
-```php
-if ($this->company->inventory) {
-    $inventoryItems[] = [
-        'product_id' => $product['product_id'],
-        'quantity'   => $product['quantity'],
-        'price'      => $product['price'],
-        'type'       => 'Venta',
-        'date'       => Carbon::today()->format('Y-m-d'),
-    ];
-}
-```
-
-No existe cálculo de saldo/stock consolidado a partir de `inventories`; el
-kardex se registra pero el saldo disponible tendría que derivarse sumando
-movimientos (hoy no se hace en backend).
+Ver **`docs/inventario.md`**. Resumen: el kardex (`inventories`) es la única
+fuente de verdad, con saldo y costo promedio por producto + bodega.
+`products.stock` es una caché del saldo total que mantiene
+`InventoryLedgerService` (decimal); con inventario activo no se edita desde
+el producto. `min_stock` alimenta el reporte de bajo stock.
 
 ## 3. Endpoints
 
@@ -118,7 +88,25 @@ Todas bajo el grupo autenticado de `routes/api.php:48-56`:
 Hace `join` con `iva_taxes` para devolver el porcentaje junto al producto,
 filtra por `search` (LIKE sobre `code`/`name`, con escape de `%` y `_`) y
 pagina. La respuesta pasa por `ProductResources` (§ estructura anidada
-`atts` + `iva`).
+`atts` + `iva`). Incluye `presentations` **solo activas** (este listado
+alimenta el buscador de ventas/compras) y la búsqueda también encuentra por el
+código de una presentación activa.
+
+### `store` con presentaciones
+
+`POST products` acepta `presentations[]` opcional
+(`{name, conversion_factor, price?, code?, active?}`, mismas reglas que
+`POST products/{product}/presentations`). Producto, presentaciones y saldo
+inicial se crean en una sola `DB::transaction`: si algo falla no queda el
+producto a medias. Validación del `code` de cada presentación
+(`AvailablePresentationCodeRule` + reglas del request): único contra
+presentaciones y productos de la sucursal, distinto del `code` del producto
+que se crea y sin repetirse en el mismo arreglo. Errores en
+`presentations.N.<campo>`. Un servicio (`type_product = 2`) con
+`presentations` responde 422 en `presentations`. La respuesta 201 es el
+producto más `presentations` en el formato de `ProductPresentationResource`.
+`PUT products/{product}` no recibe presentaciones (se editan por sus propios
+endpoints).
 
 ### `create` / `edit` (`createEditData`, `ProductController.php:99-115`)
 
@@ -143,13 +131,17 @@ de la empresa**:
 - `sriCategories`: solo si `company->transport || company->base5`.
 - `transport`: bandera de la empresa.
 
-### `lookup` (`ProductLookupController.php:12-38`)
+### `lookup` (`ProductLookupController.php`)
 
 Endpoint ligero para el buscador de la línea de venta. Recibe `q`, devuelve
 vacío si viene en blanco, y como máximo **20** productos que coincidan por
-`code` o `name`, con una forma reducida y estable:
-`id, code, name, price (= price1), stock, iva, ice`. No pagina ni usa
+`code`, `name` o el `code` de una de sus presentaciones, con una forma
+reducida y estable:
+`id, code, type_product, name, price (= price1), stock, iva, ice,
+presentations[{id, name, code, conversion_factor, price}]`. No pagina ni usa
 `ProductResources` — es un contrato aparte pensado para el autocompletar.
+Cómo una presentación (ej. cubeta x30) afecta la venta y el kardex: ver
+`docs/inventario.md` §3.
 
 ## 4. Importación y exportación (Excel)
 
@@ -239,7 +231,7 @@ y `ProductUpdateRequest` comparten reglas casi idénticas:
 | `iva` | `required|integer|exists:iva_taxes,code` | `:33` |
 | `ice` | `nullable|integer|exists:ice_cataloges,code` | `:34` |
 | `aux_cod` | `nullable|string|max:10` | `:35` |
-| `stock` | `nullable|integer|min:0` | `:36` |
+| `stock` | `nullable|numeric|min:0` | `:36` |
 
 En update, el `unique` de `code` ignora el propio producto
 (`ProductUpdateRequest.php:28-31`).
@@ -291,15 +283,9 @@ pero el backend confía en lo que llega. Ver §7.2.
 
 Hallazgos concretos con evidencia:
 
-### 6.1 — `products.stock` nunca se actualiza (dato inexacto)
+### 6.1 — ~~`products.stock` nunca se actualiza~~ (resuelto)
 
-El campo se acepta en `store`/`update` y se expone en `index` y `lookup`,
-pero no hay ni un `decrement`/`increment` ni asignación a `stock` en todo
-`app/` fuera de los requests. Al vender solo se inserta en `inventories`
-(`OrderStoreService.php:98-113`); `products.stock` queda congelado en el
-valor que se tipeó al crear el producto. Consecuencia: el `stock` mostrado
-en el buscador de ventas y en el listado es engañoso. Debería o bien
-eliminarse del contrato, o derivarse del kardex (`inventories`).
+Ahora es caché del kardex. Ver `docs/inventario.md`.
 
 ### 6.2 — Precio e impuestos por línea se confían del frontend
 

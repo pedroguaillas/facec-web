@@ -17,6 +17,18 @@ class VoucherSequenceService
      */
     public function reserveNext(EmisionPoint $emisionPoint, string $voucherTypeSlug): int
     {
+        return $this->reserveRange($emisionPoint, $voucherTypeSlug, 1);
+    }
+
+    /**
+     * Reserva atómicamente `$count` números consecutivos y devuelve el
+     * primero (el rango es [primero, primero + $count - 1]). Usado por la
+     * carga por lote para no hacer un lock por fila.
+     *
+     * Debe invocarse dentro de una transacción de BD abierta por el caller.
+     */
+    public function reserveRange(EmisionPoint $emisionPoint, string $voucherTypeSlug, int $count): int
+    {
         $voucherType = VoucherType::where('slug', $voucherTypeSlug)->firstOrFail();
 
         EmisionPointSequence::firstOrCreate(
@@ -30,7 +42,7 @@ class VoucherSequenceService
             ->first();
 
         $number = $sequence->next_number;
-        $sequence->increment('next_number');
+        $sequence->increment('next_number', $count);
 
         return $number;
     }
@@ -45,6 +57,11 @@ class VoucherSequenceService
     {
         $number = $this->reserveNext($emisionPoint, $voucherTypeSlug);
 
+        return $this->formatSerie($emisionPoint, $number);
+    }
+
+    public function formatSerie(EmisionPoint $emisionPoint, int $number): string
+    {
         $prefix = sprintf('%03d-%03d-', (int) $emisionPoint->branch->store, (int) $emisionPoint->point);
 
         return $prefix.str_pad((string) $number, 9, '0', STR_PAD_LEFT);

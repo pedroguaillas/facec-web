@@ -5,6 +5,8 @@ namespace App\Http\Requests\Product;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Product\Product;
+use App\Rules\AvailablePresentationCodeRule;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -28,6 +30,7 @@ class ProductStoreRequest extends FormRequest
                 'required',
                 Rule::unique('products')->where(fn ($query) => $query->where('branch_id', $branch->id)
                 ),
+                new AvailablePresentationCodeRule($branch->id, includeProducts: false),
             ],
             'type_product' => 'required|integer|in:1,2',
             'name' => 'required|string|max:300',
@@ -40,9 +43,29 @@ class ProductStoreRequest extends FormRequest
             ],
             'ice' => 'nullable|integer|exists:ice_cataloges,code',
             'aux_cod' => 'nullable|string|max:10',
-            'stock' => 'nullable|integer|min:0',
+            'stock' => 'nullable|numeric|min:0',
+            'min_stock' => 'nullable|numeric|min:0',
             // Solo empresas con IVA diferenciado (`base8`) pueden marcarlo.
             'differentiated_iva' => ['sometimes', 'boolean', Rule::prohibitedIf(! $company->base8 && $this->boolean('differentiated_iva'))],
+            // Presentaciones creadas junto con el producto (mismas reglas que
+            // ProductPresentationStoreRequest). Un servicio no tiene presentaciones.
+            'presentations' => ['sometimes', 'array', Rule::prohibitedIf((int) $this->input('type_product') === Product::TYPE_SERVICE)],
+            'presentations.*.name' => ['required', 'string', 'max:255'],
+            'presentations.*.conversion_factor' => ['required', 'numeric', 'min:0.000001', 'decimal:0,6'],
+            'presentations.*.price' => ['nullable', 'numeric', 'min:0'],
+            'presentations.*.code' => [
+                'nullable',
+                'string',
+                'max:25',
+                'distinct:ignore_case',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    if (mb_strtolower((string) $value) === mb_strtolower((string) $this->input('code'))) {
+                        $fail('El código ya existe en esta sucursal.');
+                    }
+                },
+                new AvailablePresentationCodeRule($branch->id),
+            ],
+            'presentations.*.active' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -75,6 +98,10 @@ class ProductStoreRequest extends FormRequest
             'differentiated_iva.prohibited' => 'La empresa no está habilitada para IVA diferenciado (8%).',
             'iva.in' => 'Como contribuyente RIMPE Negocio Popular solo puede usar IVA 0%.',
             'ice.exists' => 'El ICE seleccionado no es válido',
+            'presentations.prohibited' => 'Un servicio no puede tener presentaciones.',
+            'presentations.*.name.required' => 'El nombre de la presentación es obligatorio',
+            'presentations.*.conversion_factor.required' => 'El factor de conversión es obligatorio',
+            'presentations.*.code.distinct' => 'El código está repetido en otra presentación.',
         ];
     }
 }

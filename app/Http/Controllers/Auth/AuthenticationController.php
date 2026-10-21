@@ -44,6 +44,7 @@ class AuthenticationController extends Controller
             $this->emisionPointService->checkAndCreateFirstPoint($company);
             $response['permissions'] = [
                 'inventory' => $company->inventory,
+                'allow_negative_stock' => $company->allow_negative_stock,
                 'decimal' => $company->decimal,
                 'printf' => $company->printf,
                 'guia_in_invoice' => $company->guia_in_invoice,

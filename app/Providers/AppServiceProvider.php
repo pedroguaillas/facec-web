@@ -8,6 +8,7 @@ use App\Services\Shop\Retention\RetentionPdfService;
 use App\Services\Shop\ShopLcPdfService;
 use App\StaticClasses\MovementPartyRegistry;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
@@ -48,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // Fuera de producción, un lazy load (N+1) lanza excepción en vez de pasar inadvertido.
+        Model::preventLazyLoading(! app()->isProduction());
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\ProductImportRequest;
 use App\Http\Requests\Product\ProductStoreRequest;
 use App\Http\Requests\Product\ProductUpdateRequest;
+use App\Http\Resources\ProductPresentationResource;
 use App\Http\Resources\ProductResources;
 use App\Imports\ProductsImport;
 use App\Models\Company;
@@ -14,11 +15,13 @@ use App\Models\Product\IceCataloge;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
+use App\Services\Product\OpeningBalanceFromStockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -36,13 +39,17 @@ class ProductController extends Controller
 
                 $query->where(function ($q) use ($escaped) {
                     $q->where('products.code', 'LIKE', "%{$escaped}%")
-                        ->orWhere('products.name', 'LIKE', "%{$escaped}%");
+                        ->orWhere('products.name', 'LIKE', "%{$escaped}%")
+                        // Código propio de una presentación (ej. código de barras de la cubeta).
+                        ->orWhereHas('presentations', fn ($presentation) => $presentation->where('active', true)->where('code', 'LIKE', "%{$escaped}%"));
                 });
             })
             ->when($request->filled('type'), function ($query) use ($request) {
                 $query->ofType((int) $request->input('type'));
             })
-            ->selectRaw('products.id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.differentiated_iva')
+            ->selectRaw('products.id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.min_stock, products.differentiated_iva')
+            // Solo activas: este listado alimenta el buscador de ventas/compras.
+            ->with(['presentations' => fn ($presentation) => $presentation->where('active', true)->select('id', 'product_id', 'name', 'conversion_factor', 'price', 'code')])
             ->latest('products.created_at')
             ->paginate($paginate)
             ->withQueryString();
@@ -57,13 +64,32 @@ class ProductController extends Controller
         ], 200);
     }
 
-    public function store(ProductStoreRequest $request): JsonResponse
+    public function store(ProductStoreRequest $request, OpeningBalanceFromStockService $openingBalance): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
 
-        $product = $branch->products()->create($request->validated());
+        $attributes = $request->safe()->except('presentations');
+        $presentations = $request->validated('presentations', []);
 
-        return response()->json($product, 201);
+        // Producto y presentaciones van juntos: si algo falla, no queda el producto a medias.
+        $product = DB::transaction(function () use ($branch, $attributes, $presentations, $openingBalance) {
+            $product = $branch->products()->create($attributes);
+            $product->presentations()->createMany($presentations);
+
+            // Con inventario activo el stock inicial entra al kardex como saldo inicial.
+            if (Auth::user()->company->inventory) {
+                $openingBalance->forProduct($product);
+            }
+
+            return $product->fresh();
+        });
+
+        $product->presentations->each->setRelation('product', $product);
+
+        return response()->json([
+            ...$product->withoutRelations()->toArray(),
+            'presentations' => ProductPresentationResource::collection($product->presentations)->resolve(),
+        ], 201);
     }
 
     public function edit(Product $product): JsonResponse
@@ -76,7 +102,15 @@ class ProductController extends Controller
 
     public function update(ProductUpdateRequest $request, Product $product): JsonResponse
     {
-        $product->update($request->validated());
+        $attributes = $request->validated();
+
+        // Con inventario activo el stock es caché del kardex: solo cambia con
+        // movimientos (ajustes), no editando el producto.
+        if (Auth::user()->company->inventory) {
+            unset($attributes['stock']);
+        }
+
+        $product->update($attributes);
 
         return response()->json($product);
     }
@@ -104,6 +138,10 @@ class ProductController extends Controller
             : ExcelFormat::XLSX;
 
         Excel::import($import, $request->file('file'), null, $readerType);
+
+        if ($company->inventory) {
+            app(OpeningBalanceFromStockService::class)->forBranch($branch);
+        }
 
         return response()->json([
             'success' => $import->failures()->isEmpty(),

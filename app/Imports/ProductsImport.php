@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\Product\Product;
+use App\Rules\AvailablePresentationCodeRule;
 use App\Rules\RequiredAuxCodRule;
 use App\Rules\UniqueBranchScoped;
 use Maatwebsite\Excel\Concerns\Importable;
@@ -33,7 +34,8 @@ class ProductsImport implements SkipsOnFailure, ToModel, WithBatchInserts, WithC
             'price1' => $row['precio'],
             'iva' => $row['iva'],
             'ice' => $row['ice'] ?: null,
-            'stock' => $row['stock'] ?: null,
+            // Inserción en lote (sin eventos de modelo): los servicios no llevan stock.
+            'stock' => (int) $row['tipo'] === Product::TYPE_PRODUCT ? ($row['stock'] ?: null) : null,
         ]);
     }
 
@@ -43,14 +45,14 @@ class ProductsImport implements SkipsOnFailure, ToModel, WithBatchInserts, WithC
     public function rules(): array
     {
         return [
-            'codigo' => ['required', 'string', 'max:25', new UniqueBranchScoped('products', 'code')],
+            'codigo' => ['required', 'string', 'max:25', new UniqueBranchScoped('products', 'code'), new AvailablePresentationCodeRule($this->branchId, includeProducts: false)],
             'codigo_auxiliar' => ['nullable', 'string', 'max:25', new RequiredAuxCodRule],
             'tipo' => ['required', 'integer', 'in:1,2'],
             'nombre' => ['required', 'string', 'max:300'],
             'precio' => ['required', 'numeric', 'min:0'],
             'iva' => ['required', 'integer', 'exists:iva_taxes,code'],
             'ice' => ['nullable', 'integer', 'exists:ice_cataloges,code'],
-            'stock' => ['nullable', 'integer', 'min:0'],
+            'stock' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

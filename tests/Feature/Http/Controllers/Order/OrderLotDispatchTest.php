@@ -6,10 +6,13 @@ use App\Models\Company;
 use App\Models\CompanyUser;
 use App\Models\Customer;
 use App\Models\EmisionPoint;
+use App\Models\EmisionPointSequence;
 use App\Models\Order\Order;
 use App\Models\Product\Product;
 use App\Models\User;
 use App\Models\UserType;
+use App\Models\VoucherType;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -117,4 +120,41 @@ test('orders.lot.store usa forma de pago 01 para consumidor final, y la de la em
 
     expect(Order::where('customer_id', $consumidorFinal->id)->first()->pay_method)->toBe(1)
         ->and(Order::where('customer_id', $customerB->id)->first()->pay_method)->toBe(20);
+});
+
+test('orders.lot.store continúa el mismo secuencial que la creación individual, sin repetir series', function () {
+    Queue::fake();
+
+    $userType = UserType::firstOrCreate(['type' => 'client']);
+    $company = Company::factory()->create();
+    $branch = Branch::factory()->for($company)->create(['store' => 1]);
+    $user = User::factory()->create(['user_type_id' => $userType->id]);
+    CompanyUser::create(['user_id' => $user->id, 'level' => 1, 'level_id' => $company->id]);
+    test()->actingAs($user);
+
+    DB::table('iva_taxes')->insertOrIgnore([
+        ['code' => 2, 'percentage' => 12, 'state' => 'active'],
+    ]);
+
+    // Columna legacy desfasada (como en prod tras migrar a emision_point_sequences).
+    $emisionPoint = EmisionPoint::factory()->for($branch)->create(['point' => 100, 'invoice' => 5]);
+    $voucherTypeId = VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id');
+    EmisionPointSequence::updateOrCreate(
+        ['emision_point_id' => $emisionPoint->id, 'voucher_type_id' => $voucherTypeId],
+        ['next_number' => 20],
+    );
+
+    $customer = Customer::factory()->create(['branch_id' => $branch->id, 'identication' => '1111111111']);
+    $product = Product::factory()->create(['branch_id' => $branch->id, 'code' => 'PROD-1', 'iva' => 2]);
+
+    $file = lotUploadFile([
+        [$customer->identication, 'Cliente', $product->code, 1, 5.00],
+        [$customer->identication, 'Cliente', $product->code, 1, 6.00],
+    ]);
+
+    $this->post(route('orders.lot.store'), ['lot' => $file])->assertOk();
+
+    expect(Order::where('customer_id', $customer->id)->orderBy('id')->pluck('serie')->all())
+        ->toBe(['001-100-000000020', '001-100-000000021'])
+        ->and(EmisionPointSequence::where('emision_point_id', $emisionPoint->id)->value('next_number'))->toBe(22);
 });

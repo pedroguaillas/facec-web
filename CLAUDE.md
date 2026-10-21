@@ -58,7 +58,7 @@ Shared by Ventas (`Order`), Compras (`Shop`), and Guía de Remisión (`ReferralG
 
 ### `docs/` — read before touching a module
 
-Each domain module has a doc under `docs/`: `clientes.md`, `productos.md`, `ventas.md`, `compras.md`, `guias-remision.md`, `proveedores.md`, `transportistas.md`, plus `docs/facturacion-electronica/` for the shared e-invoicing flow. These capture business rules, known bugs, and open "points of improvement" that aren't obvious from the code alone. Check the relevant doc before making non-trivial changes to a module, and update it when behavior changes.
+Each domain module has a doc under `docs/`: `clientes.md`, `productos.md`, `ventas.md`, `compras.md`, `guias-remision.md`, `proveedores.md`, `transportistas.md`, `inventario.md` (kardex, costo promedio, bodegas), plus `docs/facturacion-electronica/` for the shared e-invoicing flow. These capture business rules, known bugs, and open "points of improvement" that aren't obvious from the code alone. Check the relevant doc before making non-trivial changes to a module, and update it when behavior changes.
 
 ### API response envelope quirk
 

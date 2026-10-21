@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Shop\Shop;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -26,7 +27,7 @@ class ShopExport implements FromQuery, WithColumnFormatting, WithHeadings, WithM
         $this->hasBase5 = ! $this->beforeTaxChange;
     }
 
-    public function query()
+    public function query(): Builder
     {
         $baseField = $this->beforeTaxChange ? 'base12' : 'base15';
         $ivaField = $this->beforeTaxChange ? 'iva' : 'iva15';

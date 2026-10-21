@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
+use App\Services\Product\VoucherInventoryService;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
@@ -51,9 +52,18 @@ class ShopLcXmlService
         }
     }
 
+    /**
+     * Si el SRI confirma la anulación, revierte el stock que sumó la liquidación.
+     */
     public function cancel(Shop $shop): mixed
     {
-        return $this->sriSoapService->cancel($shop);
+        $result = $this->sriSoapService->cancel($shop);
+
+        if ($result['canceled'] ?? false) {
+            app(VoucherInventoryService::class)->reverse($shop);
+        }
+
+        return $result;
     }
 
     private function buildXml(Company $company, int $id)
@@ -63,8 +73,12 @@ class ShopLcXmlService
             ->where('shops.id', $id)
             ->first();
 
-        $shopItems = ShopItem::select('p.id', 'p.code', 'p.name', 'shop_items.quantity', 'shop_items.price', 'shop_items.iva')
-            ->join('products AS p', 'p.id', 'product_id')
+        // Con presentación, la línea se describe con ella ("Huevos (Cubeta x30)").
+        $shopItems = ShopItem::select('p.id', 'shop_items.quantity', 'shop_items.price', 'shop_items.iva')
+            ->selectRaw('COALESCE(pp.code, p.code) AS code')
+            ->selectRaw("CASE WHEN pp.id IS NULL THEN p.name ELSE CONCAT(p.name, ' (', pp.name, ')') END AS name")
+            ->join('products AS p', 'p.id', 'shop_items.product_id')
+            ->leftJoin('product_presentations AS pp', 'pp.id', 'shop_items.presentation_id')
             ->where('shop_id', $id)
             ->get();
 

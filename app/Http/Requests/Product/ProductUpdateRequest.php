@@ -5,6 +5,7 @@ namespace App\Http\Requests\Product;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Product\Product;
+use App\Rules\AvailablePresentationCodeRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -31,6 +32,7 @@ class ProductUpdateRequest extends FormRequest
                     ->ignore($product) // 👈 Ignorar el producto actual
                     ->where(fn ($query) => $query->where('branch_id', $branch->id)
                     ),
+                new AvailablePresentationCodeRule($branch->id, includeProducts: false),
             ],
             'type_product' => 'required|integer|in:1,2',
             'name' => 'required|string|max:300',
@@ -43,7 +45,14 @@ class ProductUpdateRequest extends FormRequest
             ],
             'ice' => 'nullable|integer|exists:ice_cataloges,code',
             'aux_cod' => 'nullable|string|max:10',
-            'stock' => 'nullable|integer|min:0',
+            // Un saldo negativo ya existente (del kardex) se puede reenviar tal cual;
+            // solo un valor nuevo debe ser >= 0. Con inventario activo el
+            // controlador ignora `stock` de todas formas.
+            'stock' => ['nullable', 'numeric', Rule::when(
+                fn () => (float) $this->input('stock') !== (float) $product?->stock,
+                'min:0',
+            )],
+            'min_stock' => 'nullable|numeric|min:0',
             // Solo empresas con IVA diferenciado (`base8`) pueden marcarlo.
             'differentiated_iva' => ['sometimes', 'boolean', Rule::prohibitedIf(! $company->base8 && $this->boolean('differentiated_iva'))],
         ];
@@ -58,6 +67,15 @@ class ProductUpdateRequest extends FormRequest
 
                 if ($requiresAuxCod && blank($this->input('aux_cod'))) {
                     $validator->errors()->add('aux_cod', 'El código auxiliar es obligatorio para este producto.');
+                }
+
+                // Pasar a servicio dejaría saldo de kardex huérfano: los servicios no manejan inventario.
+                /** @var Product|null $product */
+                $product = $this->route('product');
+                $becomesService = (int) $this->input('type_product') === Product::TYPE_SERVICE;
+
+                if ($becomesService && $product?->isStockable() && $product->inventories()->whereNotNull('warehouse_id')->exists()) {
+                    $validator->errors()->add('type_product', 'El producto tiene movimientos de inventario y no puede convertirse en servicio.');
                 }
             },
         ];

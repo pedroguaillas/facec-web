@@ -5,6 +5,8 @@ namespace App\Services\Order;
 use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
+use App\Services\Product\PresentationLineResolver;
+use App\Services\Product\VoucherInventoryService;
 use App\StaticClasses\VoucherStates;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,19 +42,22 @@ class OrderUpdateService
 
             $this->updateOrderItems($order, $data['products'] ?? []);
             $this->updateOrderAditionals($order, $data['aditionals'] ?? []);
+
+            app(VoucherInventoryService::class)->syncOrder($order->fresh());
         });
 
         return $order->fresh();
     }
 
     /**
-     * Las líneas se recrean; el código/descripción propios (factura
-     * recurrente) se conservan por producto, porque el formulario de edición
-     * no los manda.
+     * Las líneas se recrean. Con presentación, código/descripción salen de
+     * ella; sin presentación, se conservan por producto los propios de la
+     * factura recurrente, porque el formulario de edición no los manda.
      */
     protected function updateOrderItems(Order $order, array $products): void
     {
         $overrides = OrderItem::where('order_id', $order->id)
+            ->whereNull('presentation_id')
             ->where(fn ($query) => $query->whereNotNull('code')->orWhereNotNull('description'))
             ->get(['product_id', 'code', 'description'])
             ->keyBy('product_id');
@@ -63,16 +68,20 @@ class OrderUpdateService
             return;
         }
 
-        $items = array_map(fn ($product) => [
+        $presentations = app(PresentationLineResolver::class)->resolve($products);
+
+        $items = array_map(fn ($product, $presentation) => [
             'product_id' => $product['product_id'],
-            'code' => $overrides[$product['product_id']]->code ?? null,
-            'description' => $overrides[$product['product_id']]->description ?? null,
+            'presentation_id' => $presentation['presentation_id'],
+            'conversion_factor' => $presentation['conversion_factor'],
+            'code' => $presentation['presentation_id'] ? $presentation['code'] : ($overrides[$product['product_id']]->code ?? null),
+            'description' => $presentation['presentation_id'] ? $presentation['description'] : ($overrides[$product['product_id']]->description ?? null),
             'quantity' => $product['quantity'],
             'price' => $product['price'],
             'discount' => $product['discount'],
             'ice' => $product['ice'] ?? 0,
             'iva' => $product['iva'],
-        ], $products);
+        ], $products, $presentations);
 
         $order->orderitems()->createMany($items);
     }

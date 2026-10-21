@@ -9,6 +9,7 @@ use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
 use App\Xml\ReferralGuideBuilder;
+use Carbon\Carbon;
 
 class ReferralGuideLifecycleService
 {
@@ -63,6 +64,20 @@ class ReferralGuideLifecycleService
 
     private function send(ReferralGuide $referralGuide)
     {
+        // Mismo criterio que OrderSriService::send(): si la guía se firmó otro
+        // día, la clave de acceso lleva una fecha vencida. Se pasa la fecha de
+        // emisión a hoy y se vuelve a CREADO; el siguiente intento del job
+        // rearma el XML y lo firma de nuevo.
+        $tz = config('app.timezone');
+
+        if (! Carbon::parse($referralGuide->date, $tz)->isToday()) {
+            $referralGuide->date = Carbon::today($tz)->format('Y-m-d');
+            $referralGuide->state = VoucherStates::SAVED;
+            $referralGuide->save();
+
+            return;
+        }
+
         $this->sriSoapService->send(
             model: $referralGuide,
             onReceived: fn () => $this->authorize($referralGuide)

@@ -50,8 +50,8 @@ guía de remisión y retención. `OrderStoreRequest` acepta cualquier slug
 - `orderitems()` → `hasMany(OrderItem)`
 - `repayments()` → `hasMany(Repayment)`
 - `orderaditionals()` → `hasMany(OrderAditional)`
-- `inventories()` → `hasMany(Inventory, 'model_id', 'id')` — movimientos de
-  stock generados si `company->inventory` está activo.
+- `inventories()` → `morphMany(Inventory, 'model')` — movimientos de
+  stock generados si `company->inventory` está activo (ver `docs/inventario.md`).
 
 Relaciones externas por FK (no declaradas como relación Eloquent en `Order`):
 `customer_id` → `Customer`, `branch_id` → `Branch`, `point_id` (en el request)
@@ -228,7 +228,13 @@ Flujo en `OrderLotService::store()`:
    `branch_id` de la sucursal — si falta alguno, `RuntimeException`.
 3. Crea un `Lot` y, por cada fila, una `Order` con su `OrderItem` (misma
    sucursal, mismo `lot_id`). Consumidor final (`9999999999999`) usa forma de
-   pago `01`; el resto usa `company->pay_method`.
+   pago `01`; el resto usa `company->pay_method`. Todo dentro de una
+   `DB::transaction`. Los secuenciales salen de **`emision_point_sequences`**
+   vía `VoucherSequenceService::reserveRange()` (lock + incremento por la
+   cantidad de filas), el mismo contador que usa la creación individual.
+   Antes el lote usaba la columna legacy `emision_points.invoice` (congelada
+   desde la migración a `emision_point_sequences`), lo que generaba series
+   **repetidas** entre facturas del formulario y del lote.
 4. Inserta el adicional obligatorio `Order::requiredAditional()` ("RUC
    Proveedor" + el RUC leído de `config('services.order.ruc_proveedor')`,
    env `RUC_PROVEEDOR`) por cada orden, igual que en la creación individual

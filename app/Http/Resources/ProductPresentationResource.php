@@ -19,6 +19,7 @@ class ProductPresentationResource extends JsonResource
             'conversion_factor' => $this->conversion_factor,
             'price' => $this->price ?? round($this->product->price1 * $this->conversion_factor, 6),
             'code' => $this->code,
+            'active' => $this->active,
         ];
     }
 }

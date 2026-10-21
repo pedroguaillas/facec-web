@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Shop;
 
+use App\Exports\ShopExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Shop\ShopStoreRequest;
 use App\Http\Requests\Shop\ShopUpdateRequest;
@@ -23,6 +24,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ShopController extends Controller
 {
@@ -74,14 +77,14 @@ class ShopController extends Controller
 
     public function edit(Shop $shop): JsonResponse
     {
-        $isSettlement = $shop->voucherType->slug === VoucherTypes::COMPRA_LIQUIDACION_COMPRA;
-
+        // Liquidación siempre detalla productos; factura/nota de venta los
+        // detallan cuando la empresa lleva inventario. Se devuelven las que haya.
         return response()->json([
             'shop' => collect($shop->toArray())
                 ->filter(fn ($value) => $value !== null)
                 ->all(),
-            'shop_items' => $isSettlement ? $this->getShopItems($shop->id) : [],
-            'products' => $isSettlement ? $this->getProducts($shop->id) : [],
+            'shop_items' => $this->getShopItems($shop->id),
+            'products' => $this->getProducts($shop->id),
             'shopretentionitems' => $this->getShopRetentionItems($shop->id),
             'taxes' => Tax::all(),
             'provider' => Provider::where('id', $shop->provider_id)->first(['id', 'name', 'identication']),
@@ -97,6 +100,17 @@ class ShopController extends Controller
             'message' => 'Compra actualizada con éxito.',
             'data' => $shop->fresh(),
         ]);
+    }
+
+    /**
+     * Compras del mes (`yearMonth` = YYYY-MM), mismo formato que `orders.export`.
+     */
+    public function export(string $yearMonth): BinaryFileResponse
+    {
+        [$year, $month] = explode('-', $yearMonth);
+        $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
+
+        return Excel::download(new ShopExport($branch->id, $year, $month), "compras-{$yearMonth}.xlsx");
     }
 
     public function pdf(Shop $shop, ShopLcPdfService $service)

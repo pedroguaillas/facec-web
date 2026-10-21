@@ -3,12 +3,14 @@
 namespace App\Models\Shop;
 
 use App\Models\BaseModel;
+use App\Models\Inventory;
 use App\Models\Provider;
 use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Shop extends BaseModel
 {
@@ -90,6 +92,11 @@ class Shop extends BaseModel
     public function shopitems()
     {
         return $this->hasMany(ShopItem::class);
+    }
+
+    public function inventories(): MorphMany
+    {
+        return $this->morphMany(Inventory::class, 'model');
     }
 
     public function shopretentionitems()

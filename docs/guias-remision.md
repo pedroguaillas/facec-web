@@ -220,15 +220,13 @@ Hallazgos concretos con evidencia:
    del request — `ReferralGuideStoreService` la fija siempre en `now()` al
    crear, mismo criterio que `serie`.
 
-   **Sigue pendiente**: no hay guarda de fecha antes de enviar (comprobante
-   vencido). En Ventas, `OrderSriService` verifica `!$dateOrder->isToday()` y
-   resetea la fecha para no mandar un comprobante con fecha vencida
-   (`app/Services/Order/OrderSriService.php:26-29`).
-   `ReferralGuideLifecycleService::send()` (`:66-72`) llama a
-   `SriSoapService::send()` directo, sin ninguna guarda equivalente — una
-   guía creada con `date` de ayer (o antes) y enviada hoy generaría una
-   clave de acceso con fecha vencida. Falta el mismo chequeo que tiene
-   Ventas.
+   **Guarda de fecha vencida (resuelto, 2026-10).** Igual que
+   `OrderSriService::send()` en Ventas: `ReferralGuideLifecycleService::send()`
+   verifica que `date` sea hoy antes de llamar a `SriSoapService::send()`.
+   Si no lo es, pone `date` = hoy, vuelve el estado a `CREADO` y no envía;
+   el siguiente reintento de `ProcessVoucherJob` rearma el XML, lo firma de
+   nuevo (clave de acceso con la fecha nueva) y envía. `date_start`/`date_end`
+   no se tocan.
 
 3. **Nunca se notifica por correo al autorizar.** `authorize()` pasa
    `onAuthorized: fn () => null` (`ReferralGuideLifecycleService.php:78`),

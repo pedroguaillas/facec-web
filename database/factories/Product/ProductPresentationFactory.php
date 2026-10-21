@@ -24,6 +24,12 @@ class ProductPresentationFactory extends Factory
             'conversion_factor' => $this->faker->randomElement([6, 12, 24]),
             'price' => null,
             'code' => null,
+            'active' => true,
         ];
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(['active' => false]);
     }
 }

@@ -12,6 +12,7 @@ class OrderItem extends Model
      * @var array
      */
     protected $casts = [
+        'conversion_factor' => 'float',
         'quantity' => 'float',
         'price' => 'float',
         'discount' => 'float',
@@ -20,6 +21,8 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id', 'product_id',
+        // Presentación vendida y copia de su factor (1 = unidad base).
+        'presentation_id', 'conversion_factor',
         // Código/descripción propios de la línea (null = los del producto).
         'code', 'description',
         'quantity', 'price',

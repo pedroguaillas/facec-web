@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
+use App\Rules\ProductPresentationLinesRule;
 use App\Services\SubscriptionGate;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
@@ -45,8 +46,9 @@ class OrderStoreRequest extends FormRequest
             'point_id' => 'required|integer|exists:emision_points,id',
             'date' => 'required|date',
             'send' => 'sometimes|boolean',
-            'products' => 'present|array',
+            'products' => ['present', 'array', new ProductPresentationLinesRule],
             'products.*.product_id' => 'required|integer|exists:products,id',
+            'products.*.presentation_id' => 'nullable|integer',
             'products.*.quantity' => 'required|numeric',
             'products.*.price' => 'required|numeric',
             'products.*.discount' => 'required|numeric',

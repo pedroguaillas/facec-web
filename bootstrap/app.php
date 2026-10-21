@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckRoleMiddleware;
 use App\Http\Middleware\EnsureActiveSubscription;
+use App\Http\Middleware\EnsureInventoryEnabled;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRoleMiddleware::class,
             'subscription.active' => EnsureActiveSubscription::class,
+            'inventory.enabled' => EnsureInventoryEnabled::class,
         ]);
 
         // Caddy termina TLS y reenvía a `app` por HTTP dentro de la red de

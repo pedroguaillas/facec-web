@@ -6,6 +6,7 @@ use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
 use App\Models\Branch;
 use App\Models\Shop\Shop;
 use App\Models\VoucherType;
+use App\Rules\ProductPresentationLinesRule;
 use App\Services\SubscriptionGate;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
@@ -107,8 +108,9 @@ class ShopStoreRequest extends FormRequest
             'date_retention' => ['nullable', 'date'],
 
             // Items de productos
-            'products' => ['nullable', 'array'],
+            'products' => ['nullable', 'array', new ProductPresentationLinesRule],
             'products.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'products.*.presentation_id' => ['nullable', 'integer'],
             'products.*.quantity' => ['required', 'numeric', 'min:0'],
             'products.*.price' => ['required', 'numeric', 'min:0'],
             'products.*.discount' => ['required', 'numeric', 'min:0'],

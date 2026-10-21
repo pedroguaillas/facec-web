@@ -11,6 +11,7 @@ use App\Models\Shop\ShopItem;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends BaseModel
@@ -44,6 +45,7 @@ class Product extends BaseModel
         'active_account_id',
         'inventory_account_id',
         'stock',
+        'min_stock',
         // IVA diferenciado (8%) en feriados — ver DifferentiatedIvaService
         'differentiated_iva',
         // Obligatorio productos con el IVA 5%
@@ -52,6 +54,8 @@ class Product extends BaseModel
 
     protected $casts = [
         'price1' => 'float',
+        'stock' => 'float',
+        'min_stock' => 'float',
         'differentiated_iva' => 'boolean',
     ];
 
@@ -75,7 +79,8 @@ class Product extends BaseModel
         return $this->hasMany(Inventory::class);
     }
 
-    public function presentations()
+    /** @return HasMany<ProductPresentation, $this> */
+    public function presentations(): HasMany
     {
         return $this->hasMany(ProductPresentation::class);
     }
@@ -108,5 +113,34 @@ class Product extends BaseModel
     public function scopeOfType(Builder $query, int $typeProduct): Builder
     {
         return $query->where('products.type_product', $typeProduct);
+    }
+
+    /**
+     * Solo los productos (no servicios) manejan inventario.
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    public function scopeStockable(Builder $query): Builder
+    {
+        return $query->where('products.type_product', self::TYPE_PRODUCT);
+    }
+
+    public function isStockable(): bool
+    {
+        return (int) $this->type_product === self::TYPE_PRODUCT;
+    }
+
+    /**
+     * Un servicio nunca tiene stock: se limpia en cualquier alta/edición.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product) {
+            if (! $product->isStockable()) {
+                $product->stock = null;
+                $product->min_stock = null;
+            }
+        });
     }
 }

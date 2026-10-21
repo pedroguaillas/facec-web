@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Order\Lot;
 use App\Models\Order\Order;
 use App\Models\Order\OrderItem;
+use App\Services\Product\VoucherInventoryService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
@@ -68,9 +69,18 @@ class OrderLifecycleService
         }
     }
 
+    /**
+     * Si el SRI confirma la anulación, revierte el stock que movió la venta.
+     */
     public function cancel(Order $order): mixed
     {
-        return $this->sri->cancel($order);
+        $result = $this->sri->cancel($order);
+
+        if ($result['canceled'] ?? false) {
+            app(VoucherInventoryService::class)->reverse($order);
+        }
+
+        return $result;
     }
 
     private function buildXml($id, $company)

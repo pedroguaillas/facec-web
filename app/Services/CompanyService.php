@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Product\Product;
+use App\Services\Product\OpeningBalanceFromStockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -38,7 +40,8 @@ class CompanyService
     /**
      * Si la empresa pasa a RIMPE Negocio Popular, todos sus productos (de
      * todas las sucursales) pasan a IVA 0% en la misma transacción. La
-     * confirmación del usuario la exige `CompanyUpdateRequest`.
+     * confirmación del usuario la exige `CompanyUpdateRequest`. Si activa el
+     * inventario, el `stock` actual de sus productos se carga como saldo inicial.
      *
      * @param  array<string, mixed>  $attributes
      */
@@ -47,13 +50,19 @@ class CompanyService
         unset($attributes['confirm_iva_change']);
 
         $becomesNegocioPopular = $this->becomesNegocioPopular($company, $attributes['rimpe'] ?? $company->rimpe);
+        $enablesInventory = ! $company->inventory && filter_var($attributes['inventory'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        DB::transaction(function () use ($company, $attributes, $becomesNegocioPopular) {
+        DB::transaction(function () use ($company, $attributes, $becomesNegocioPopular, $enablesInventory) {
             $company->update($attributes);
 
             if ($becomesNegocioPopular) {
                 $this->productsOutsideNegocioPopularIva($company)
                     ->update(['iva' => Company::NEGOCIO_POPULAR_IVA_CODES[0]]);
+            }
+
+            // El stock que se venía tipeando a mano pasa a ser el saldo inicial del kardex.
+            if ($enablesInventory) {
+                $company->branches->each(fn (Branch $branch) => app(OpeningBalanceFromStockService::class)->forBranch($branch));
             }
         });
 

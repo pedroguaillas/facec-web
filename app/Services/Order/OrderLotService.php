@@ -14,12 +14,14 @@ use App\Models\Order\OrderItem;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
 use App\Models\VoucherType;
+use App\Services\VoucherSequenceService;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class OrderLotService
@@ -32,6 +34,7 @@ class OrderLotService
 
     public function __construct(
         private readonly OrderLotExcelReader $excelReader,
+        private readonly VoucherSequenceService $sequenceService,
     ) {
         $this->company = Auth::user()->company;
         $this->branch = Branch::where('company_id', $this->company->id)
@@ -56,25 +59,31 @@ class OrderLotService
         $emisionPoint = EmisionPoint::where('branch_id', $this->branch->id)->first();
         $date = Carbon::now();
 
-        $lot = Lot::create([
-            'emision_point_id' => $emisionPoint->id,
-            'serie' => $this->buildSerie($emisionPoint, $emisionPoint->lot),
-            'authorization' => '',
-            'state' => VoucherStates::SAVED,
-            'date' => $date->toDateString(),
-            'voucher_type' => 1,
-        ]);
-        $emisionPoint->lot++;
-        $emisionPoint->save();
+        DB::transaction(function () use ($excelData, $customers, $products, $emisionPoint, $date) {
+            $lot = Lot::create([
+                'emision_point_id' => $emisionPoint->id,
+                'serie' => $this->buildSerie($emisionPoint, $emisionPoint->lot),
+                'authorization' => '',
+                'state' => VoucherStates::SAVED,
+                'date' => $date->toDateString(),
+                'voucher_type' => 1,
+            ]);
+            $emisionPoint->lot++;
+            $emisionPoint->save();
 
-        [$orderRows, $orderItemsByRow] = $this->buildOrderRows($excelData, $customers, $products, $lot, $emisionPoint, $date->toDateString());
+            // Mismo contador que la creación individual (emision_point_sequences),
+            // no la columna legacy emision_points.invoice: usar contadores distintos
+            // hacía que el lote repitiera secuenciales ya emitidos por el formulario.
+            $firstNumber = $this->sequenceService->reserveRange($emisionPoint, VoucherTypes::VENTA_FACTURA, count($excelData));
 
-        $orders = $this->branch->orders()->createMany($orderRows)->fresh();
-        $emisionPoint->save();
+            [$orderRows, $orderItemsByRow] = $this->buildOrderRows($excelData, $customers, $products, $lot, $emisionPoint, $firstNumber, $date->toDateString());
 
-        $this->insertOrderItems($orders, $orderItemsByRow);
-        $this->insertAditionals($orders);
-        $this->dispatchProcessing($orders);
+            $orders = $this->branch->orders()->createMany($orderRows)->fresh();
+
+            $this->insertOrderItems($orders, $orderItemsByRow);
+            $this->insertAditionals($orders);
+            $this->dispatchProcessing($orders);
+        });
     }
 
     /**
@@ -142,10 +151,11 @@ class OrderLotService
      * @param  array<int, array<int, mixed>>  $excelData
      * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>} [filas de orders, filas de order_items] en el mismo orden
      */
-    private function buildOrderRows(array $excelData, array $customers, array $products, Lot $lot, EmisionPoint $emisionPoint, string $date): array
+    private function buildOrderRows(array $excelData, array $customers, array $products, Lot $lot, EmisionPoint $emisionPoint, int $firstNumber, string $date): array
     {
         $orders = [];
         $orderItems = [];
+        $number = $firstNumber;
 
         $facturaVoucherTypeId = VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id');
         $appliesDifferentiatedIva = app(DifferentiatedIvaService::class)->appliesTo($this->company, $date);
@@ -168,7 +178,7 @@ class OrderLotService
             $input = [
                 'date' => $date,
                 'sub_total' => $subTotal,
-                'serie' => $this->buildSerie($emisionPoint, $emisionPoint->invoice),
+                'serie' => $this->sequenceService->formatSerie($emisionPoint, $number),
                 'customer_id' => $customer[0]->id,
                 'lot_id' => $lot->id,
                 'total' => $subTotal + $iva,
@@ -191,7 +201,7 @@ class OrderLotService
                 'price' => $productData[4],
                 'iva' => $product->iva,
             ];
-            $emisionPoint->invoice++;
+            $number++;
         }
 
         return [$orders, $orderItems];

@@ -26,6 +26,7 @@ class CompanyController extends Controller
         'guia_in_invoice',
         'import_in_invoice',
         'import_in_invoices',
+        'allow_negative_stock',
     ];
 
     public function edit(): JsonResponse

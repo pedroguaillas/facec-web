@@ -17,21 +17,33 @@ class ProductLookupController extends Controller
             return response()->json([]);
         }
 
+        // También encuentra por el código propio de una presentación activa (ej. código de barras de la cubeta).
         $products = Product::query()
             ->where(function ($query) use ($term) {
                 $query->where('code', 'like', "%{$term}%")
-                    ->orWhere('name', 'like', "%{$term}%");
+                    ->orWhere('name', 'like', "%{$term}%")
+                    ->orWhereHas('presentations', fn ($presentation) => $presentation->where('active', true)->where('code', 'like', "%{$term}%"));
             })
+            ->with(['presentations' => fn ($presentation) => $presentation->where('active', true)->select('id', 'product_id', 'name', 'conversion_factor', 'price', 'code')])
             ->limit(20)
-            ->get(['id', 'code', 'name', 'price1', 'stock', 'iva', 'ice'])
+            ->get(['id', 'code', 'type_product', 'name', 'price1', 'stock', 'iva', 'ice'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'code' => $product->code,
+                'type_product' => $product->type_product,
                 'name' => $product->name,
                 'price' => $product->price1,
                 'stock' => $product->stock,
                 'iva' => $product->iva,
                 'ice' => $product->ice,
+                // Precio propio o, si no tiene, precio de la unidad × factor.
+                'presentations' => $product->presentations->map(fn ($presentation) => [
+                    'id' => $presentation->id,
+                    'name' => $presentation->name,
+                    'code' => $presentation->code,
+                    'conversion_factor' => $presentation->conversion_factor,
+                    'price' => $presentation->price ?? round((float) $product->price1 * $presentation->conversion_factor, 6),
+                ])->values(),
             ]);
 
         return response()->json($products);

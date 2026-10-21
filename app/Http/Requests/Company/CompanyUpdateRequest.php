@@ -65,6 +65,7 @@ class CompanyUpdateRequest extends FormRequest
             'tourism_to' => ['nullable', 'date', 'after_or_equal:tourism_from'],
             'ice' => ['sometimes', 'boolean'],
             'inventory' => ['sometimes', 'boolean'],
+            'allow_negative_stock' => ['sometimes', 'boolean'],
             'pay_method' => ['sometimes', 'integer'],
             'printf' => ['sometimes', 'boolean'],
             'guia_in_invoice' => ['sometimes', 'boolean'],

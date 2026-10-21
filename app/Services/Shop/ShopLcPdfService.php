@@ -32,8 +32,11 @@ class ShopLcPdfService
         $movement = $this->getMovement($id);
         $beforeTaxChange = Carbon::parse($movement->date)->isBefore(Carbon::parse('2024-04-01'));
 
-        $movement_items = ShopItem::join('products', 'products.id', 'product_id')
+        $movement_items = ShopItem::join('products', 'products.id', 'shop_items.product_id')
+            ->leftJoin('product_presentations AS pp', 'pp.id', 'shop_items.presentation_id')
             ->select('products.*', 'shop_items.*')
+            ->selectRaw('COALESCE(pp.code, products.code) AS code')
+            ->selectRaw("CASE WHEN pp.id IS NULL THEN products.name ELSE CONCAT(products.name, ' (', pp.name, ')') END AS name")
             ->where('shop_id', $id)
             ->get();
 

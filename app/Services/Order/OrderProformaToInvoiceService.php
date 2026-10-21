@@ -37,6 +37,7 @@ class OrderProformaToInvoiceService
             'send' => true,
             'products' => $proforma->orderitems->map(fn ($item) => [
                 'product_id' => $item->product_id,
+                'presentation_id' => $item->presentation_id,
                 'quantity' => $item->quantity,
                 'price' => $item->price,
                 'discount' => $item->discount,

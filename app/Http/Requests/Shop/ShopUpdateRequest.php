@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Shop;
 
 use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
+use App\Models\Shop\Shop;
+use App\Rules\ProductPresentationLinesRule;
 use App\StaticClasses\VoucherStates;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -77,6 +79,15 @@ class ShopUpdateRequest extends FormRequest
             'ice' => ['nullable', 'numeric', 'min:0'],
             'total' => ['sometimes', 'numeric', 'min:0'],
 
+            // Líneas (opcional: si no viene `products`, se conservan las actuales)
+            'products' => ['sometimes', 'nullable', 'array', new ProductPresentationLinesRule($this->usedPresentationIds())],
+            'products.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'products.*.presentation_id' => ['nullable', 'integer'],
+            'products.*.quantity' => ['required', 'numeric', 'min:0'],
+            'products.*.price' => ['required', 'numeric', 'min:0'],
+            'products.*.discount' => ['required', 'numeric', 'min:0'],
+            'products.*.iva' => ['required', 'numeric', 'min:0'],
+
             // Retención
             'app_retention' => ['nullable', 'boolean'],
             'send' => ['nullable', 'boolean'],
@@ -101,5 +112,22 @@ class ShopUpdateRequest extends FormRequest
             'serie_retencion.required_if' => 'La serie de retención es obligatoria cuando se aplica retención.',
             'taxes.required_if' => 'Los impuestos son obligatorios cuando se aplica retención.',
         ];
+    }
+
+    /**
+     * Presentaciones que ya tienen las líneas guardadas: se aceptan aunque
+     * después se hayan desactivado.
+     *
+     * @return array<int, int>
+     */
+    private function usedPresentationIds(): array
+    {
+        $shop = $this->route('shop');
+
+        if (! $shop instanceof Shop) {
+            return [];
+        }
+
+        return $shop->shopitems()->whereNotNull('presentation_id')->pluck('presentation_id')->map(fn ($id) => (int) $id)->all();
     }
 }

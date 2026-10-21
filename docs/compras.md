@@ -115,10 +115,14 @@ y `..._add_bases_to_shops.php`. Casts en `app/Models/Shop/Shop.php:65-78`.
 ### Editar (`update`)
 
 `ShopController::update` → `new ShopUpdateService($shop)` →
-`updateShop` (`app/Services/Shop/ShopUpdateService.php:15`). Actualiza la
-cabecera (excluyendo `id`, `taxes`, `pay_methods`, `app_retention`, `send`)
-y **re-sincroniza** los ítems de retención con un `delete` + `createMany`
-(`:42-43`), recalculando `value` de nuevo. No re-sincroniza `shop_items`.
+`updateShop` (`app/Services/Shop/ShopUpdateService.php`), en una transacción.
+Actualiza la cabecera (excluyendo `id`, `taxes`, `pay_methods`,
+`app_retention`, `send`, `products`) y **re-sincroniza** los ítems de
+retención con un `delete` + `createMany`, recalculando `value` de nuevo. Si
+llega `products` (opcional), reemplaza `shop_items`; si no, se conservan.
+Siempre re-sincroniza el kardex (`VoucherInventoryService::syncShop`, ver
+`docs/inventario.md`). `edit` devuelve `shop_items` para todos los tipos de
+compra, no solo liquidación.
 
 > El servicio se instancia manualmente en el controller (no por el
 > container), por eso `RetentionTotalsCalculator` se crea con `new` directo
@@ -189,6 +193,7 @@ comprobante" sin hardcodear los 4 slugs de Compras.
 |---|---|---|---|
 | GET | `shops` | Listado paginado (búsqueda por serie/proveedor, filtro `date`) | `ShopController@index` |
 | GET | `shops/create` | Datos para el formulario (taxes, puntos de emisión, `voucherTypes` módulo compra) | `ShopController@create` |
+| GET | `shops/export/{yearMonth}` | Excel de compras del mes (`YYYY-MM`, `ShopExport`) | `ShopController@export` |
 | POST | `shops` | Crear compra (+ emisión si `send`) | `ShopController@store` |
 | GET | `shops/{shop}` | Datos para editar (ítems, retenciones, proveedor) | `ShopController@edit` |
 | PUT | `shops/{shop}` | Actualizar compra | `ShopController@update` |
@@ -249,11 +254,8 @@ no se repiten aquí. Lo siguiente es específico del módulo CRUD:
    diseño transversal (no solo de Compras), pero afecta directamente al
    scope de este módulo.
 
-6. **`update` no re-sincroniza `shop_items`** (`ShopUpdateService.php`): al
-   editar una liquidación de compra se actualiza la cabecera y las
-   retenciones, pero las líneas de producto quedan intactas. Si es
-   intencional (los ítems no se editan tras crear), conviene documentarlo;
-   si no, es una omisión.
+6. **~~`update` no re-sincroniza `shop_items`~~ (resuelto)**: `products`
+   opcional en el update reemplaza las líneas y re-sincroniza el kardex.
 
 7. **~~No se enviaba correo al proveedor al autorizar liquidación/retención~~
    (resuelto)**. `ShopLcXmlService::authorize()` y
