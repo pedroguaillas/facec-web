@@ -104,6 +104,27 @@ class Shop extends BaseModel
         return $this->hasMany(ShopRetentionItem::class);
     }
 
+    /**
+     * Total retenido al proveedor: no se le paga, así que descuenta del saldo.
+     */
+    public function retentionTotal(): float
+    {
+        // `retention_sum` viene de withSum() (null si no hay retención).
+        if (array_key_exists('retention_sum', $this->getAttributes())) {
+            return (float) $this->getAttribute('retention_sum');
+        }
+
+        return (float) $this->shopretentionitems()->sum('value');
+    }
+
+    /**
+     * Saldo pendiente de pago al proveedor: total - retención - pagado.
+     */
+    public function pendingBalance(): float
+    {
+        return round((float) $this->total - $this->retentionTotal() - (float) $this->paid, 2);
+    }
+
     public function voucherType(): BelongsTo
     {
         return $this->belongsTo(VoucherType::class);

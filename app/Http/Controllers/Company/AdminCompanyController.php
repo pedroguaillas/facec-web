@@ -11,10 +11,12 @@ use App\Models\User;
 use App\Services\CompanyService;
 use App\Services\SubscriptionService;
 use App\Services\UserService;
+use App\StaticClasses\CompanyActivityStatuses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class AdminCompanyController extends Controller
 {
@@ -26,9 +28,12 @@ class AdminCompanyController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate(['activity' => ['nullable', Rule::in(CompanyActivityStatuses::ALL)]]);
+
         $companies = $this->companyService->getAll(
             $request->query('search'),
-            (int) $request->query('per_page', 15)
+            (int) $request->query('per_page', 15),
+            $request->query('activity'),
         );
 
         return response()->json($companies);

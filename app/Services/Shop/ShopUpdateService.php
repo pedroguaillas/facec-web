@@ -6,9 +6,11 @@ use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
 use App\Models\Shop\ShopRetentionItem;
 use App\Services\Product\PresentationLineResolver;
+use App\Services\Product\ProductUnitService;
 use App\Services\Product\VoucherInventoryService;
 use App\Services\Shop\Retention\RetentionTotalsCalculator;
 use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ShopUpdateService
@@ -29,11 +31,19 @@ class ShopUpdateService
                 $this->syncRetentionItems($data);
             }
 
+            $previousProductIds = $this->shop->shopitems()->pluck('product_id')->map(fn ($id) => (int) $id);
+
             if (array_key_exists('products', $data)) {
                 $this->syncShopItems($data['products'] ?? []);
             }
 
             app(VoucherInventoryService::class)->syncShop($this->shop->fresh());
+
+            // Motos que esta compra registró y se quitaron al editar (después del kardex, que ya las revirtió).
+            if (array_key_exists('products', $data)) {
+                $currentProductIds = $this->shop->shopitems()->pluck('product_id')->map(fn ($id) => (int) $id);
+                app(ProductUnitService::class)->discardUnused($previousProductIds->diff($currentProductIds)->values()->all());
+            }
         });
 
         return $this->shop->fresh();
@@ -50,6 +60,8 @@ class ShopUpdateService
             return;
         }
 
+        // Líneas con `unit` registran la moto nueva y pasan a apuntar a ella.
+        $products = app(ProductUnitService::class)->createFromPurchaseLines($products, (bool) Auth::user()->company->inventory);
         $presentations = app(PresentationLineResolver::class)->resolve($products);
 
         $this->shop->shopitems()->createMany(array_map(fn ($product, $presentation) => [

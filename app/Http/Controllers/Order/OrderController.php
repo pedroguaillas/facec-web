@@ -22,6 +22,7 @@ use App\Services\Order\OrderProformaToInvoiceService;
 use App\Services\Order\OrderShowService;
 use App\Services\Order\OrderStoreService;
 use App\Services\Order\OrderUpdateService;
+use App\Services\Product\UnitSaleService;
 use App\StaticClasses\VoucherTypes;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +43,7 @@ class OrderController extends Controller
 
         $orders = Order::join('customers AS c', 'c.id', 'orders.customer_id')
             ->select('orders.*', 'c.name', 'c.email')
-            ->with('voucherType')
+            ->with(['voucherType', 'convertedInvoice.voucherType'])
             ->latest('orders.created_at')
             ->when($search, function ($query) use ($search) {
                 $escaped = str_replace(['%', '_'], ['\%', '\_'], $search);
@@ -85,13 +86,27 @@ class OrderController extends Controller
         return response()->json($order, 201);
     }
 
-    public function convertToInvoice(Order $order, OrderProformaToInvoiceService $service): JsonResponse
+    public function convertToInvoice(Order $order, OrderProformaToInvoiceService $service, UnitSaleService $unitSales): JsonResponse
     {
         if ($order->voucherType->slug !== VoucherTypes::VENTA_PROFORMA) {
             return response()->json(['succes' => false, 'message' => 'Solo una proforma puede convertirse a factura.'], 422);
         }
 
-        $invoice = $service->convert($order);
+        $unitErrors = $unitSales->lineErrors(
+            $order->orderitems()->get(['product_id', 'presentation_id', 'quantity'])->toArray(),
+            VoucherTypes::VENTA_FACTURA,
+            (bool) Auth::user()->company->inventory,
+        );
+
+        if ($unitErrors !== []) {
+            return response()->json(['succes' => false, 'message' => reset($unitErrors)], 422);
+        }
+
+        try {
+            $invoice = $service->convert($order);
+        } catch (RuntimeException $e) {
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json($invoice, 201);
     }
@@ -109,6 +124,8 @@ class OrderController extends Controller
     {
         return response()->json([
             ...$service->getOrderDetail($order),
+            // Factura vigente generada desde esta proforma (null si no la hay).
+            'converted_invoice' => $order->convertedInvoiceSummary(),
             ...$this->emisionData(),
         ]);
     }

@@ -26,6 +26,16 @@
                             <td class="align-middle">Placa: {{ $movement->plate }}</td>
                             @endif
                         </tr>
+                        @if($movement->phone || ($movement->guia && $movement->email))
+                        <tr>
+                            @if($movement->phone)
+                            <td class="relleno">Teléfono: {{ $movement->phone }}</td>
+                            @endif
+                            @if($movement->guia && $movement->email)
+                            <td class="align-middle">Correo: {{ $movement->email }}</td>
+                            @endif
+                        </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
@@ -64,7 +74,7 @@
                                 <td style="text-align: center; width: 5em;">{{ $item->aux_cod }}</td>
                             @endif
                             <td style="text-align: center; width: 4em;">{{ floatval($item->quantity) }}</td>
-                            <td>{{ $item->name }}</td>
+                            <td>{{ $item->name }}@include('vouchers.theme.itemdetails', ['details' => $item->details])</td>
                             <td style="text-align: right; width: 5em;">{{ number_format($item->price, $company->decimal) }}</td>
                             @if($enabledDiscount)
                                 <td style="text-align: right; width: 5em;">{{ number_format($item->discount, 2) }}</td>

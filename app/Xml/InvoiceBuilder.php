@@ -121,7 +121,7 @@ class InvoiceBuilder extends BaseVoucherBuilder
         $string .= '</infoFactura>';
 
         // Detalles
-        $string .= $this->renderDetalles($this->items, $company->decimal, 'codigoPrincipal', includeAuxCode: true);
+        $string .= $this->renderDetalles($this->items, $company->decimal, 'codigoPrincipal', includeAuxCode: true, includeAdditionalDetails: true);
 
         // Reembolsos
         if ($repayments->count()) {
@@ -130,10 +130,12 @@ class InvoiceBuilder extends BaseVoucherBuilder
 
         // Info adicional
         $artisan = $this->artisanAdditional();
+        $contact = $this->customerContactAdditional($order->email, $order->phone, $additionals);
 
-        if ($additionals->count() || $artisan !== '') {
+        if ($additionals->count() || $artisan !== '' || $contact !== '') {
             $string .= '<infoAdicional>';
             $string .= $artisan;
+            $string .= $contact;
             foreach ($additionals as $additional) {
                 $string .= "<campoAdicional nombre=\"{$additional->name}\">{$additional->description}</campoAdicional>";
             }

@@ -19,8 +19,8 @@ class ReferralGuideUpdateRequest extends FormRequest
             'carrier_id' => ['required', 'integer', 'exists:carriers,id'],
             'address_from' => ['required', 'string', 'max:300'],
             'address_to' => ['required', 'string', 'max:300'],
-            'date_start' => ['required', 'date'],
-            'date_end' => ['required', 'date', 'after_or_equal:date_start'],
+            // Inicio de transporte: se conserva la fecha con la que se creó; no viene del cliente.
+            'date_end' => ['required', 'date', 'after_or_equal:'.$this->route('referralguide')->date_start],
             'reason_transfer' => ['required', 'string', 'max:300'],
             'customs_doc' => ['nullable', 'string', 'max:20'],
             'branch_destiny' => ['nullable', 'string', 'max:3'],

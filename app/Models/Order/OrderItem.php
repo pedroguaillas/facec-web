@@ -17,6 +17,7 @@ class OrderItem extends Model
         'price' => 'float',
         'discount' => 'float',
         'ice' => 'float',
+        'details' => 'array',
     ];
 
     protected $fillable = [
@@ -25,6 +26,8 @@ class OrderItem extends Model
         'presentation_id', 'conversion_factor',
         // Código/descripción propios de la línea (null = los del producto).
         'code', 'description',
+        // Foto de las características del producto al vender (null = sin características).
+        'details',
         'quantity', 'price',
         'discount', 'iva', 'ice',
     ];

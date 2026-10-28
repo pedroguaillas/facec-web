@@ -203,3 +203,16 @@ Mismo problema (antes del fix) aplicaba al módulo Compras — ver
 - `OrderLifecycleService::process()` no valida que `company->active_voucher`
   sea `false` de forma explícita para el llamador — retorna silenciosamente
   (línea 28), lo cual puede confundirse con "ya procesado".
+
+## 5. `<detallesAdicionales>` por ítem
+
+`HasItemTaxes::renderDetalles(..., includeAdditionalDetails: true)` (solo
+factura; la nota de crédito pasa `false`) emite, entre
+`<precioTotalSinImpuesto>` y `<impuestos>`, hasta 3 `<detAdicional>` desde
+la foto `order_items.details`, con el trait
+`Xml\Concerns\RendersDetallesAdicionales`. Una línea sin características
+`in_sri` genera el mismo XML que antes. Ver `docs/caracteristicas-producto.md` §15.
+
+## 6. Contacto del cliente en `<infoAdicional>`
+
+Factura y nota de crédito agregan `<campoAdicional nombre="Email">` y `<campoAdicional nombre="Teléfono">` con `customers.email` / `customers.phone` cuando el cliente los tiene (`BaseVoucherBuilder::customerContactAdditional`, valores escapados). Si el usuario ya cargó un adicional de la venta con el mismo nombre (sin distinguir mayúsculas), no se duplica. Los PDF de factura, nota de venta, nota de crédito y proforma muestran también el teléfono.

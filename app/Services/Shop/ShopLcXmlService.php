@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
+use App\Services\Product\UnitSaleService;
 use App\Services\Product\VoucherInventoryService;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
@@ -81,6 +82,10 @@ class ShopLcXmlService
             ->leftJoin('product_presentations AS pp', 'pp.id', 'shop_items.presentation_id')
             ->where('shop_id', $id)
             ->get();
+
+        // Características actuales del producto (la unidad no se edita una vez usada).
+        $characteristics = app(UnitSaleService::class)->characteristicsByProduct($shopItems->pluck('id'));
+        $shopItems->each(fn (ShopItem $item) => $item->setAttribute('details', $characteristics[$item->id] ?? null));
 
         return (new SettlementOnPurchaseBuilder($company, $shop, $shopItems))->build();
     }

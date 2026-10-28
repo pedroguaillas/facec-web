@@ -154,11 +154,16 @@ eso que existe el flujo proforma → factura.
   `OrderStoreService::createOrder()` normal: totales se recalculan de nuevo,
   y siempre dispara `ProcessVoucherJob` (`send` fijo en `true` dentro del
   service, no viene del request).
-- **La proforma original no se toca**: no se marca como "convertida", no se
-  bloquea. El mismo `{order}` puede convertirse varias veces — cada
-  conversión genera una factura nueva e independiente. Es una decisión de
-  producto explícita (no un descuido): si en el futuro se necesita impedir
-  reconversión, hay que agregar el guard a propósito.
+- **Una sola factura vigente por proforma**: la factura guarda
+  `orders.proforma_id`. Si la proforma ya tiene una factura no anulada,
+  responde 422 `Esta proforma ya fue convertida en la factura FAC 001-001-…`.
+  Si esa factura se anuló, la proforma se puede volver a convertir. La fila
+  de la proforma se bloquea (`lockForUpdate`) dentro de la transacción, así
+  que un doble clic no genera dos facturas. Las conversiones anteriores a la
+  columna quedan con `proforma_id` null (no hay backfill).
+- `converted_invoice` (`{id, serie, state}` de la última factura no anulada,
+  o null) sale en `atts` del listado `GET orders` (eager load
+  `convertedInvoice.voucherType`, sin N+1) y en la raíz de `GET orders/{id}`.
 - Sin `point_id`: la factura siempre sale del mismo punto de emisión que la
   proforma (ver arriba); si se necesita emitir desde otro punto, hay que
   editar la proforma antes de convertir, o crear la factura a mano con
@@ -476,3 +481,19 @@ usuario autenticado. La segregación multiempresa depende enteramente de que los
 servicios asignen `branch_id` desde `Auth::user()->company`; no hay defensa a
 nivel de request contra manipular `{order}` de otra empresa vía route-model
 binding (p.ej. en `update`, que hace binding directo de `Order`).
+
+## 6. Ventas de unidades (motos)
+
+Contrato completo: `docs/caracteristicas-producto.md` §14 y §15.
+
+- La línea apunta a la **unidad**, con cantidad 1 y sin presentación.
+  Factura y nota de venta no aceptan el modelo de una plantilla con campos
+  por unidad. La proforma sí lo acepta, pero `convert-to-invoice` lo
+  rechaza (422).
+- Disponibilidad (`UnitSaleService::lineErrors`): con inventario,
+  stock > 0; sin inventario, que no esté en otra venta vigente (más
+  facturas/notas de venta que notas de crédito vigentes).
+- **Foto**: `order_items.details` guarda las características al crear o
+  editar (excepto en la nota de crédito). El XML y el PDF salen de ella,
+  así un reproceso no cambia si después se edita el producto.
+- El lote (`orders/lot`) rechaza productos por unidad.

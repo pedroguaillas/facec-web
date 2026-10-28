@@ -70,7 +70,7 @@ class OrderPdfService
     private function getMovement(int $id)
     {
         return Order::join('customers AS c', 'c.id', 'customer_id')
-            ->select('orders.*', 'c.identication', 'c.name', 'c.address', 'c.email')
+            ->select('orders.*', 'c.identication', 'c.name', 'c.address', 'c.email', 'c.phone')
             ->where('orders.id', $id)
             ->firstOrFail();
     }

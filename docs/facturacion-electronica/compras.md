@@ -134,3 +134,10 @@ se incluye en el footer de `settlementonpurchase.blade.php`,
   recalcular" que ya tiene Ventas (§1).
 - Si en el futuro Compras gana descuento/ICE por ítem, revisar si conviene
   unificar `SettlementOnPurchaseBuilder` con `HasItemTaxes` (§3).
+
+## 6. `<detallesAdicionales>` en la liquidación
+
+`SettlementOnPurchaseBuilder` usa `RendersDetallesAdicionales` (el mismo
+trait que la factura), con las características actuales de la unidad que
+`ShopLcXmlService::buildXml` carga por línea. Ver
+`docs/caracteristicas-producto.md` §15.

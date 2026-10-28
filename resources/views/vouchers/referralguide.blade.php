@@ -7,11 +7,6 @@
                 <table class="table-bordered">
                     <tbody>
                         <tr>
-                            <td class="relleno" style="width: 100px;">Fecha de Emisión:</td>
-                            <td class="relleno" colspan="4">{{ date('d/m/Y', strtotime($movement->date)) }}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
                             <td class="relleno" colspan="2">Identificación (Transportista):</td>
                             <td class="relleno" colspan="3">{{ $movement->ca_identication }}</td>
                         </tr>
@@ -31,9 +26,9 @@
                         </tr>
                         <tr>
                             <td class="relleno" style="width: 100px;">Fecha inicio:</td>
-                            <td class="relleno" colspan="2">{{ $movement->date_start }}</td>
+                            <td class="relleno" colspan="2">{{ date('d/m/Y', strtotime($movement->date_start)) }}</td>
                             <td class="relleno">Fecha fin transporte:</td>
-                            <td class="relleno">{{ $movement->date_end }}</td>
+                            <td class="relleno">{{ date('d/m/Y', strtotime($movement->date_end)) }}</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -111,7 +106,7 @@
                     <tbody>
                         <tr>
                             <td style="text-align: center; width: 5em;">{{ $item->quantity }}</td>
-                            <td>{{ $item->name }}</td>
+                            <td>{{ $item->name }}@include('vouchers.theme.itemdetails', ['details' => $item->details])</td>
                             <td style="text-align: center; width: 8em;">{{ $item->code }}</td>
                         </tr>
                     </tbody>

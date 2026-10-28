@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Order;
 
+use App\Models\Treasury\PaymentReceipt;
 use App\StaticClasses\MovementPartyRegistry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +26,8 @@ class OrderPaymentRequest extends FormRequest
             'source_type' => ['required', Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION])],
             'source_id' => ['required', 'integer', Rule::exists($sourceTable, 'id')],
             'date' => ['sometimes', 'date'],
+            'receipt_id' => PaymentReceipt::idRules($this->input('source_type')),
+            'receipt_number' => PaymentReceipt::numberRules($this->input('source_type')),
         ];
     }
 }

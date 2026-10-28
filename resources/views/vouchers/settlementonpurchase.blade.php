@@ -39,7 +39,7 @@
                         <tr>
                             <td style="padding: .5em; text-align: center;">{{ $item->code }}</td>
                             <td style="padding: .5em; text-align: center;">{{ floatval($item->quantity) }}</td>
-                            <td style="padding: .5em;">{{ $item->name }}</td>
+                            <td style="padding: .5em;">{{ $item->name }}@include('vouchers.theme.itemdetails', ['details' => $item->details])</td>
                             <td style="padding: .5em; text-align: right;">{{ number_format($item->price, $company->decimal) }}
                             </td>
                             <td style="padding: .5em; text-align: right;">{{ number_format($item->discount, 2) }}</td>

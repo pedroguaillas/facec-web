@@ -8,9 +8,12 @@ use App\Models\Inventory;
 use App\Models\Order\Repayment\Repayment;
 use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
+use App\StaticClasses\VoucherStates;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Order extends BaseModel
@@ -89,6 +92,8 @@ class Order extends BaseModel
         'payment_type',
         'due_date',
         'movement_id',
+        // Proforma de la que se generó esta factura (convert-to-invoice)
+        'proforma_id',
     ];
 
     protected $casts = [
@@ -111,9 +116,39 @@ class Order extends BaseModel
         'due_date' => 'date',
     ];
 
+    /** @return BelongsTo<VoucherType, $this> */
     public function voucherType(): BelongsTo
     {
         return $this->belongsTo(VoucherType::class);
+    }
+
+    /**
+     * Última factura vigente (no anulada) generada desde esta proforma.
+     *
+     * @return HasOne<Order, $this>
+     */
+    public function convertedInvoice(): HasOne
+    {
+        return $this->hasOne(self::class, 'proforma_id')->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where(fn ($state) => $state->whereNull('orders.state')->orWhere('orders.state', '!=', VoucherStates::CANCELED)),
+        );
+    }
+
+    /**
+     * `{id, serie, state}` de la factura vigente de la proforma, o null.
+     *
+     * @return array{id: int, serie: string, state: string|null}|null
+     */
+    public function convertedInvoiceSummary(): ?array
+    {
+        $invoice = $this->convertedInvoice;
+
+        return $invoice ? [
+            'id' => $invoice->id,
+            'serie' => "{$invoice->voucherType->abbreviation} {$invoice->serie}",
+            'state' => $invoice->state,
+        ] : null;
     }
 
     public function customer(): BelongsTo
@@ -136,7 +171,8 @@ class Order extends BaseModel
         return $this->hasMany(Repayment::class);
     }
 
-    public function orderaditionals()
+    /** @return HasMany<OrderAditional, $this> */
+    public function orderaditionals(): HasMany
     {
         return $this->hasMany(OrderAditional::class);
     }

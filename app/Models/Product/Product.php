@@ -11,8 +11,10 @@ use App\Models\Shop\ShopItem;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Product extends BaseModel
 {
@@ -31,6 +33,8 @@ class Product extends BaseModel
         'branch_id',
         'category_id',
         'parent_product_id',
+        // Plantilla de características (solo en el producto modelo/padre) — ver docs/caracteristicas-producto.md
+        'product_template_id',
         'code',
         'type_product',
         'name',
@@ -85,7 +89,8 @@ class Product extends BaseModel
         return $this->hasMany(ProductPresentation::class);
     }
 
-    public function parentProduct()
+    /** @return BelongsTo<Product, $this> */
+    public function parentProduct(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_product_id');
     }
@@ -93,6 +98,43 @@ class Product extends BaseModel
     public function variants()
     {
         return $this->hasMany(self::class, 'parent_product_id');
+    }
+
+    /** @return BelongsTo<ProductTemplate, $this> */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(ProductTemplate::class, 'product_template_id');
+    }
+
+    /** @return HasMany<ProductDetail, $this> */
+    public function details(): HasMany
+    {
+        return $this->hasMany(ProductDetail::class);
+    }
+
+    /**
+     * Características efectivas: las del modelo (padre) + las propias de la
+     * unidad, solo de campos activos, en el orden de la plantilla.
+     *
+     * @return Collection<int, array{label: string, value: string, in_sri: bool, sort: int}>
+     */
+    public function characteristics(): Collection
+    {
+        $this->loadMissing(['details.field', 'parentProduct.details.field']);
+
+        /** @var Collection<int, ProductDetail> $details */
+        $details = $this->details->toBase()->concat($this->parentProduct->details ?? []);
+
+        return $details
+            ->filter(fn (ProductDetail $detail) => $detail->field->active)
+            ->sortBy(fn (ProductDetail $detail) => sprintf('%05d-%010d', $detail->field->sort, $detail->field->id))
+            ->map(fn (ProductDetail $detail) => [
+                'label' => $detail->field->label,
+                'value' => $detail->value,
+                'in_sri' => $detail->field->in_sri,
+                'sort' => $detail->field->sort,
+            ])
+            ->values();
     }
 
     public function orderItems()

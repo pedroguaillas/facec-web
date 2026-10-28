@@ -276,3 +276,18 @@ no se repiten aquí. Lo siguiente es específico del módulo CRUD:
    se marcan `true` tras el envío. `ShopLcPdfService` ganó un `savePdf()`
    (antes solo tenía `stream()`) para poder adjuntar el PDF igual que
    `RetentionPdfService`/`OrderPdfService`.
+
+## 6. Compras de unidades (motos)
+
+Contrato completo: `docs/caracteristicas-producto.md` §13.
+
+- Una línea sobre el **modelo** con `unit: {key: valor}` (y `unit_code` si
+  la plantilla no genera código) registra la unidad y pasa a apuntar a ella.
+  Solo en tipos que suman stock (factura, nota de venta, liquidación), con
+  cantidad 1.
+- Validación en `Shop\Concerns\ValidatesUnitLines` (store y update). No se
+  quita al editar ni se anula (liquidación) una compra cuya unidad ya se
+  vendió.
+- `shops.edit` devuelve `parent_product_id` y `characteristics` por línea.
+- El XML y el PDF de la liquidación llevan las características de la
+  unidad (§15 del doc de características).

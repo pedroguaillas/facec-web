@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Shop\Shop;
 use App\Models\Shop\ShopItem;
+use App\Services\Product\UnitSaleService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -39,6 +40,9 @@ class ShopLcPdfService
             ->selectRaw("CASE WHEN pp.id IS NULL THEN products.name ELSE CONCAT(products.name, ' (', pp.name, ')') END AS name")
             ->where('shop_id', $id)
             ->get();
+
+        $characteristics = app(UnitSaleService::class)->characteristicsByProduct($movement_items->pluck('product_id'));
+        $movement_items->each(fn (ShopItem $item) => $item->setAttribute('details', $characteristics[$item->product_id] ?? null));
 
         $company = $this->company;
         $company->logo_dir = $company->logo_dir ?: 'default.png';

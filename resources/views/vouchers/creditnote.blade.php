@@ -15,6 +15,12 @@
                             <td class="relleno-nc" colspan="4"><strong>Fecha de Emisión:</strong>
                                 {{ date("d/m/Y", strtotime($movement->date)) }}</td>
                         </tr>
+                        @if($movement->email || $movement->phone)
+                        <tr>
+                            <td class="relleno-nc" colspan="2">@if($movement->email)<strong>Correo:</strong> {{ $movement->email }}@endif</td>
+                            <td class="align-middle" colspan="2">@if($movement->phone)<strong>Teléfono:</strong> {{ $movement->phone }}@endif</td>
+                        </tr>
+                        @endif
                         <tr>
                             <th style="padding-top: 0;" class="relleno-nc" colspan="4">
                                 _________________________________________________________________________________________________________

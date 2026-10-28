@@ -20,13 +20,16 @@ class AccountsReceivableAdvanceService
 {
     public function __construct(private AccountsReceivableLedgerService $ledgerService) {}
 
-    public function register(Customer $customer, float $amount, string $sourceType, int $sourceId, ?string $date = null): CustomerAdvance
+    /**
+     * @param  array{receipt_id?: int|null, receipt_number?: string|null}  $bankDetails  comprobante del pago por banco
+     */
+    public function register(Customer $customer, float $amount, string $sourceType, int $sourceId, ?string $date = null, array $bankDetails = []): CustomerAdvance
     {
         app(SubscriptionGate::class)->ensureFinancieroAccess(Auth::user()->company);
 
         $date ??= now()->format('Y-m-d');
 
-        return DB::transaction(function () use ($customer, $amount, $sourceType, $sourceId, $date) {
+        return DB::transaction(function () use ($customer, $amount, $sourceType, $sourceId, $date, $bankDetails) {
             $movement = app(MovementService::class)->create([
                 'branch_id' => $customer->branch_id,
                 'date' => $date,
@@ -34,6 +37,7 @@ class AccountsReceivableAdvanceService
                 'transaction_type' => MovementTransactionTypes::CUSTOMER_ADVANCE,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                ...$bankDetails,
                 'amount' => $amount,
                 'description' => 'Anticipo recibido de cliente',
                 'user_id' => Auth::id(),

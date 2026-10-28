@@ -12,6 +12,7 @@ use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
 use App\Services\Product\PresentationLineResolver;
+use App\Services\Product\UnitSaleService;
 use App\Services\Product\VoucherInventoryService;
 use App\Services\SubscriptionGate;
 use App\Services\Treasury\MovementService;
@@ -20,6 +21,7 @@ use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
+use App\StaticClasses\VoucherTypes;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +42,7 @@ class OrderStoreService
 
     public function createOrder(array $data): Order
     {
-        $voucherType = VoucherType::findOrFail($data['voucher_type_id']);
+        $voucherType = VoucherType::findOrFail((int) $data['voucher_type_id']);
 
         if (in_array($voucherType->slug, DifferentiatedIvaService::VOUCHER_SLUGS, true)) {
             $data['products'] = app(DifferentiatedIvaService::class)
@@ -58,7 +60,7 @@ class OrderStoreService
                     ->update(['origin_type' => MovementPartyRegistry::ORDER, 'origin_id' => $order->id]);
             }
 
-            $this->createOrderItems($order, $data['products']);
+            $this->createOrderItems($order, $data['products'], $voucherType);
             $this->createRepayments($order, $data['repayments'] ?? []);
             $this->createOrderAditionals($order, $data['aditionals'] ?? [], $voucherType);
 
@@ -76,7 +78,7 @@ class OrderStoreService
 
     protected function prepareOrderData(array $data, EmisionPoint $emisionPoint, VoucherType $voucherType): array
     {
-        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id', 'without_source'])->toArray();
+        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id', 'receipt_id', 'receipt_number', 'without_source'])->toArray();
 
         if (array_key_exists('guia', $input) && trim($input['guia']) === '') {
             $input['guia'] = null;
@@ -110,6 +112,8 @@ class OrderStoreService
                 'transaction_type' => MovementTransactionTypes::SALE_COLLECTION,
                 'source_type' => $data['source_type'],
                 'source_id' => $data['source_id'],
+                'receipt_id' => $data['receipt_id'] ?? null,
+                'receipt_number' => $data['receipt_number'] ?? null,
                 'amount' => $input['total'],
                 'description' => "Cobro venta {$input['serie']}",
                 'user_id' => Auth::id(),
@@ -121,13 +125,16 @@ class OrderStoreService
         return $input;
     }
 
-    protected function createOrderItems(Order $order, array $products): void
+    protected function createOrderItems(Order $order, array $products, VoucherType $voucherType): void
     {
         if (empty($products)) {
             return;
         }
 
         $presentations = app(PresentationLineResolver::class)->resolve($products);
+        $unitSales = app(UnitSaleService::class);
+        // La nota de crédito no lleva características (docs/caracteristicas-producto.md §7).
+        $snapshots = $voucherType->slug === VoucherTypes::VENTA_NOTA_CREDITO ? [] : $unitSales->characteristicsByProduct(array_column($products, 'product_id'));
 
         $orderItems = array_map(fn ($product, $presentation) => [
             'product_id' => $product['product_id'],
@@ -136,6 +143,7 @@ class OrderStoreService
             // Solo la factura recurrente manda code/description; si no, los de la presentación.
             'code' => $product['code'] ?? $presentation['code'],
             'description' => $product['description'] ?? $presentation['description'],
+            'details' => $snapshots[$product['product_id']] ?? null,
             'quantity' => $product['quantity'],
             'price' => $product['price'],
             'discount' => $product['discount'],
@@ -146,6 +154,7 @@ class OrderStoreService
         $order->orderitems()->createMany($orderItems);
 
         app(VoucherInventoryService::class)->syncOrder($order, isNew: true);
+        $unitSales->syncStockWithoutInventory(array_column($products, 'product_id'), (bool) $this->company->inventory);
     }
 
     protected function createRepayments(Order $order, array $repayments): void

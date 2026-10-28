@@ -32,6 +32,12 @@ Tabla `subscriptions` — **historial**, no un campo en `companies`:
 
 - `POST /api/admin/companies` — **`plan` obligatorio** (`GRATUITO`/`FACTURADOR`/`FINANCIERO`); `plan_ends_at` (fecha futura) y `plan_amount` (numeric ≥ 0) obligatorios salvo para `GRATUITO`, que sin fecha es trial de 1 mes y sin monto guarda 0. La respuesta incluye `subscription`.
 - `GET /api/admin/companies` (listado paginado) — cada empresa trae `last_subscription` = su última suscripción, **vigente o vencida** (`{id, company_id, plan, started_at, ended_at, ...}`, fechas Y-m-d), o `null` si nunca tuvo plan. El front determina si venció comparando `ended_at` con hoy. Eager loading vía `Company::lastSubscription()` (hasOne ofMany). `Company::subscription()` es la vigente (la usan gate/login). También trae `user: {id, user, email}` = usuario principal (primero en `company_users`, el creado con la empresa) o `null` — relación `Company::user()`.
+  - **Actividad** (`CompanyService::activityStats`: 3 consultas agrupadas para todo el sistema —ventas y compras por sucursal, tokens por empresa—, cubiertas por `orders_activity_index`/`shops_activity_index`; `DB::table`, sin BranchScope; ~130 ms con 418k ventas): `last_activity_at` (ISO 8601 o null, máx. `personal_access_tokens.last_used_at` de sus usuarios; `company_users.level_id` siempre es la empresa), `orders_30d` / `shops_30d` (comprobantes con `date` ≥ hoy-30, sin `ANULADO` ni proformas), `first_voucher_at` (Y-m-d de la primera venta o compra no anulada, null = nunca emitió) y `activity_status` (`CompanyActivityStatuses`): `never` (sin comprobantes) → `inactive` (sin actividad o > 30 días) → `risk` (8–30 días, o ≤ 7 días sin comprobantes en 30 días) → `active`. Filtro `?activity=never|inactive|risk|active` (otro valor: 422): se resuelve a `whereIn`/`whereNotIn` de ids sobre `companies`, así la paginación es la normal.
+- `GET /api/admin/dashboard` — tablero de todo el sistema (`AdminDashboardService`, cacheado 5 min en `admin.dashboard`, `generated_at` dice cuándo se calculó):
+  - `vouchers`: comprobantes electrónicos (factura y N/C de `orders`, liquidación `shops.state`, retención `shops.state_retencion`, guía) en un `UNION ALL`. `month` (por fecha de emisión del mes en curso: `authorized`, `pending` = CREADO/FIRMADO/ENVIADO/RECIBIDA/DEVUELTA/EN_PROCESO, `rejected` = NO AUTORIZADO), `stuck` (pendientes creados hace más de 24 h y dentro de los últimos 30 días; incluye los CREADO de empresas sin firma), `by_day` (30 días, `{date, authorized, rejected}`, con ceros), `top_errors` (top 5 `extra_detail` de rechazos del mes, `{message, count}`), `stuck_companies` (top 10 `{id, ruc, company, pending, oldest_at}`).
+  - `companies`: `total`, `new_month`, `new_prev_month`, `by_month` (6 meses `{month: Y-m, count}`), `activity` (`{active, risk, inactive, never}`, mismo cálculo que el listado). Sin eliminadas.
+  - `subscriptions`: `by_plan` (vigentes por plan), `renewals` (última suscripción vence en ≤ 30 días: `{id, ruc, company, plan, ended_at, days_left}`, por fecha), `expired_recent` (última suscripción venció en los últimos 30 días, sin renovar), `revenue_month` (suma de `amount` de suscripciones no trial creadas en el mes).
+  - `signatures`: `expired` (`sign_valid_to` pasada) y `expiring` (≤ 30 días: `{id, ruc, company, sign_valid_to, days_left}`).
 - `GET /api/admin/companies/{company}/subscriptions` → `{ company: {id, ruc, company}, current, history }` (`history` ordenado del más reciente al más antiguo).
 - `POST /api/admin/companies/{company}/subscription` — `{ plan, ends_at, amount }` (`ends_at` y `amount` opcionales solo para `GRATUITO`) → cambia/renueva el plan, 201 con la nueva suscripción.
 
@@ -161,6 +167,17 @@ el listado `GET /api/movements` no está bloqueado.
   depósitos, retiros, transferencias y apertura/cierre de caja; `pending`
   aparte; `by_category` con `group`; `accounts` = saldo actual (caja = sesión
   abierta, 0 si cerrada).
+
+## 5.2 Comprobante de cobros/pagos por banco
+
+Flujo en dos pasos, para no volver multipart los stores grandes:
+
+1. `POST /api/payment-receipts` (multipart, campo `receipt`: jpg/png/webp, máx 5 MB) → `201 {id}`. Se guarda en el disco privado (`treasury/receipts`, mismo lugar que los comprobantes de depósito/retiro/transferencia/otro) como `PaymentReceipt` sin vincular.
+2. `receipt_id` opcional en `orders/{id}/payments`, `shops/{id}/payments`, `customers|providers/{id}/advances` y en el store de venta/compra de contado. Solo con `source_type = bank_account` (si no, 422 `receipt_id`); debe ser de la empresa y no estar vinculado. `MovementService::create` lo vincula (`payment_receipts.movement_id`) y copia el archivo a `movements.receipt_path`.
+
+`GET /api/movements/{movement}/receipt` devuelve el archivo con su Content-Type real (también los PDF de movimientos manuales); 404 si no tiene. `MovementResources` expone `atts.has_receipt`. Los comprobantes no vinculados se purgan a las 24 h (`model:prune` cada hora, `routes/console.php`; en prod lo corre el servicio `scheduler`).
+
+`PATCH /api/movements/{movement}/receipt` (JSON) corrige después el comprobante (ej. se guardó sin él): `receipt_number` y/o `receipt_id` (del mismo flujo de 2 pasos). Clave ausente = sin cambios; `null`/`""` = se borra. Un `receipt_id` nuevo reemplaza `receipt_path`; el archivo anterior y su `PaymentReceipt` se borran (el archivo recién confirmada la transacción). Solo movimientos con `bank_account` como origen o destino; si no, 422 `Solo los movimientos con cuenta bancaria llevan comprobante.`. Responde `MovementResources` (`MovementService::updateReceipt`).
 
 ## 6. Puntos de mejora
 

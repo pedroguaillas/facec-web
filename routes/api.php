@@ -17,6 +17,7 @@ use App\Http\Controllers\CashRegister\CashRegisterSessionController;
 use App\Http\Controllers\Company\AdminCompanyController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerLookupController;
+use App\Http\Controllers\Dashboard\AdminDashboardController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Holiday\AdminHolidayController;
 use App\Http\Controllers\Inventory\InventoryOperationController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\Order\OrderLifecycleController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductLookupController;
 use App\Http\Controllers\Product\ProductPresentationController;
+use App\Http\Controllers\Product\ProductUnitController;
 use App\Http\Controllers\Product\ProviderProductCodeController;
 use App\Http\Controllers\Provider\ProviderController;
 use App\Http\Controllers\Provider\ProviderLookupController;
@@ -36,12 +38,14 @@ use App\Http\Controllers\ReferralGuide\ReferralGuideLifecycleController;
 use App\Http\Controllers\Settings\BranchController as SettingsBranchController;
 use App\Http\Controllers\Settings\CompanyController as SettingsCompanyController;
 use App\Http\Controllers\Settings\EmisionPointController as SettingsEmisionPointController;
+use App\Http\Controllers\Settings\ProductTemplateController as SettingsProductTemplateController;
 use App\Http\Controllers\Shop\RetentionController;
 use App\Http\Controllers\Shop\ShopController;
 use App\Http\Controllers\Shop\ShopLifecycleController;
 use App\Http\Controllers\Subscription\SubscriptionController;
 use App\Http\Controllers\Treasury\DenominationController;
 use App\Http\Controllers\Treasury\MovementController;
+use App\Http\Controllers\Treasury\PaymentReceiptController;
 use App\Http\Controllers\User\UserLookupController;
 use Illuminate\Support\Facades\Route;
 
@@ -116,6 +120,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('products/{product}/presentations', [ProductPresentationController::class, 'store'])->name('products.presentations.store');
     Route::put('products/{product}/presentations/{presentation}', [ProductPresentationController::class, 'update'])->name('products.presentations.update');
     Route::delete('products/{product}/presentations/{presentation}', [ProductPresentationController::class, 'destroy'])->name('products.presentations.destroy');
+    Route::get('products/{product}/units', [ProductUnitController::class, 'index'])->name('products.units.index');
+    Route::post('products/{product}/units', [ProductUnitController::class, 'store'])->name('products.units.store');
+    Route::put('products/{product}/units/{unit}', [ProductUnitController::class, 'update'])->name('products.units.update');
 
     Route::middleware('inventory.enabled')->group(function () {
         Route::get('products/{product}/kardex', [InventoryReportController::class, 'kardex'])->name('products.kardex');
@@ -228,6 +235,12 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::post('settings/points', [SettingsEmisionPointController::class, 'store'])->name('settings.points.store');
     Route::put('settings/points/{emisionPoint}', [SettingsEmisionPointController::class, 'update'])->name('settings.points.update');
 
+    Route::get('settings/product-templates', [SettingsProductTemplateController::class, 'index'])->name('settings.product-templates.index');
+    Route::post('settings/product-templates', [SettingsProductTemplateController::class, 'store'])->name('settings.product-templates.store');
+    Route::get('settings/product-templates/{productTemplate}', [SettingsProductTemplateController::class, 'show'])->name('settings.product-templates.show');
+    Route::put('settings/product-templates/{productTemplate}', [SettingsProductTemplateController::class, 'update'])->name('settings.product-templates.update');
+    Route::delete('settings/product-templates/{productTemplate}', [SettingsProductTemplateController::class, 'destroy'])->name('settings.product-templates.destroy');
+
     Route::get('banks', [BankController::class, 'index'])->name('banks.index');
     Route::post('banks', [BankController::class, 'store'])->name('banks.store');
     Route::get('banks/{bank}', [BankController::class, 'edit'])->name('banks.edit');
@@ -255,6 +268,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('movements/categories', [MovementController::class, 'categories'])->name('movements.categories');
     Route::get('movements/summary', [MovementController::class, 'summary'])->name('movements.summary');
     Route::get('movements/{movement}', [MovementController::class, 'show'])->name('movements.show');
+    Route::get('movements/{movement}/receipt', [PaymentReceiptController::class, 'show'])->name('movements.receipt');
+    Route::patch('movements/{movement}/receipt', [PaymentReceiptController::class, 'update'])->name('movements.receipt.update');
+    Route::post('payment-receipts', [PaymentReceiptController::class, 'store'])->name('payment-receipts.store');
     Route::patch('movements/{movement}/category', [MovementController::class, 'updateCategory'])->name('movements.category');
     Route::post('movements/deposit', [MovementController::class, 'deposit'])->name('movements.deposit');
     Route::post('movements/withdraw', [MovementController::class, 'withdraw'])->name('movements.withdraw');
@@ -264,6 +280,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('dashboard', AdminDashboardController::class)->name('admin.dashboard');
     Route::get('companies', [AdminCompanyController::class, 'index'])->name('admin.companies.index');
     Route::post('companies', [AdminCompanyController::class, 'store'])->name('admin.companies.store');
     Route::get('companies/sri/{identification}', [AdminCompanyController::class, 'resolve'])->name('admin.companies.resolve');

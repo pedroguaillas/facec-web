@@ -14,8 +14,11 @@ use App\Models\Company;
 use App\Models\Product\IceCataloge;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
+use App\Models\Product\ProductTemplate;
+use App\Models\Product\ProductTemplateField;
 use App\Models\Product\SriCategory;
 use App\Services\Product\OpeningBalanceFromStockService;
+use App\Services\Product\ProductDetailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -41,15 +44,22 @@ class ProductController extends Controller
                     $q->where('products.code', 'LIKE', "%{$escaped}%")
                         ->orWhere('products.name', 'LIKE', "%{$escaped}%")
                         // Código propio de una presentación (ej. código de barras de la cubeta).
-                        ->orWhereHas('presentations', fn ($presentation) => $presentation->where('active', true)->where('code', 'LIKE', "%{$escaped}%"));
+                        ->orWhereHas('presentations', fn ($presentation) => $presentation->where('active', true)->where('code', 'LIKE', "%{$escaped}%"))
+                        // Unidad por chasis/motor/etc.: valor de una característica única.
+                        ->orWhereHas('details', fn ($detail) => $detail->where('value', 'LIKE', "%{$escaped}%")
+                            ->whereHas('field', fn ($field) => $field->where('unique', true)->where('active', true)));
                 });
             })
             ->when($request->filled('type'), function ($query) use ($request) {
                 $query->ofType((int) $request->input('type'));
             })
-            ->selectRaw('products.id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.min_stock, products.differentiated_iva')
+            ->selectRaw('products.id, products.parent_product_id, products.product_template_id, products.code, products.aux_cod, products.type_product, products.name, products.price1, iva_taxes.code AS iva_code, iva_taxes.percentage, products.ice, products.irbpnr, products.stock, products.min_stock, products.differentiated_iva')
             // Solo activas: este listado alimenta el buscador de ventas/compras.
-            ->with(['presentations' => fn ($presentation) => $presentation->where('active', true)->select('id', 'product_id', 'name', 'conversion_factor', 'price', 'code')])
+            ->with([
+                'presentations' => fn ($presentation) => $presentation->where('active', true)->select('id', 'product_id', 'name', 'conversion_factor', 'price', 'code'),
+                'details.field',
+                'parentProduct.details.field',
+            ])
             ->latest('products.created_at')
             ->paginate($paginate)
             ->withQueryString();
@@ -64,17 +74,22 @@ class ProductController extends Controller
         ], 200);
     }
 
-    public function store(ProductStoreRequest $request, OpeningBalanceFromStockService $openingBalance): JsonResponse
+    public function store(ProductStoreRequest $request, OpeningBalanceFromStockService $openingBalance, ProductDetailService $details): JsonResponse
     {
         $branch = Auth::user()->company->branches()->orderBy('created_at')->first();
 
-        $attributes = $request->safe()->except('presentations');
+        $attributes = $request->safe()->except(['presentations', 'details']);
         $presentations = $request->validated('presentations', []);
+        $detailValues = $request->validated('details', []);
 
         // Producto y presentaciones van juntos: si algo falla, no queda el producto a medias.
-        $product = DB::transaction(function () use ($branch, $attributes, $presentations, $openingBalance) {
+        $product = DB::transaction(function () use ($branch, $attributes, $presentations, $detailValues, $openingBalance, $details) {
             $product = $branch->products()->create($attributes);
             $product->presentations()->createMany($presentations);
+
+            if ($product->template) {
+                $details->sync($product, $product->template, ProductTemplateField::LEVEL_MODEL, $detailValues);
+            }
 
             // Con inventario activo el stock inicial entra al kardex como saldo inicial.
             if (Auth::user()->company->inventory) {
@@ -89,28 +104,48 @@ class ProductController extends Controller
         return response()->json([
             ...$product->withoutRelations()->toArray(),
             'presentations' => ProductPresentationResource::collection($product->presentations)->resolve(),
+            'details' => $details->valuesOf($product),
         ], 201);
     }
 
-    public function edit(Product $product): JsonResponse
+    public function edit(Product $product, ProductDetailService $details): JsonResponse
     {
         return response()->json([
             'product' => $product,
+            // Valores propios {key: valor} y, para una unidad, las características efectivas (modelo + unidad).
+            'details' => $details->valuesOf($product),
+            'characteristics' => $product->characteristics(),
             ...$this->createEditData(),
         ], 200);
     }
 
-    public function update(ProductUpdateRequest $request, Product $product): JsonResponse
+    public function update(ProductUpdateRequest $request, Product $product, ProductDetailService $details): JsonResponse
     {
-        $attributes = $request->validated();
+        $attributes = $request->safe()->except('details');
+        $detailValues = $request->validated('details', []);
 
         // Con inventario activo el stock es caché del kardex: solo cambia con
-        // movimientos (ajustes), no editando el producto.
-        if (Auth::user()->company->inventory) {
+        // movimientos (ajustes), no editando el producto. Una unidad (moto)
+        // tiene stock 1 o 0 según sus comprobantes, nunca a mano.
+        if (Auth::user()->company->inventory || $product->parent_product_id) {
             unset($attributes['stock']);
         }
 
-        $product->update($attributes);
+        DB::transaction(function () use ($request, $product, $attributes, $detailValues, $details) {
+            $product->update($attributes);
+
+            // Las características de una unidad se editan desde products/{modelo}/units;
+            // sin `product_template_id` ni `details` en el payload no se tocan.
+            if ($product->parent_product_id || (! $request->has('product_template_id') && ! $request->has('details'))) {
+                return;
+            }
+
+            $template = $product->fresh()->template;
+
+            $template
+                ? $details->sync($product, $template, ProductTemplateField::LEVEL_MODEL, $detailValues)
+                : $details->clear($product);
+        });
 
         return response()->json($product);
     }
@@ -155,6 +190,13 @@ class ProductController extends Controller
 
     public function destroy(Product $product): JsonResponse
     {
+        if ($product->variants()->exists()) {
+            return response()->json([
+                'succes' => false,
+                'message' => 'El producto tiene unidades registradas y no se puede eliminar.',
+            ], 422);
+        }
+
         $isUsed = $product->orderItems()->exists()
             || $product->shopItems()->exists()
             || $product->referralGuideItems()->exists()
@@ -176,7 +218,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @return array{ivaTaxes: Collection, iceCataloges: Collection|array, sriCategories: Collection|array, transport: bool, base8: bool}
+     * @return array{ivaTaxes: Collection, iceCataloges: Collection|array, sriCategories: Collection|array, transport: bool, base8: bool, productTemplates: \Illuminate\Database\Eloquent\Collection<int, ProductTemplate>}
      */
     private function createEditData(): array
     {
@@ -194,6 +236,11 @@ class ProductController extends Controller
             'transport' => $company->transport,
             // Habilita el check "IVA diferenciado (8% en feriados)".
             'base8' => (bool) $company->base8,
+            // Plantillas de características activas, con sus campos activos.
+            'productTemplates' => ProductTemplate::where('active', true)
+                ->with(['fields' => fn ($query) => $query->where('active', true)])
+                ->orderBy('name')
+                ->get(),
         ];
     }
 

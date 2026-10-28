@@ -84,6 +84,26 @@ abstract class BaseVoucherBuilder
     }
 
     /**
+     * Campos adicionales con el correo y el teléfono del cliente, si los
+     * tiene. Se omite el que el usuario ya cargó como adicional de la venta
+     * con el mismo nombre, para no duplicarlo.
+     *
+     * @param  iterable<int, object{name: string}>  $existingAdditionals
+     */
+    protected function customerContactAdditional(?string $email, ?string $phone, iterable $existingAdditionals = []): string
+    {
+        $existingNames = collect($existingAdditionals)
+            ->map(fn ($additional) => mb_strtolower(trim((string) $additional->name)))
+            ->all();
+
+        return collect(['Email' => $email, 'Teléfono' => $phone])
+            ->map(fn ($value) => trim((string) $value))
+            ->filter(fn (string $value, string $name) => $value !== '' && ! in_array(mb_strtolower($name), $existingNames, true))
+            ->map(fn (string $value, string $name) => "<campoAdicional nombre=\"{$name}\">".htmlspecialchars($value, ENT_XML1).'</campoAdicional>')
+            ->implode('');
+    }
+
+    /**
      * Algoritmo módulo 11 para el dígito verificador de la clave de acceso SRI.
      */
     final protected function generaDigitoModulo11(string $cadena): int

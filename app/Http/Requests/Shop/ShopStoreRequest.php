@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Shop;
 
 use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
+use App\Http\Requests\Shop\Concerns\ValidatesUnitLines;
 use App\Models\Branch;
 use App\Models\Shop\Shop;
+use App\Models\Treasury\PaymentReceipt;
 use App\Models\VoucherType;
 use App\Rules\ProductPresentationLinesRule;
 use App\Services\SubscriptionGate;
@@ -18,6 +20,7 @@ use Illuminate\Validation\Rule;
 class ShopStoreRequest extends FormRequest
 {
     use ValidatesProviderIdentification;
+    use ValidatesUnitLines;
 
     public function authorize(): bool
     {
@@ -87,6 +90,9 @@ class ShopStoreRequest extends FormRequest
                 'integer',
                 Rule::exists($sourceTable, 'id'),
             ],
+            // Comprobante subido antes (POST payment-receipts), solo con banco.
+            'receipt_id' => PaymentReceipt::idRules($this->input('source_type')),
+            'receipt_number' => PaymentReceipt::numberRules($this->input('source_type')),
 
             // Bases imponibles
             'sub_total' => ['nullable', 'numeric', 'min:0'],
@@ -115,6 +121,10 @@ class ShopStoreRequest extends FormRequest
             'products.*.price' => ['required', 'numeric', 'min:0'],
             'products.*.discount' => ['required', 'numeric', 'min:0'],
             'products.*.iva' => ['required', 'numeric', 'min:0'],
+            // Unidad nueva (moto) sobre el producto modelo: {key: valor} de nivel `unidad`;
+            // `unit_code` solo si la plantilla no genera el código. Ver ValidatesUnitLines.
+            'products.*.unit' => ['sometimes', 'nullable', 'array'],
+            'products.*.unit_code' => ['sometimes', 'nullable', 'string', 'max:25'],
 
             // Items de retención
             'taxes' => ['required_if:app_retention,true', 'nullable', 'array'],
@@ -130,6 +140,10 @@ class ShopStoreRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $this->validateProviderIdentification($validator, $this->input('voucher_type_id'), $this->input('provider_id'));
+
+            if ($validator->errors()->isEmpty()) {
+                $this->validateUnitLines($validator, $this->input('voucher_type_id'));
+            }
 
             if ($this->boolean('app_retention') && ! empty($this->serie) && ! empty($this->provider_id)) {
                 $auth = Auth::user();

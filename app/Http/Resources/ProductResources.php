@@ -29,6 +29,10 @@ class ProductResources extends JsonResource
                 'min_stock' => $this->min_stock,
                 'differentiated_iva' => $this->differentiated_iva,
             ],
+            // Unidad (moto) de un producto modelo; null si no lo es.
+            'parent_product_id' => $this->parent_product_id,
+            // Producto modelo con plantilla: en compras se registra la unidad (ver docs/caracteristicas-producto.md).
+            'product_template_id' => $this->product_template_id,
             'iva' => [
                 'code' => $this->iva_code,
                 'percentage' => $this->percentage,
@@ -41,6 +45,8 @@ class ProductResources extends JsonResource
                 'conversion_factor' => $presentation->conversion_factor,
                 'price' => $presentation->price ?? round((float) $this->price1 * $presentation->conversion_factor, 6),
             ])->values()),
+            // Características efectivas (modelo + unidad), mismo formato que products/lookup.
+            'characteristics' => $this->whenLoaded('details', fn () => $this->characteristics()),
             // 'category' => [
             //     'category_id' => $this->category_id,
             //     'category' => $this->category,

@@ -3,6 +3,7 @@
 namespace App\Services\Treasury;
 
 use App\Models\Treasury\Movement;
+use App\Models\Treasury\PaymentReceipt;
 use App\StaticClasses\MovementCategories;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\MovementStatuses;
@@ -10,6 +11,7 @@ use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentMethods;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Motor genérico de movimientos: crea el registro de auditoría y aplica su
@@ -20,18 +22,27 @@ use Illuminate\Support\Facades\DB;
 class MovementService
 {
     /**
+     * `receipt_id` (opcional) vincula un PaymentReceipt ya subido: el
+     * movimiento toma su archivo en `receipt_path`.
+     *
      * @param  array<string, mixed>  $data
      */
     public function create(array $data): Movement
     {
         return DB::transaction(function () use ($data) {
+            $receipt = $this->pendingReceipt($data['receipt_id'] ?? null);
+            unset($data['receipt_id']);
+
             $movement = Movement::create([
                 ...$data,
+                ...($receipt ? ['receipt_path' => $receipt->path] : []),
                 'category' => array_key_exists('category', $data)
                     ? $data['category']
                     : MovementCategories::automaticFor($data['transaction_type']),
                 'status' => $this->resolveInitialStatus($data),
             ]);
+
+            $receipt?->update(['movement_id' => $movement->id]);
 
             if ($movement->status === MovementStatuses::COMPLETED) {
                 $this->apply($movement);
@@ -39,6 +50,56 @@ class MovementService
 
             return $movement->fresh();
         });
+    }
+
+    /**
+     * Corrige después el comprobante de un movimiento por banco. Solo toca
+     * las claves presentes: `receipt_number` null/"" lo borra; `receipt_id`
+     * reemplaza el archivo (null lo quita). El archivo anterior se borra del
+     * disco recién confirmada la transacción.
+     *
+     * @param  array{receipt_id?: int|null, receipt_number?: string|null}  $data
+     */
+    public function updateReceipt(Movement $movement, array $data): Movement
+    {
+        $previousPath = $movement->receipt_path;
+
+        DB::transaction(function () use ($movement, $data) {
+            if (array_key_exists('receipt_number', $data)) {
+                $movement->receipt_number = $data['receipt_number'] ?: null;
+            }
+
+            if (array_key_exists('receipt_id', $data)) {
+                $receipt = $this->pendingReceipt($data['receipt_id']);
+
+                PaymentReceipt::where('movement_id', $movement->id)->delete();
+                $movement->receipt_path = $receipt?->path;
+                $receipt?->update(['movement_id' => $movement->id]);
+            }
+
+            $movement->save();
+        });
+
+        if ($previousPath && $previousPath !== $movement->receipt_path) {
+            Storage::delete($previousPath);
+        }
+
+        return $movement;
+    }
+
+    private function pendingReceipt(mixed $receiptId): ?PaymentReceipt
+    {
+        if (! $receiptId) {
+            return null;
+        }
+
+        $receipt = PaymentReceipt::whereKey($receiptId)->whereNull('movement_id')->lockForUpdate()->first();
+
+        if (! $receipt) {
+            throw new \RuntimeException('El comprobante no existe o ya está vinculado a otro movimiento.');
+        }
+
+        return $receipt;
     }
 
     /**

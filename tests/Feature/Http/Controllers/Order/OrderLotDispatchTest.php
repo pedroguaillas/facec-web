@@ -158,3 +158,28 @@ test('orders.lot.store continúa el mismo secuencial que la creación individual
         ->toBe(['001-100-000000020', '001-100-000000021'])
         ->and(EmisionPointSequence::where('emision_point_id', $emisionPoint->id)->value('next_number'))->toBe(22);
 });
+
+test('orders.lot.store rechaza motos (productos por unidad)', function () {
+    Queue::fake();
+
+    $userType = UserType::firstOrCreate(['type' => 'client']);
+    $company = Company::factory()->create();
+    $branch = Branch::factory()->for($company)->create();
+    $user = User::factory()->create(['user_type_id' => $userType->id]);
+    CompanyUser::create(['user_id' => $user->id, 'level' => 1, 'level_id' => $company->id]);
+    test()->actingAs($user);
+
+    DB::table('iva_taxes')->insertOrIgnore([['code' => 2, 'percentage' => 12, 'state' => 'active']]);
+    EmisionPoint::factory()->for($branch)->create(['point' => 1]);
+
+    $customer = Customer::factory()->create(['branch_id' => $branch->id, 'identication' => '1111111111']);
+    $model = Product::factory()->create(['branch_id' => $branch->id, 'code' => 'MOTO-1', 'iva' => 2]);
+    Product::factory()->create(['branch_id' => $branch->id, 'code' => 'M5452', 'iva' => 2, 'parent_product_id' => $model->id]);
+
+    $this->post(route('orders.lot.store'), ['lot' => lotUploadFile([[$customer->identication, 'Cliente', 'M5452', 1, 2500]])])
+        ->assertOk()
+        ->assertJsonPath('msm', 'El lote no admite productos por unidad: M5452');
+
+    expect(Order::count())->toBe(0);
+    Queue::assertNothingPushed();
+});

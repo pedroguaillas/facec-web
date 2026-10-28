@@ -21,7 +21,10 @@ class AccountsReceivablePaymentService
 {
     public function __construct(private AccountsReceivableLedgerService $ledgerService) {}
 
-    public function pay(Order $order, float $amount, string $sourceType, int $sourceId, ?string $date = null): AccountReceivableMovement
+    /**
+     * @param  array{receipt_id?: int|null, receipt_number?: string|null}  $bankDetails  comprobante del pago por banco
+     */
+    public function pay(Order $order, float $amount, string $sourceType, int $sourceId, ?string $date = null, array $bankDetails = []): AccountReceivableMovement
     {
         if ($order->payment_type !== PaymentTypes::CREDITO) {
             throw new \RuntimeException('Esta venta no está a crédito, no admite abonos.');
@@ -33,7 +36,7 @@ class AccountsReceivablePaymentService
             throw new \RuntimeException('El abono no puede ser mayor al saldo pendiente de la factura.');
         }
 
-        return DB::transaction(function () use ($order, $amount, $sourceType, $sourceId, $date) {
+        return DB::transaction(function () use ($order, $amount, $sourceType, $sourceId, $date, $bankDetails) {
             app(MovementService::class)->create([
                 'branch_id' => $order->branch_id,
                 'date' => $date ?? now()->format('Y-m-d'),
@@ -41,6 +44,7 @@ class AccountsReceivablePaymentService
                 'transaction_type' => MovementTransactionTypes::SALE_COLLECTION,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                ...$bankDetails,
                 'origin_type' => MovementPartyRegistry::ORDER,
                 'origin_id' => $order->id,
                 'amount' => $amount,

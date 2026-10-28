@@ -124,10 +124,22 @@ class ShopController extends Controller
 
     private function getShopItems(int $shopId)
     {
-        return ShopItem::join('products AS p', 'shop_items.product_id', 'p.id')
-            ->select('shop_items.*', 'p.name', 'p.code')
+        $items = ShopItem::join('products AS p', 'shop_items.product_id', 'p.id')
+            ->select('shop_items.*', 'p.name', 'p.code', 'p.parent_product_id')
             ->where('shop_id', $shopId)
             ->get();
+
+        // Unidades (motos): sus características efectivas, para mostrarlas y fijar la cantidad en 1 al editar.
+        $units = Product::withTrashed()
+            ->whereIn('id', $items->whereNotNull('parent_product_id')->pluck('product_id'))
+            ->with(['details.field', 'parentProduct.details.field'])
+            ->get()
+            ->keyBy('id');
+
+        return $items->each(fn (ShopItem $item) => $item->setAttribute(
+            'characteristics',
+            $units->get($item->product_id)?->characteristics() ?? [],
+        ));
     }
 
     private function getProducts(int $shopId)

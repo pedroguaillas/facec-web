@@ -2,8 +2,12 @@
 
 namespace App\Xml;
 
+use App\Xml\Concerns\RendersDetallesAdicionales;
+
 class ReferralGuideBuilder extends BaseVoucherBuilder
 {
+    use RendersDetallesAdicionales;
+
     public function __construct(
         $company,
         private $guide,
@@ -69,6 +73,7 @@ class ReferralGuideBuilder extends BaseVoucherBuilder
             $string .= "<codigoInterno>{$item->code}</codigoInterno>";
             $string .= "<descripcion>{$item->name}</descripcion>";
             $string .= "<cantidad>{$item->quantity}</cantidad>";
+            $string .= $this->renderDetallesAdicionales($item->details ?? null);
             $string .= '</detalle>';
         }
         $string .= '</detalles>';

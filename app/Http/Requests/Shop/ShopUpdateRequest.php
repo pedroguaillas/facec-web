@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Shop;
 
 use App\Http\Requests\Shop\Concerns\ValidatesProviderIdentification;
+use App\Http\Requests\Shop\Concerns\ValidatesUnitLines;
 use App\Models\Shop\Shop;
 use App\Rules\ProductPresentationLinesRule;
 use App\StaticClasses\VoucherStates;
@@ -14,6 +15,7 @@ use Illuminate\Validation\Validator;
 class ShopUpdateRequest extends FormRequest
 {
     use ValidatesProviderIdentification;
+    use ValidatesUnitLines;
 
     public function authorize(): bool
     {
@@ -43,6 +45,10 @@ class ShopUpdateRequest extends FormRequest
                     $this->input('voucher_type_id', $shop->voucher_type_id),
                     $this->input('provider_id', $shop->provider_id),
                 );
+
+                if ($validator->errors()->isEmpty() && $this->has('products') && $shop instanceof Shop) {
+                    $this->validateUnitLines($validator, $this->input('voucher_type_id', $shop->voucher_type_id), $shop);
+                }
             },
         ];
     }
@@ -87,6 +93,10 @@ class ShopUpdateRequest extends FormRequest
             'products.*.price' => ['required', 'numeric', 'min:0'],
             'products.*.discount' => ['required', 'numeric', 'min:0'],
             'products.*.iva' => ['required', 'numeric', 'min:0'],
+            // Unidad nueva (moto) sobre el producto modelo: {key: valor} de nivel `unidad`;
+            // `unit_code` solo si la plantilla no genera el código. Ver ValidatesUnitLines.
+            'products.*.unit' => ['sometimes', 'nullable', 'array'],
+            'products.*.unit_code' => ['sometimes', 'nullable', 'string', 'max:25'],
 
             // Retención
             'app_retention' => ['nullable', 'boolean'],

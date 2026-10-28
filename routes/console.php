@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Treasury\PaymentReceipt;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -14,4 +15,9 @@ Artisan::command('inspire', function () {
 Schedule::command('invoices:recurring')
     ->everyMinute()
     ->withoutOverlapping()
+    ->onOneServer();
+
+// Comprobantes de pago subidos y nunca vinculados a un movimiento (24h).
+Schedule::command('model:prune', ['--model' => [PaymentReceipt::class]])
+    ->hourly()
     ->onOneServer();

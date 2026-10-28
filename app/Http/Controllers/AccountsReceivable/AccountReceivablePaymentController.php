@@ -20,6 +20,7 @@ class AccountReceivablePaymentController extends Controller
                 $request->validated('source_type'),
                 (int) $request->validated('source_id'),
                 $request->validated('date'),
+                $request->safe()->only(['receipt_id', 'receipt_number']),
             );
         } catch (\RuntimeException $e) {
             return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);

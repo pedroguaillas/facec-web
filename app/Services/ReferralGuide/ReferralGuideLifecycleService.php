@@ -5,6 +5,7 @@ namespace App\Services\ReferralGuide;
 use App\Models\Company;
 use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\ReferralGuide\ReferralGuideItem;
+use App\Services\Product\UnitSaleService;
 use App\Services\SriSoapService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
@@ -58,6 +59,10 @@ class ReferralGuideLifecycleService
         $referralguideitems = ReferralGuideItem::join('products AS p', 'p.id', 'product_id')
             ->where('referral_guide_id', $id)
             ->get();
+
+        // Características actuales del producto (la unidad no se edita una vez usada).
+        $characteristics = app(UnitSaleService::class)->characteristicsByProduct($referralguideitems->pluck('product_id'));
+        $referralguideitems->each(fn (ReferralGuideItem $item) => $item->setAttribute('details', $characteristics[$item->product_id] ?? null));
 
         return (new ReferralGuideBuilder($company, $referralguide, $referralguideitems))->build();
     }

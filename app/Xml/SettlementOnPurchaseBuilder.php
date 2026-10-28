@@ -2,10 +2,13 @@
 
 namespace App\Xml;
 
+use App\Xml\Concerns\RendersDetallesAdicionales;
 use stdClass;
 
 class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
 {
+    use RendersDetallesAdicionales;
+
     public function __construct(
         $company,
         private $shop,
@@ -94,6 +97,7 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
             $string .= '<precioUnitario>'.round($detail->price, $company->decimal).'</precioUnitario>';
             $string .= '<descuento>0.00</descuento>';
             $string .= "<precioTotalSinImpuesto>{$total}</precioTotalSinImpuesto>";
+            $string .= $this->renderDetallesAdicionales($detail->details ?? null);
             $string .= '<impuestos>';
             $string .= '<impuesto>';
             $string .= '<codigo>2</codigo>';

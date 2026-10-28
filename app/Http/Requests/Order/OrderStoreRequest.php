@@ -6,10 +6,14 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Product\Product;
 use App\Models\Product\SriCategory;
+use App\Models\Treasury\PaymentReceipt;
+use App\Models\VoucherType;
 use App\Rules\ProductPresentationLinesRule;
+use App\Services\Product\UnitSaleService;
 use App\Services\SubscriptionGate;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -102,6 +106,9 @@ class OrderStoreRequest extends FormRequest
                 'integer',
                 Rule::exists($sourceTable, 'id'),
             ],
+            // Comprobante subido antes (POST payment-receipts), solo con banco.
+            'receipt_id' => PaymentReceipt::idRules($this->input('source_type')),
+            'receipt_number' => PaymentReceipt::numberRules($this->input('source_type')),
             'date_order' => 'sometimes|nullable|date',
             'serie_order' => 'sometimes|nullable|string',
             'reason' => 'sometimes|nullable|string',
@@ -117,14 +124,31 @@ class OrderStoreRequest extends FormRequest
                     return;
                 }
 
-                $customer = Customer::find($this->customer_id);
+                $customer = Customer::find($this->integer('customer_id'));
 
                 if ($customer && $customer->identication === '9999999999999' && $this->total > 50) {
                     $validator->errors()->add('total', 'No es posible una venta mayor a $50 a consumidor final.');
                 }
 
+                // El SRI rechaza notas de crédito a consumidor final.
+                if ($customer && $customer->identication === '9999999999999'
+                    && VoucherType::whereKey($this->voucher_type_id)->value('slug') === VoucherTypes::VENTA_NOTA_CREDITO) {
+                    $validator->errors()->add('customer_id', 'No se puede emitir una nota de crédito a consumidor final');
+                }
+
                 if (blank($this->plate) && $this->hasTransportService()) {
                     $validator->errors()->add('plate', 'La placa es obligatoria cuando la venta incluye un servicio de transporte.');
+                }
+
+                $voucherSlug = VoucherType::whereKey($this->voucher_type_id)->value('slug');
+                $unitErrors = app(UnitSaleService::class)->lineErrors(
+                    $this->input('products', []),
+                    (string) $voucherSlug,
+                    (bool) $this->user()->company->inventory,
+                );
+
+                foreach ($unitErrors as $attribute => $message) {
+                    $validator->errors()->add($attribute, $message);
                 }
             },
         ];

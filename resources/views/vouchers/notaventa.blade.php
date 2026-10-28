@@ -20,6 +20,9 @@
                             @if($movement->address)
                             <td class="relleno">Dirección: {{ $movement->address }}</td>
                             @endif
+                            @if($movement->phone)
+                            <td class="align-middle">Teléfono: {{ $movement->phone }}</td>
+                            @endif
                         </tr>
                     </tbody>
                 </table>
@@ -53,7 +56,7 @@
                         <tr>
                             <td style="text-align: center; width: 5em;">{{ $item->code }}</td>
                             <td style="text-align: center; width: 4em;">{{ floatval($item->quantity) }}</td>
-                            <td>{{ $item->name }}</td>
+                            <td>{{ $item->name }}@include('vouchers.theme.itemdetails', ['details' => $item->details])</td>
                             <td style="text-align: right; width: 5em;">{{ number_format($item->price, $company->decimal) }}</td>
                             @if($enabledDiscount)
                                 <td style="text-align: right; width: 5em;">{{ number_format($item->discount, 2) }}</td>

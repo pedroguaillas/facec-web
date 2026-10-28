@@ -131,11 +131,14 @@ compartido es `resources/views/vouchers/theme/rucproveedor.blade.php`.
 - `ReferralGuideStoreRequest` (`app/Http/Requests/ReferralGuide/ReferralGuideStoreRequest.php`):
   `customer_id`, `carrier_id`, `point_id` deben existir; `serie` `max:17`;
   `address_from`/`address_to`/`reason_transfer` requeridos `max:300`;
-  `date_end` `after_or_equal:date_start`; `products.*.quantity`
+  `date_end` `after_or_equal:today`; `products.*.quantity`
   `numeric min:0`. `authorize()` solo exige `Auth::check()`. `date` (fecha
-  de emisión) **no** es campo del request — `ReferralGuideStoreService`
-  siempre la fija en `now()` al crear, igual criterio que `serie`; cualquier
-  `date` que mande el cliente se ignora.
+  de emisión) y `date_start` (inicio de transporte) **no** son campos del
+  request — `ReferralGuideStoreService` fija ambas en `now()` al crear, igual
+  criterio que `serie`; lo que mande el cliente se ignora. Al editar,
+  `date_start` se conserva y `date_end` debe ser `>=` ese inicio guardado.
+- PDF: no muestra una fila "Fecha de Emisión" aparte; la fecha visible es
+  "Fecha inicio" (= emisión al crear), en `d/m/Y`.
 - `ReferralGuideUpdateRequest`: idéntico salvo que **no** pide `point_id` ni
   `serie` (el secuencial ya está asignado y no se regenera en update).
 - **Secuencial server-side:** el número de la serie no se confía del
@@ -255,3 +258,14 @@ tiene totales — los ítems solo cargan `quantity`, sin precio ni impuestos.
 El secuencial de la serie sí se calcula server-side (§4). El scope
 multi-empresa está cubierto por `BranchScope` (no hay fuga entre empresas en
 `index`/`show`), aunque limitado a la primera sucursal.
+
+## 8. Características de producto
+
+Las líneas no guardan foto: `ReferralGuideLifecycleService::buildXml` y el
+PDF toman las características actuales del producto
+(`UnitSaleService::characteristicsByProduct`). El XML lleva hasta 3
+`<detAdicional>` (`in_sri`) después de `<cantidad>`; el PDF las muestra
+todas. Para que salga el chasis, la línea debe ser la unidad.
+`referralguides.show` devuelve en cada `referralguide_items[]`
+`parent_product_id` y `characteristics` (vacío si no tiene). Ver
+`docs/caracteristicas-producto.md` §10 y §15.

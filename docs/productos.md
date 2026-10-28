@@ -326,3 +326,27 @@ SRI de 11–25 caracteres serían rechazados pese a caber en BD. Alinear ambos.
   columnas (`percentage`, `iva_code`) que solo existen en el `selectRaw` de
   `index`; usarlo con un `Product` normal devolvería esos campos en `null`.
   El recurso está acoplado a esa consulta concreta.
+
+## 8. Características (plantillas) y unidades
+
+Diseño y contrato completos: `docs/caracteristicas-producto.md`.
+
+- **Plantilla** (`product_templates` + `product_template_fields`, CRUD en
+  `settings/product-templates`): campos que define cada contribuyente, de
+  nivel `modelo` (Marca, Año, Modelo) o `unidad` (Chasis, Motor, RAMV). Hasta
+  3 campos activos `in_sri`, que van al XML. Prefijo de código opcional y campo
+  de código (de nivel `unidad` y `unique`).
+- **Modelo**: `products.product_template_id` + valores de nivel `modelo` en
+  `product_details` (`details: {key: valor}` en `products.store/update`).
+  Si la plantilla tiene campos por unidad, el modelo no lleva stock propio.
+- **Unidad** (variante): producto hijo (`parent_product_id`), creado a mano
+  (`POST products/{id}/units`) o desde una línea de compra. Hereda nombre,
+  precio e impuestos (`ProductUnitService::INHERITED_ATTRIBUTES`). Su código
+  es prefijo + campo de código (ej. `M5452`), y no se edita una vez usada
+  en un comprobante.
+- **Características efectivas** (`Product::characteristics()`): las del
+  modelo más las de la unidad, `[{label, value, in_sri, sort}]`. Las
+  devuelven `products` (index), `products/lookup` (que además busca por
+  valores `unique`, como chasis o motor) y `products/{id}/edit`.
+- Un producto con unidades no se elimina, y su plantilla no cambia si tiene
+  variantes.

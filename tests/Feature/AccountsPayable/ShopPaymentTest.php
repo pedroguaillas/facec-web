@@ -7,6 +7,7 @@ use App\Models\CompanyUser;
 use App\Models\EmisionPoint;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
+use App\Models\Shop\ShopRetentionItem;
 use App\Models\Treasury\CashRegister;
 use App\Models\Treasury\CashRegisterSession;
 use App\Models\User;
@@ -18,6 +19,7 @@ use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\PlanTypes;
 use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @return array{0: Branch, 1: Shop, 2: CashRegisterSession}
@@ -132,3 +134,16 @@ test('se puede abonar a una compra a crédito existente aunque el plan haya baja
     'facturador vigente' => fn () => ['plan' => PlanTypes::FACTURADOR, 'started_at' => now()->subDay(), 'ended_at' => now()->addMonth()],
     'plan vencido' => fn () => ['plan' => PlanTypes::FINANCIERO, 'started_at' => now()->subMonths(2), 'ended_at' => now()->subDay()],
 ]);
+
+test('el saldo pendiente para abonar descuenta la retención', function () {
+    [, $shop, $session] = creditShopReadyForPayment(100);
+    DB::table('taxes')->insertOrIgnore(['code' => '303', 'conception' => 'Retención renta', 'porcentage' => 1, 'type' => 'renta']);
+    ShopRetentionItem::create(['shop_id' => $shop->id, 'code' => '1', 'tax_code' => '303', 'base' => 100, 'porcentage' => 1, 'value' => 1]);
+    $payload = ['source_type' => MovementPartyRegistry::CASH_REGISTER_SESSION, 'source_id' => $session->id];
+
+    test()->postJson(route('shops.payments.store', $shop), [...$payload, 'amount' => 100])->assertStatus(422);
+    test()->postJson(route('shops.payments.store', $shop), [...$payload, 'amount' => 99])->assertCreated();
+
+    expect((float) $shop->fresh()->paid)->toBe(99.0)
+        ->and($shop->fresh()->pendingBalance())->toBe(0.0);
+});

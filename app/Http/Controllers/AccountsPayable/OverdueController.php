@@ -11,8 +11,8 @@ use Illuminate\Support\Carbon;
 class OverdueController extends Controller
 {
     /**
-     * Compras a crédito/anticipo vencidas (due_date < hoy) con saldo pendiente,
-     * agrupadas por proveedor — para la pantalla "Cartera vencida".
+     * Compras a crédito/anticipo vencidas (due_date < hoy) con saldo pendiente
+     * (total - retención - pagado), agrupadas por proveedor — para la pantalla "Cartera vencida".
      */
     public function index(): JsonResponse
     {
@@ -23,7 +23,9 @@ class OverdueController extends Controller
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', $today)
             ->whereColumn('paid', '<', 'total')
-            ->get();
+            ->withSum('shopretentionitems as retention_sum', 'value')
+            ->get()
+            ->filter(fn (Shop $shop) => $shop->pendingBalance() > 0);
 
         $parties = $shops->groupBy('provider_id')->map(function ($group) use ($today) {
             $provider = $group->first()->provider;
@@ -33,7 +35,7 @@ class OverdueController extends Controller
                 'serie' => $shop->serie,
                 'due_date' => $shop->due_date->format('Y-m-d'),
                 'days_overdue' => (int) $shop->due_date->diffInDays($today),
-                'pending' => round((float) $shop->total - (float) $shop->paid, 2),
+                'pending' => $shop->pendingBalance(),
             ])->values();
 
             return [

@@ -18,6 +18,7 @@ use App\StaticClasses\CashRegisterStatuses;
 use App\StaticClasses\MovementPartyRegistry;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @return array{0: Branch, 1: Provider, 2: User, 3: CashRegisterSession}
@@ -147,4 +148,29 @@ test('listar anticipos disponibles de un proveedor suma solo lo no consumido', f
     expect((float) $response->json('total_remaining'))->toBe(50.0)
         ->and($response->json('advances'))->toHaveCount(1)
         ->and((float) $response->json('advances.0.remaining'))->toBe(50.0);
+});
+
+test('el anticipo se aplica solo hasta el total menos la retención', function () {
+    [$branch, $provider, , $session] = payableAdvanceActingAsCompany();
+    DB::table('taxes')->insertOrIgnore(['code' => '303', 'conception' => 'Retención renta', 'porcentage' => 1, 'type' => 'renta']);
+
+    test()->postJson(route('providers.advances.store', $provider), [
+        'amount' => 150,
+        'source_type' => MovementPartyRegistry::CASH_REGISTER_SESSION,
+        'source_id' => $session->id,
+    ])->assertCreated();
+
+    test()->postJson(route('shops.store'), payableAdvanceShopPayload($branch, $provider, 100, [
+        'app_retention' => true,
+        'taxes' => [['code' => '1', 'tax_code' => '303', 'base' => 100, 'porcentage' => 1, 'value' => 1]],
+    ]))->assertCreated();
+
+    $shop = Shop::first();
+    $advance = ProviderAdvance::where('provider_id', $provider->id)->first();
+    $lastMovement = AccountPayableMovement::where('provider_id', $provider->id)->orderByDesc('id')->first();
+
+    expect((float) $shop->paid)->toBe(99.0)
+        ->and($shop->pendingBalance())->toBe(0.0)
+        ->and((float) $advance->applied_amount)->toBe(99.0)
+        ->and((float) $lastMovement->new_balance)->toBe(-51.0); // anticipo restante: 150 - 99
 });

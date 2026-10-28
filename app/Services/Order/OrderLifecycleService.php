@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Order\Lot;
 use App\Models\Order\Order;
 use App\Models\Order\OrderItem;
+use App\Services\Product\UnitSaleService;
 use App\Services\Product\VoucherInventoryService;
 use App\Services\VoucherLifecycleService;
 use App\StaticClasses\VoucherStates;
@@ -78,6 +79,10 @@ class OrderLifecycleService
 
         if ($result['canceled'] ?? false) {
             app(VoucherInventoryService::class)->reverse($order);
+            app(UnitSaleService::class)->syncStockWithoutInventory(
+                $order->orderitems()->pluck('product_id'),
+                (bool) Auth::user()->company->inventory,
+            );
         }
 
         return $result;
@@ -86,7 +91,7 @@ class OrderLifecycleService
     private function buildXml($id, $company)
     {
         $order = Order::join('customers AS c', 'c.id', 'customer_id')
-            ->select('c.identication', 'c.name', 'c.address', 'c.type_identification', 'orders.*')
+            ->select('c.identication', 'c.name', 'c.address', 'c.email', 'c.phone', 'c.type_identification', 'orders.*')
             ->where('orders.id', $id)
             ->first();
 
@@ -98,7 +103,7 @@ class OrderLifecycleService
 
         $order_items = OrderItem::join('products AS p', 'p.id', 'product_id')
             ->join('iva_taxes AS it', 'it.code', 'order_items.iva')
-            ->selectRaw('quantity,price,discount,order_items.ice AS valice,COALESCE(order_items.code, p.code) AS codeproduct,aux_cod,COALESCE(order_items.description, p.name) AS name,it.code AS iva,it.percentage,p.ice AS codice')
+            ->selectRaw('quantity,price,discount,order_items.ice AS valice,COALESCE(order_items.code, p.code) AS codeproduct,aux_cod,COALESCE(order_items.description, p.name) AS name,order_items.details,it.code AS iva,it.percentage,p.ice AS codice')
             ->where('order_id', $order->id)
             ->get();
 

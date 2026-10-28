@@ -16,6 +16,7 @@ use App\Models\Product\Product;
 use App\Models\ReferralGuide\ReferralGuide;
 use App\Models\ReferralGuide\ReferralGuideItem;
 use App\Models\VoucherType;
+use App\Services\Product\UnitSaleService;
 use App\Services\ReferralGuide\ReferralGuideStoreService;
 use App\Services\ReferralGuide\ReferralGuideUpdateService;
 use App\StaticClasses\VoucherTypes;
@@ -105,9 +106,12 @@ class ReferralGuideController extends Controller
         $isElectronic = true;
 
         $movement_items = ReferralGuideItem::join('products AS p', 'p.id', 'product_id')
-            ->select('quantity', 'name', 'code')
+            ->select('product_id', 'quantity', 'name', 'code')
             ->where('referral_guide_id', $id)
             ->get();
+
+        $characteristics = app(UnitSaleService::class)->characteristicsByProduct($movement_items->pluck('product_id'));
+        $movement_items->each(fn (ReferralGuideItem $item) => $item->setAttribute('details', $characteristics[$item->product_id] ?? null));
 
         $company = Auth::user()->company;
         $company->logo_dir = $company->logo_dir ?: 'default.png';
@@ -124,15 +128,20 @@ class ReferralGuideController extends Controller
 
     private function getItems(int $id)
     {
-        return Product::join('referral_guide_items AS rgi', 'product_id', 'products.id')
-            ->select('rgi.id', 'quantity', 'name', 'product_id')
+        $items = Product::join('referral_guide_items AS rgi', 'product_id', 'products.id')
+            ->select('rgi.id', 'quantity', 'name', 'product_id', 'parent_product_id')
             ->where('referral_guide_id', $id)
-            ->get()
-            ->map(function ($item) {
-                $item->quantity = floatval($item->quantity);
+            ->get();
 
-                return $item;
-            });
+        // Características actuales del producto de la línea (unidad: chasis, motor…).
+        $characteristics = app(UnitSaleService::class)->characteristicsByProduct($items->pluck('product_id'));
+
+        return $items->map(function ($item) use ($characteristics) {
+            $item->quantity = floatval($item->quantity);
+            $item->setAttribute('characteristics', $characteristics[$item->getAttribute('product_id')] ?? []);
+
+            return $item;
+        });
     }
 
     private function getProducts(int $id)

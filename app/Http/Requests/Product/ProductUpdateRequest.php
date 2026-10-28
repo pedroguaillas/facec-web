@@ -5,7 +5,10 @@ namespace App\Http\Requests\Product;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Product\Product;
+use App\Models\Product\ProductTemplate;
+use App\Models\Product\ProductTemplateField;
 use App\Rules\AvailablePresentationCodeRule;
+use App\Services\Product\ProductDetailService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -55,6 +58,16 @@ class ProductUpdateRequest extends FormRequest
             'min_stock' => 'nullable|numeric|min:0',
             // Solo empresas con IVA diferenciado (`base8`) pueden marcarlo.
             'differentiated_iva' => ['sometimes', 'boolean', Rule::prohibitedIf(! $company->base8 && $this->boolean('differentiated_iva'))],
+            // Plantilla de características (producto modelo) y valores de nivel `modelo` como {key: valor}.
+            // Puede conservar una plantilla ya desactivada, pero no asignar una nueva inactiva.
+            'product_template_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('product_templates', 'id')->where('branch_id', $branch->id)->where(
+                    fn ($query) => $query->where('active', true)->orWhere('id', $product instanceof Product ? $product->product_template_id : null)
+                ),
+            ],
+            'details' => ['sometimes', 'array'],
         ];
     }
 
@@ -77,8 +90,48 @@ class ProductUpdateRequest extends FormRequest
                 if ($becomesService && $product?->isStockable() && $product->inventories()->whereNotNull('warehouse_id')->exists()) {
                     $validator->errors()->add('type_product', 'El producto tiene movimientos de inventario y no puede convertirse en servicio.');
                 }
+
+                if ($validator->errors()->isEmpty() && $product) {
+                    $this->validateTemplate($validator, $product);
+                }
             },
         ];
+    }
+
+    private function validateTemplate(Validator $validator, Product $product): void
+    {
+        // Sin la clave, el producto conserva su plantilla (clientes que no la envían).
+        if (! $this->has('product_template_id') && ! $this->has('details')) {
+            return;
+        }
+
+        $templateId = $this->has('product_template_id')
+            ? ($this->filled('product_template_id') ? $this->integer('product_template_id') : null)
+            : $product->product_template_id;
+
+        if ($product->parent_product_id && $templateId) {
+            $validator->errors()->add('product_template_id', 'Una unidad usa la plantilla de su producto modelo.');
+
+            return;
+        }
+
+        if ($templateId !== $product->product_template_id && $product->variants()->exists()) {
+            $validator->errors()->add('product_template_id', 'El producto tiene unidades registradas y no puede cambiar de plantilla.');
+
+            return;
+        }
+
+        if (! $templateId) {
+            return;
+        }
+
+        /** @var array<string, mixed> $details */
+        $details = $this->input('details', []);
+        $template = ProductTemplate::findOrFail($templateId);
+
+        foreach (app(ProductDetailService::class)->errors($template, ProductTemplateField::LEVEL_MODEL, $details, $product->id) as $attribute => $message) {
+            $validator->errors()->add($attribute, $message);
+        }
     }
 
     public function messages(): array

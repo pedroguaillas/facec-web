@@ -11,6 +11,7 @@ use App\Models\Product\Product;
 use App\Models\User;
 use App\Models\UserType;
 use App\Models\VoucherType;
+use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -34,7 +35,7 @@ function convertActingAsCompany(): Branch
 
 function createProformaFor(Branch $branch, Product $product): Order
 {
-    $emisionPoint = EmisionPoint::factory()->for($branch)->create(['point' => 1]);
+    $emisionPoint = EmisionPoint::firstOrCreate(['branch_id' => $branch->id, 'point' => 1], EmisionPoint::factory()->make()->only(['invoice', 'creditnote', 'retention', 'referralguide', 'settlementonpurchase', 'recognition']));
     $customer = Customer::factory()->create(['branch_id' => $branch->id]);
     $proformaTypeId = VoucherType::where('slug', VoucherTypes::VENTA_PROFORMA)->value('id');
 
@@ -82,21 +83,66 @@ test('convertir una proforma crea una factura nueva desde el mismo punto de emis
     expect($proforma->voucherType->slug)->toBe(VoucherTypes::VENTA_PROFORMA);
 });
 
-test('una proforma puede convertirse mas de una vez, generando facturas independientes', function () {
+test('una proforma ya convertida no se vuelve a convertir mientras su factura esté vigente', function () {
     Queue::fake();
     $branch = convertActingAsCompany();
     $product = Product::factory()->create(['branch_id' => $branch->id, 'iva' => 2]);
     $proforma = createProformaFor($branch, $product);
 
     $first = $this->getJson(route('orders.convert-to-invoice', $proforma))->assertCreated();
-    $second = $this->getJson(route('orders.convert-to-invoice', $proforma))->assertCreated();
+    $invoice = Order::with('voucherType')->findOrFail($first->json('id'));
 
-    expect($first->json('id'))->not->toBe($second->json('id'));
+    expect($invoice->proforma_id)->toBe($proforma->id);
 
-    $firstSequential = (int) substr($first->json('serie'), -9);
-    $secondSequential = (int) substr($second->json('serie'), -9);
+    $this->getJson(route('orders.convert-to-invoice', $proforma))
+        ->assertUnprocessable()
+        ->assertJsonPath('succes', false)
+        ->assertJsonPath('message', "Esta proforma ya fue convertida en la factura {$invoice->voucherType->abbreviation} {$invoice->serie}.");
 
-    expect($secondSequential)->toBe($firstSequential + 1);
+    expect(Order::where('proforma_id', $proforma->id)->count())->toBe(1);
+});
+
+test('si la factura de la proforma se anuló, la proforma se puede convertir de nuevo', function () {
+    Queue::fake();
+    $branch = convertActingAsCompany();
+    $product = Product::factory()->create(['branch_id' => $branch->id, 'iva' => 2]);
+    $proforma = createProformaFor($branch, $product);
+
+    $firstId = $this->getJson(route('orders.convert-to-invoice', $proforma))->assertCreated()->json('id');
+    Order::whereKey($firstId)->update(['state' => VoucherStates::CANCELED]);
+
+    $secondId = $this->getJson(route('orders.convert-to-invoice', $proforma))->assertCreated()->json('id');
+
+    expect($secondId)->not->toBe($firstId)
+        ->and(Order::findOrFail($secondId)->proforma_id)->toBe($proforma->id);
+});
+
+test('el listado y el edit devuelven la factura vigente de la proforma sin consultas por orden', function () {
+    Queue::fake();
+    $branch = convertActingAsCompany();
+    $product = Product::factory()->create(['branch_id' => $branch->id, 'iva' => 2]);
+    $proforma = createProformaFor($branch, $product);
+    $invoice = Order::with('voucherType')->findOrFail($this->getJson(route('orders.convert-to-invoice', $proforma))->json('id'));
+    $expected = ['id' => $invoice->id, 'serie' => "{$invoice->voucherType->abbreviation} {$invoice->serie}", 'state' => $invoice->state];
+
+    $rows = collect($this->getJson(route('orders.index'))->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows[$proforma->id]['atts']['converted_invoice'])->toBe($expected)
+        ->and($rows[$invoice->id]['atts']['converted_invoice'])->toBeNull();
+    $this->getJson(route('orders.edit', $proforma))->assertOk()->assertJsonPath('converted_invoice', $expected);
+
+    $queries = function () {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->getJson(route('orders.index'))->assertOk();
+        DB::disableQueryLog();
+
+        return count(DB::getQueryLog());
+    };
+    $before = $queries();
+    $this->getJson(route('orders.convert-to-invoice', createProformaFor($branch, $product)))->assertCreated();
+
+    expect($queries())->toBe($before);
 });
 
 test('no se puede convertir una orden que ya es factura', function () {

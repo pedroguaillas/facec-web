@@ -78,8 +78,8 @@ class AccountsPayableLedgerService
     }
 
     /**
-     * Aplica los anticipos disponibles del proveedor (FIFO) contra el total
-     * de la compra. Si no alcanzan, el resto queda como crédito normal — la
+     * Aplica los anticipos disponibles del proveedor (FIFO) contra lo que se
+     * le debe por la compra (total - retención). Si no alcanzan, el resto queda como crédito normal — la
      * compra carga el TOTAL y la aplicación de anticipo abona lo consumido,
      * dejando pendiente solo la diferencia.
      */
@@ -92,7 +92,7 @@ class AccountsPayableLedgerService
             ->orderBy('id')
             ->get();
 
-        $remaining = (float) $shop->total;
+        $remaining = (float) $shop->total - $shop->retentionTotal();
         $aplicado = 0.0;
 
         foreach ($advances as $advance) {

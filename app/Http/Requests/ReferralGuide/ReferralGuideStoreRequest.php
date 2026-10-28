@@ -20,8 +20,8 @@ class ReferralGuideStoreRequest extends FormRequest
             'point_id' => ['required', 'integer', 'exists:emision_points,id'],
             'address_from' => ['required', 'string', 'max:300'],
             'address_to' => ['required', 'string', 'max:300'],
-            'date_start' => ['required', 'date'],
-            'date_end' => ['required', 'date', 'after_or_equal:date_start'],
+            // Inicio de transporte = fecha actual del servidor (ReferralGuideStoreService); no viene del cliente.
+            'date_end' => ['required', 'date', 'after_or_equal:today'],
             'reason_transfer' => ['required', 'string', 'max:300'],
             'customs_doc' => ['nullable', 'string', 'max:20'],
             'branch_destiny' => ['nullable', 'string', 'max:3'],

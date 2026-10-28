@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessVoucherJob;
 use App\Models\Shop\Shop;
+use App\Services\Product\ProductUnitService;
 use App\Services\Shop\ShopLcXmlService;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
@@ -39,6 +40,16 @@ class ShopLifecycleController extends Controller
     {
         abort_unless($shop->voucherType->slug === VoucherTypes::COMPRA_LIQUIDACION_COMPRA, 404);
 
+        // Una moto registrada por esta compra que ya se vendió no puede salir del inventario.
+        $soldUnitCodes = app(ProductUnitService::class)->soldUnitCodesOf($shop);
+
+        if ($soldUnitCodes !== []) {
+            return response()->json([
+                'succes' => false,
+                'message' => 'No se puede anular: las unidades '.implode(', ', $soldUnitCodes).' ya se vendieron.',
+            ], 422);
+        }
+
         try {
             $result = $service->cancel($shop);
         } catch (\Throwable $e) {
@@ -56,6 +67,8 @@ class ShopLifecycleController extends Controller
                 'shop' => $shop->fresh(),
             ], 422);
         }
+
+        app(ProductUnitService::class)->retireUnitsOf($shop);
 
         return response()->json(['succes' => true, 'message' => 'Comprobante anulado con éxito.', 'shop' => $shop->fresh()]);
     }

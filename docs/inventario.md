@@ -177,3 +177,18 @@ del producto.
   el precio antes del descuento.
 - Ventas y compras usan siempre la bodega por defecto; elegir otra bodega por
   documento queda pendiente (requiere `warehouse_id` en el request).
+
+## 8. Unidades (motos)
+
+Ver `docs/caracteristicas-producto.md` §5, §13 y §14.
+
+- Cada unidad tiene stock 1 mientras está disponible. El alta manual entra
+  como saldo inicial; el alta desde compra entra con el movimiento
+  `Compra`, a su costo.
+- Va con cantidad 1 por línea en compra y venta. No se vende con stock 0,
+  aunque la empresa tenga `allow_negative_stock`.
+- Al anular una venta o emitir una nota de crédito, la unidad vuelve a
+  stock 1 por el kardex. Al anular una liquidación con unidades no
+  vendidas, quedan en stock 0 y soft delete.
+- Sin inventario el kardex no corre: `UnitSaleService::syncStockWithoutInventory`
+  pone 0 si la unidad está vendida y 1 si no.

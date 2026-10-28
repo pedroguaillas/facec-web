@@ -80,8 +80,10 @@ class CreditNoteBuilder extends BaseVoucherBuilder
 
         $string .= $this->renderDetalles($this->items, $company->decimal, 'codigoInterno', includeAuxCode: false);
 
-        if (($artisan = $this->artisanAdditional()) !== '') {
-            $string .= "<infoAdicional>{$artisan}</infoAdicional>";
+        $additional = $this->artisanAdditional().$this->customerContactAdditional($order->email, $order->phone);
+
+        if ($additional !== '') {
+            $string .= "<infoAdicional>{$additional}</infoAdicional>";
         }
 
         $string .= '</notaCredito>';

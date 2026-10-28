@@ -29,6 +29,7 @@ class MovementResources extends JsonResource
                 'payment_method' => $this->payment_method,
                 'description' => $this->description,
                 'receipt_path' => $this->receipt_path,
+                'has_receipt' => $this->receipt_path !== null,
             ],
             'source_type' => $this->source_type,
             'source' => $this->whenLoaded('source', fn () => $this->morphResource($this->source, $this->source_type)),

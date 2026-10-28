@@ -13,6 +13,7 @@ use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
 use App\Models\Product\IvaTax;
 use App\Models\Product\Product;
+use App\Models\Product\ProductTemplateField;
 use App\Models\VoucherType;
 use App\Services\VoucherSequenceService;
 use App\StaticClasses\VoucherStates;
@@ -137,6 +138,16 @@ class OrderLotService
 
         if (count($codes) > $products->count()) {
             throw new RuntimeException('No esta registrado todos los productos');
+        }
+
+        // Las motos (unidades o modelos con plantilla de unidad) se venden de una en una desde el formulario.
+        $unitCodes = Product::whereIn('id', $products->pluck('id'))
+            ->where(fn ($query) => $query->whereNotNull('parent_product_id')->orWhereHas('template.fields', fn ($fields) => $fields
+                ->where('level', ProductTemplateField::LEVEL_UNIT)->where('active', true)))
+            ->pluck('code');
+
+        if ($unitCodes->isNotEmpty()) {
+            throw new RuntimeException('El lote no admite productos por unidad: '.$unitCodes->implode(', '));
         }
 
         return json_decode(json_encode($products));

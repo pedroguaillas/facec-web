@@ -5,7 +5,10 @@ namespace App\Http\Requests\Product;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Product\Product;
+use App\Models\Product\ProductTemplate;
+use App\Models\Product\ProductTemplateField;
 use App\Rules\AvailablePresentationCodeRule;
+use App\Services\Product\ProductDetailService;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -66,6 +69,13 @@ class ProductStoreRequest extends FormRequest
                 new AvailablePresentationCodeRule($branch->id),
             ],
             'presentations.*.active' => ['sometimes', 'boolean'],
+            // Plantilla de características (producto modelo) y valores de nivel `modelo` como {key: valor}.
+            'product_template_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('product_templates', 'id')->where('branch_id', $branch->id)->where('active', true),
+            ],
+            'details' => ['sometimes', 'array'],
         ];
     }
 
@@ -79,8 +89,30 @@ class ProductStoreRequest extends FormRequest
                 if ($requiresAuxCod && blank($this->input('aux_cod'))) {
                     $validator->errors()->add('aux_cod', 'El código auxiliar es obligatorio para este producto.');
                 }
+
+                if ($validator->errors()->isEmpty() && $this->filled('product_template_id')) {
+                    $this->validateDetails($validator);
+                }
             },
         ];
+    }
+
+    private function validateDetails(Validator $validator): void
+    {
+        $template = ProductTemplate::findOrFail($this->integer('product_template_id'));
+
+        /** @var array<string, mixed> $details */
+        $details = $this->input('details', []);
+
+        foreach (app(ProductDetailService::class)->errors($template, ProductTemplateField::LEVEL_MODEL, $details) as $attribute => $message) {
+            $validator->errors()->add($attribute, $message);
+        }
+
+        $hasUnitFields = $template->fields()->where('level', ProductTemplateField::LEVEL_UNIT)->where('active', true)->exists();
+
+        if ($hasUnitFields && (float) $this->input('stock') > 0) {
+            $validator->errors()->add('stock', 'El stock de este producto se maneja por unidades: regístralas desde el producto o por compra.');
+        }
     }
 
     public function messages(): array

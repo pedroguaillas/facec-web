@@ -4,6 +4,7 @@ namespace App\Models\Treasury;
 
 use App\Models\BaseModel;
 use App\Models\User;
+use App\StaticClasses\MovementPartyRegistry;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -41,6 +42,12 @@ class Movement extends BaseModel
         'previous_balance' => 'float',
         'new_balance' => 'float',
     ];
+
+    /** Solo los movimientos con cuenta bancaria (origen o destino) llevan comprobante. */
+    public function involvesBankAccount(): bool
+    {
+        return in_array(MovementPartyRegistry::BANK_ACCOUNT, [$this->source_type, $this->destination_type], true);
+    }
 
     public function source(): MorphTo
     {

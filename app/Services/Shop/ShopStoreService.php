@@ -11,6 +11,7 @@ use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use App\Services\AccountsPayable\AccountsPayableLedgerService;
 use App\Services\Product\PresentationLineResolver;
+use App\Services\Product\ProductUnitService;
 use App\Services\Product\VoucherInventoryService;
 use App\Services\Shop\Retention\RetentionTotalsCalculator;
 use App\Services\SubscriptionGate;
@@ -65,7 +66,7 @@ class ShopStoreService
 
     protected function prepareShopData(array $data, EmisionPoint $emisionPoint): array
     {
-        $except = ['taxes', 'pay_methods', 'app_retention', 'send', 'point_id', 'source_type', 'source_id', 'without_source'];
+        $except = ['taxes', 'pay_methods', 'app_retention', 'send', 'point_id', 'source_type', 'source_id', 'receipt_id', 'receipt_number', 'without_source'];
         $inputs = collect($data)->except($except)->toArray();
 
         $voucherType = VoucherType::findOrFail($data['voucher_type_id']);
@@ -112,6 +113,8 @@ class ShopStoreService
                 'transaction_type' => MovementTransactionTypes::PURCHASE_PAYMENT,
                 'source_type' => $data['source_type'],
                 'source_id' => $data['source_id'],
+                'receipt_id' => $data['receipt_id'] ?? null,
+                'receipt_number' => $data['receipt_number'] ?? null,
                 'amount' => (float) $inputs['total'] - $retencion,
                 'description' => "Pago compra {$inputs['serie']}",
                 'user_id' => Auth::id(),
@@ -129,6 +132,8 @@ class ShopStoreService
             return;
         }
 
+        // Líneas con `unit` registran la moto nueva y pasan a apuntar a ella.
+        $products = app(ProductUnitService::class)->createFromPurchaseLines($products, (bool) $this->company->inventory);
         $presentations = app(PresentationLineResolver::class)->resolve($products);
 
         $items = array_map(fn ($p, $presentation) => [

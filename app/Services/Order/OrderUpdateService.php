@@ -6,8 +6,10 @@ use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
 use App\Services\Product\PresentationLineResolver;
+use App\Services\Product\UnitSaleService;
 use App\Services\Product\VoucherInventoryService;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -40,10 +42,16 @@ class OrderUpdateService
                 'state' => VoucherStates::SAVED,
             ]);
 
+            $previousProductIds = $order->orderitems()->pluck('product_id')->all();
+
             $this->updateOrderItems($order, $data['products'] ?? []);
             $this->updateOrderAditionals($order, $data['aditionals'] ?? []);
 
             app(VoucherInventoryService::class)->syncOrder($order->fresh());
+            app(UnitSaleService::class)->syncStockWithoutInventory(
+                [...$previousProductIds, ...array_column($data['products'] ?? [], 'product_id')],
+                (bool) Auth::user()->company->inventory,
+            );
         });
 
         return $order->fresh();
@@ -69,6 +77,10 @@ class OrderUpdateService
         }
 
         $presentations = app(PresentationLineResolver::class)->resolve($products);
+        // La nota de crédito no lleva características (docs/caracteristicas-producto.md §7).
+        $snapshots = $order->voucherType()->value('slug') === VoucherTypes::VENTA_NOTA_CREDITO
+            ? []
+            : app(UnitSaleService::class)->characteristicsByProduct(array_column($products, 'product_id'));
 
         $items = array_map(fn ($product, $presentation) => [
             'product_id' => $product['product_id'],
@@ -76,6 +88,7 @@ class OrderUpdateService
             'conversion_factor' => $presentation['conversion_factor'],
             'code' => $presentation['presentation_id'] ? $presentation['code'] : ($overrides[$product['product_id']]->code ?? null),
             'description' => $presentation['presentation_id'] ? $presentation['description'] : ($overrides[$product['product_id']]->description ?? null),
+            'details' => $snapshots[$product['product_id']] ?? null,
             'quantity' => $product['quantity'],
             'price' => $product['price'],
             'discount' => $product['discount'],

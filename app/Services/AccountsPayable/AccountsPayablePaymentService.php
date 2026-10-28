@@ -21,19 +21,22 @@ class AccountsPayablePaymentService
 {
     public function __construct(private AccountsPayableLedgerService $ledgerService) {}
 
-    public function pay(Shop $shop, float $amount, string $sourceType, int $sourceId, ?string $date = null): AccountPayableMovement
+    /**
+     * @param  array{receipt_id?: int|null, receipt_number?: string|null}  $bankDetails  comprobante del pago por banco
+     */
+    public function pay(Shop $shop, float $amount, string $sourceType, int $sourceId, ?string $date = null, array $bankDetails = []): AccountPayableMovement
     {
         if ($shop->payment_type !== PaymentTypes::CREDITO) {
             throw new \RuntimeException('Esta compra no está a crédito, no admite abonos.');
         }
 
-        $pendiente = (float) $shop->total - (float) $shop->paid;
+        $pendiente = $shop->pendingBalance();
 
         if ($amount <= 0 || $amount > $pendiente) {
             throw new \RuntimeException('El abono no puede ser mayor al saldo pendiente de la compra.');
         }
 
-        return DB::transaction(function () use ($shop, $amount, $sourceType, $sourceId, $date) {
+        return DB::transaction(function () use ($shop, $amount, $sourceType, $sourceId, $date, $bankDetails) {
             app(MovementService::class)->create([
                 'branch_id' => $shop->branch_id,
                 'date' => $date ?? now()->format('Y-m-d'),
@@ -41,6 +44,7 @@ class AccountsPayablePaymentService
                 'transaction_type' => MovementTransactionTypes::PURCHASE_PAYMENT,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
+                ...$bankDetails,
                 'origin_type' => MovementPartyRegistry::SHOP,
                 'origin_id' => $shop->id,
                 'amount' => $amount,

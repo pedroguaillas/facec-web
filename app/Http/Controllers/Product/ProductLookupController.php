@@ -22,11 +22,18 @@ class ProductLookupController extends Controller
             ->where(function ($query) use ($term) {
                 $query->where('code', 'like', "%{$term}%")
                     ->orWhere('name', 'like', "%{$term}%")
-                    ->orWhereHas('presentations', fn ($presentation) => $presentation->where('active', true)->where('code', 'like', "%{$term}%"));
+                    ->orWhereHas('presentations', fn ($presentation) => $presentation->where('active', true)->where('code', 'like', "%{$term}%"))
+                    // Unidad por chasis/motor/etc.: valor de una característica única.
+                    ->orWhereHas('details', fn ($detail) => $detail->where('value', 'like', "%{$term}%")
+                        ->whereHas('field', fn ($field) => $field->where('unique', true)->where('active', true)));
             })
-            ->with(['presentations' => fn ($presentation) => $presentation->where('active', true)->select('id', 'product_id', 'name', 'conversion_factor', 'price', 'code')])
+            ->with([
+                'presentations' => fn ($presentation) => $presentation->where('active', true)->select('id', 'product_id', 'name', 'conversion_factor', 'price', 'code'),
+                'details.field',
+                'parentProduct.details.field',
+            ])
             ->limit(20)
-            ->get(['id', 'code', 'type_product', 'name', 'price1', 'stock', 'iva', 'ice'])
+            ->get(['id', 'parent_product_id', 'code', 'type_product', 'name', 'price1', 'stock', 'iva', 'ice'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'code' => $product->code,
@@ -36,6 +43,8 @@ class ProductLookupController extends Controller
                 'stock' => $product->stock,
                 'iva' => $product->iva,
                 'ice' => $product->ice,
+                // Características efectivas (modelo + unidad); vacío si el producto no usa plantilla.
+                'characteristics' => $product->characteristics(),
                 // Precio propio o, si no tiene, precio de la unidad × factor.
                 'presentations' => $product->presentations->map(fn ($presentation) => [
                     'id' => $presentation->id,

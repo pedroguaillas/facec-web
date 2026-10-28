@@ -250,6 +250,10 @@
                                         <div class="client-label">Correo</div>
                                         <div class="muted">{{ $movement->email }}</div>
                                     @endif
+                                    @if($movement->phone)
+                                        <div class="client-label">Teléfono</div>
+                                        <div class="muted">{{ $movement->phone }}</div>
+                                    @endif
                                 </td>
                             </tr>
                         </tbody>
@@ -282,7 +286,7 @@
                             @foreach($movement_items as $item)
                                 <tr class="{{ $loop->even ? 'even' : '' }}">
                                     <td class="text-center">{{ floatval($item->quantity) }}</td>
-                                    <td>{{ $item->name }}</td>
+                                    <td>{{ $item->name }}@include('vouchers.theme.itemdetails', ['details' => $item->details])</td>
                                     <td class="text-right">{{ number_format($item->price, $company->decimal) }}</td>
                                     @if($enabledDiscount)
                                         <td class="text-right">{{ number_format($item->discount, 2) }}</td>

@@ -5,7 +5,9 @@ namespace App\Http\Requests\Order;
 use App\Models\Company;
 use App\Models\Order\Order;
 use App\Rules\ProductPresentationLinesRule;
+use App\Services\Product\UnitSaleService;
 use App\StaticClasses\VoucherStates;
+use App\StaticClasses\VoucherTypes;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -52,6 +54,26 @@ class OrderUpdateRequest extends FormRequest
 
                 if (in_array($order->state, $protectedStates)) {
                     $validator->errors()->add('order', 'No se puede modificar una orden en estado '.$order->state.'.');
+                }
+
+                // customer_id/voucher_type_id no se editan: se valida contra lo guardado.
+                // El SRI rechaza notas de crédito a consumidor final.
+                if ($order instanceof Order && $order->customer()->value('identication') === '9999999999999'
+                    && $order->voucherType()->value('slug') === VoucherTypes::VENTA_NOTA_CREDITO) {
+                    $validator->errors()->add('customer_id', 'No se puede emitir una nota de crédito a consumidor final');
+                }
+
+                if ($order instanceof Order && is_array($this->input('products'))) {
+                    $unitErrors = app(UnitSaleService::class)->lineErrors(
+                        $this->input('products'),
+                        (string) $order->voucherType()->value('slug'),
+                        (bool) $this->user()->company->inventory,
+                        $order,
+                    );
+
+                    foreach ($unitErrors as $attribute => $message) {
+                        $validator->errors()->add($attribute, $message);
+                    }
                 }
             },
         ];

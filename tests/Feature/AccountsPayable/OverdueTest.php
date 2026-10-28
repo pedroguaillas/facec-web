@@ -6,11 +6,13 @@ use App\Models\CompanyUser;
 use App\Models\EmisionPoint;
 use App\Models\Provider;
 use App\Models\Shop\Shop;
+use App\Models\Shop\ShopRetentionItem;
 use App\Models\User;
 use App\Models\UserType;
 use App\Models\VoucherType;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @return array{0: Branch, 1: Provider}
@@ -85,4 +87,26 @@ test('compra vencida pero ya pagada no aparece en el reporte', function () {
 
     $response->assertOk();
     expect($response->json('parties'))->toHaveCount(0);
+});
+
+test('el saldo vencido descuenta la retención y la compra pagada neta de retención no aparece', function () {
+    [$branch, $provider] = overduePayableActingAsCompany();
+    DB::table('taxes')->insertOrIgnore(['code' => '303', 'conception' => 'Retención renta', 'porcentage' => 1, 'type' => 'renta']);
+
+    test()->postJson(route('shops.store'), overdueShopPayload($branch, $provider, 100, now()->subDays(3)->format('Y-m-d')))->assertCreated();
+    test()->postJson(route('shops.store'), overdueShopPayload($branch, $provider, 50, now()->subDays(3)->format('Y-m-d'), ['serie' => '001-001-000124']))->assertCreated();
+    [$paidShop, $pendingShop] = Shop::orderBy('id')->get();
+
+    foreach ([$paidShop, $pendingShop] as $shop) {
+        ShopRetentionItem::create(['shop_id' => $shop->id, 'code' => '1', 'tax_code' => '303', 'base' => $shop->total, 'porcentage' => 2, 'value' => $shop->total * 0.02]);
+    }
+    $paidShop->update(['paid' => 98]);
+    $pendingShop->update(['paid' => 10]);
+
+    $response = test()->getJson(route('providers.overdue'))->assertOk();
+
+    expect($response->json('parties.0.documents'))->toHaveCount(1)
+        ->and($response->json('parties.0.documents.0.shop_id'))->toBe($pendingShop->id)
+        ->and((float) $response->json('parties.0.documents.0.pending'))->toBe(39.0)
+        ->and((float) $response->json('total_overdue'))->toBe(39.0);
 });

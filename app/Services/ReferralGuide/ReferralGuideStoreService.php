@@ -53,6 +53,8 @@ class ReferralGuideStoreService
         // Fecha de emisión: siempre la fecha del servidor al crear, no un
         // campo que mande el cliente (igual criterio que `serie`).
         $inputs['date'] = now()->format('Y-m-d');
+        // El transporte también inicia el día de emisión.
+        $inputs['date_start'] = $inputs['date'];
 
         return $inputs;
     }

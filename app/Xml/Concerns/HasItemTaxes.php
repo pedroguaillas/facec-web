@@ -10,6 +10,8 @@ use stdClass;
  */
 trait HasItemTaxes
 {
+    use RendersDetallesAdicionales;
+
     /**
      * Mapa código IVA (iva_taxes.code) => columnas ya calculadas y
      * persistidas en la Orden por OrderTotalsCalculator. `iva` field es
@@ -116,10 +118,11 @@ trait HasItemTaxes
 
     /**
      * Renderiza el bloque <detalles> completo (factura y nota de crédito
-     * comparten esta estructura, solo cambia el tag del código de producto
-     * y si incluye código auxiliar).
+     * comparten esta estructura, solo cambia el tag del código de producto,
+     * si incluye código auxiliar y si lleva las características de la foto
+     * `details` de la línea; la nota de crédito no las lleva).
      */
-    protected function renderDetalles(iterable $items, int $decimal, string $codeTag, bool $includeAuxCode): string
+    protected function renderDetalles(iterable $items, int $decimal, string $codeTag, bool $includeAuxCode, bool $includeAdditionalDetails = false): string
     {
         $string = '<detalles>';
 
@@ -135,6 +138,7 @@ trait HasItemTaxes
             $string .= '<precioUnitario>'.round($detail->price, $decimal).'</precioUnitario>';
             $string .= "<descuento>{$detail->discount}</descuento>";
             $string .= "<precioTotalSinImpuesto>{$total}</precioTotalSinImpuesto>";
+            $string .= $includeAdditionalDetails ? $this->renderDetallesAdicionales($detail->details ?? null) : '';
             $string .= $this->itemImpuestos($detail, $subTotal);
             $string .= '</detalle>';
         }
