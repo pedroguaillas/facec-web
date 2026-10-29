@@ -28,11 +28,12 @@ class OpeningBalanceFromStockService
     ) {}
 
     /**
+     * @param  array<string, float>  $unitCostsByCode  Costo unitario por código (columna "Costo" del Excel); sin costo queda en 0.
      * @return int Productos a los que se les registró saldo inicial.
      */
-    public function forBranch(Branch $branch): int
+    public function forBranch(Branch $branch, array $unitCostsByCode = []): int
     {
-        return DB::transaction(function () use ($branch) {
+        return DB::transaction(function () use ($branch, $unitCostsByCode) {
             $products = $this->pendingProducts()->where('branch_id', $branch->id)->get();
 
             if ($products->isEmpty()) {
@@ -45,7 +46,7 @@ class OpeningBalanceFromStockService
             foreach ($products as $product) {
                 $this->ledger->registerMovement(
                     $product, $warehouse, InventoryMovementTypes::OPENING_BALANCE,
-                    (float) $product->stock, $date, note: self::NOTE,
+                    (float) $product->stock, $date, unitCost: $unitCostsByCode[$product->code] ?? null, note: self::NOTE,
                 );
             }
 

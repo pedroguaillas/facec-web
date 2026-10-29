@@ -172,6 +172,19 @@ Ambas rutas están registradas **antes** de `products/{product}` en
 | IVA | `iva` | `iva` (código SRI, no el porcentaje — ver §1) |
 | ICE | `ice` | `ice` |
 | Stock | `stock` | `stock` |
+| Costo | `costo` | — (solo import, opcional) |
+
+> **Costo** no es campo de `Product`: con inventario activo es el `unit_cost`
+> del "Inventario inicial" que se genera desde el `stock` importado
+> (`OpeningBalanceFromStockService::forBranch($branch, $import->unitCosts())`).
+> Vacío → costo 0. Se ignora en servicios. El export no la escribe.
+> **Importar con inventario desactivado pierde el costo**: al activarlo
+> después, el saldo inicial se crea desde `stock` con costo 0 (no hay dónde
+> guardarlo). Activar inventario antes de importar.
+>
+> `ProductExport` usa `WithStrictNullComparison`: sin eso PhpSpreadsheet
+> escribía el `0` como celda vacía, y el IVA 0% (código `0`) salía en blanco
+> y fallaba `iva required` al reimportar.
 
 > Decisión: el export escribe el **código SRI** de IVA (p. ej. `2`), no el
 > porcentaje formateado (`12%`), para que el mismo archivo se pueda
@@ -203,6 +216,7 @@ Reglas por fila (`rules()`):
   `nullable` cuando el valor es `null` y la validación nunca se ejecutaría.
 - `tipo`, `nombre`, `precio`, `iva`, `ice`, `stock`: mismas reglas que
   `ProductStoreRequest`.
+- `costo`: `nullable|numeric|min:0`.
 
 `ProductController::import` responde con `success` (bool) y `failures`
 (array de `{row, attribute, errors}` por fila rechazada); no aborta si hay

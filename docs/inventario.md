@@ -158,7 +158,8 @@ idempotente. Corre:
   inventario (antes el stock lo mantenía el trigger).
 
 Para cargar el costo real, usar `inventory/opening-balance` en vez del stock
-del producto.
+del producto, o la columna opcional **Costo** del Excel de productos (la
+importación la pasa como `unit_cost` de este saldo inicial).
 
 ## 7. Límites conocidos
 

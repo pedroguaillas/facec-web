@@ -8,9 +8,14 @@ use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class ProductExport implements FromQuery, WithColumnFormatting, WithHeadings, WithMapping
+/**
+ * `WithStrictNullComparison`: sin esto PhpSpreadsheet escribe el `0` como
+ * celda vacía y el IVA 0% (código `0`) no se podría reimportar.
+ */
+class ProductExport implements FromQuery, WithColumnFormatting, WithHeadings, WithMapping, WithStrictNullComparison
 {
     public function __construct(protected int $branchId) {}
 

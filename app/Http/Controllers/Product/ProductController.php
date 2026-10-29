@@ -175,7 +175,7 @@ class ProductController extends Controller
         Excel::import($import, $request->file('file'), null, $readerType);
 
         if ($company->inventory) {
-            app(OpeningBalanceFromStockService::class)->forBranch($branch);
+            app(OpeningBalanceFromStockService::class)->forBranch($branch, $import->unitCosts());
         }
 
         return response()->json([
