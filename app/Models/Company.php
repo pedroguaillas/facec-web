@@ -177,4 +177,21 @@ class Company extends Model
     {
         return $this->subscription()->first();
     }
+
+    /**
+     * La firma se considera vigente si `sign_valid_to` es null (fecha no cargada)
+     * o aún no ha pasado.
+     */
+    public function isSignatureExpired(): bool
+    {
+        return $this->sign_valid_to !== null && $this->sign_valid_to->isPast();
+    }
+
+    /**
+     * Si la empresa puede firmar comprobantes: tiene certificado cargado y vigente.
+     */
+    public function canSignVouchers(): bool
+    {
+        return $this->cert_dir !== null && ! $this->isSignatureExpired();
+    }
 }

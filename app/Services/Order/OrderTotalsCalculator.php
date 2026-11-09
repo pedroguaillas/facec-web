@@ -29,14 +29,17 @@ class OrderTotalsCalculator
      * verdad server-side, replicando la misma base imponible que arma el XML
      * enviado al SRI (ver HasItemTaxes::groupTaxes).
      *
+     * Solo existen descuentos por ítem (no hay descuento adicional/global): cada
+     * base ya llega neta de su descuento, así que `discount` es solo la suma
+     * informativa (totalDescuento del XML / RIDE) y NO se vuelve a restar del total.
+     *
      * @param  array<int, array{quantity: float|int, price: float|int, discount?: float|int, ice?: float|int, iva: int}>  $products
      * @param  array<string, mixed>  $submitted  Datos crudos del frontend, solo para comparar/loggear (nunca para calcular).
      * @param  Collection<int, float>|null  $percentages  Mapa código IVA => porcentaje. Si es null se consulta la BD.
-     * @return array{no_iva: float, base0: float, base5: float, base8: float, base12: float, base15: float, iva5: float, iva8: float, iva: float, iva15: float, ice: float, sub_total: float, total: float}
+     * @return array{no_iva: float, base0: float, base5: float, base8: float, base12: float, base15: float, iva5: float, iva8: float, iva: float, iva15: float, ice: float, discount: float, sub_total: float, total: float}
      */
     public function calculate(
         array $products,
-        float $discount,
         array $submitted = [],
         ?int $orderId = null,
         ?Collection $percentages = null
@@ -52,6 +55,7 @@ class OrderTotalsCalculator
         ];
 
         $iceTotal = 0.0;
+        $discountTotal = 0.0;
 
         foreach ($products as $product) {
             $ice = (float) ($product['ice'] ?? 0);
@@ -73,6 +77,7 @@ class OrderTotalsCalculator
             }
 
             $iceTotal += $ice;
+            $discountTotal += (float) ($product['discount'] ?? 0);
         }
 
         // El IVA se calcula sobre la base sin redondear para evitar doble
@@ -91,9 +96,10 @@ class OrderTotalsCalculator
         $noIva = round($bases[self::NO_IVA_CODE], 2);
 
         $iceTotal = round($iceTotal, 2);
+        $discountTotal = round($discountTotal, 2);
         $subTotal = round($noIva + $base0 + $base5 + $base8 + $base12 + $base15, 2);
         $ivaTotal = round($iva5 + $iva8 + $iva + $iva15, 2);
-        $total = round($subTotal + $iceTotal + $ivaTotal - $discount, 2);
+        $total = round($subTotal + $iceTotal + $ivaTotal, 2);
 
         $this->logMismatch($submitted, 'sub_total', $subTotal, $orderId);
         $this->logMismatch($submitted, 'total', $total, $orderId);
@@ -110,6 +116,7 @@ class OrderTotalsCalculator
             'iva' => $iva,
             'iva15' => $iva15,
             'ice' => $iceTotal,
+            'discount' => $discountTotal,
             'sub_total' => $subTotal,
             'total' => $total,
         ];

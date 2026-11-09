@@ -17,7 +17,6 @@ test('la tarifa 12% (codigo IVA 2) esta descontinuada: base12/iva quedan en 0 y 
         products: [
             ['quantity' => 2, 'price' => 10, 'discount' => 0, 'iva' => 2],
         ],
-        discount: 0,
         percentages: ivaPercentages(),
     );
 
@@ -33,7 +32,6 @@ test('un item con codigo 12% mezclado con tarifas activas se ignora sin contamin
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 2],
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
         ],
-        discount: 0,
         percentages: ivaPercentages(),
     );
 
@@ -50,7 +48,6 @@ test('agrupa un item no objeto de IVA (code 6)', function () {
         products: [
             ['quantity' => 1, 'price' => 50, 'discount' => 0, 'iva' => 6],
         ],
-        discount: 0,
         percentages: ivaPercentages(),
     );
 
@@ -60,7 +57,7 @@ test('agrupa un item no objeto de IVA (code 6)', function () {
         ->and($result['total'])->toBe(50.0);
 });
 
-test('mezcla varias tarifas activas (0%, 5%, 8%, 15%) y descuento global', function () {
+test('mezcla varias tarifas activas (0%, 5%, 8%, 15%)', function () {
     $result = (new OrderTotalsCalculator)->calculate(
         products: [
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 0],
@@ -68,7 +65,6 @@ test('mezcla varias tarifas activas (0%, 5%, 8%, 15%) y descuento global', funct
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 8],
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
         ],
-        discount: 10,
         percentages: ivaPercentages(),
     );
 
@@ -80,7 +76,7 @@ test('mezcla varias tarifas activas (0%, 5%, 8%, 15%) y descuento global', funct
         ->and($result['iva8'])->toBe(8.0)
         ->and($result['iva15'])->toBe(15.0)
         ->and($result['sub_total'])->toBe(400.0)
-        ->and($result['total'])->toBe(418.0);
+        ->and($result['total'])->toBe(428.0);
 });
 
 test('suma el ICE a la base imponible y al total', function () {
@@ -88,7 +84,6 @@ test('suma el ICE a la base imponible y al total', function () {
         products: [
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'ice' => 20, 'iva' => 4],
         ],
-        discount: 0,
         percentages: ivaPercentages(),
     );
 
@@ -104,7 +99,6 @@ test('el iva se calcula sobre la base sin redondear para evitar doble redondeo',
         products: [
             ['quantity' => 1, 'price' => 0.434783, 'discount' => 0, 'iva' => 4],
         ],
-        discount: 0,
         percentages: ivaPercentages(),
     );
 
@@ -120,7 +114,6 @@ test('no loggea cuando la diferencia esta dentro de la tolerancia', function () 
         products: [
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
         ],
-        discount: 0,
         submitted: ['sub_total' => 100.0, 'total' => 115.01],
         percentages: ivaPercentages(),
     );
@@ -135,7 +128,6 @@ test('loggea cuando la diferencia supera la tolerancia', function () {
         products: [
             ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
         ],
-        discount: 0,
         submitted: ['sub_total' => 100.0, 'total' => 69.0],
         orderId: 42,
         percentages: ivaPercentages(),
@@ -146,4 +138,35 @@ test('loggea cuando la diferencia supera la tolerancia', function () {
             && $context['order_id'] === 42
             && $context['field'] === 'total';
     });
+});
+
+test('el descuento por item se resta una sola vez: discount es solo la suma informativa', function () {
+    $result = (new OrderTotalsCalculator)->calculate(
+        products: [
+            ['quantity' => 4, 'price' => 100, 'discount' => 40, 'iva' => 0],
+            ['quantity' => 2, 'price' => 80, 'discount' => 44, 'iva' => 0],
+        ],
+        submitted: ['discount' => 84],
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['base0'])->toBe(476.0)
+        ->and($result['sub_total'])->toBe(476.0)
+        ->and($result['discount'])->toBe(84.0)
+        ->and($result['total'])->toBe(476.0);
+});
+
+test('ignora el descuento global enviado por el frontend y usa la suma de los items', function () {
+    $result = (new OrderTotalsCalculator)->calculate(
+        products: [
+            ['quantity' => 1, 'price' => 100, 'discount' => 10, 'iva' => 4],
+        ],
+        submitted: ['discount' => 50],
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['discount'])->toBe(10.0)
+        ->and($result['base15'])->toBe(90.0)
+        ->and($result['iva15'])->toBe(13.5)
+        ->and($result['total'])->toBe(103.5);
 });

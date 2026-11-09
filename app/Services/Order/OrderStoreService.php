@@ -88,7 +88,6 @@ class OrderStoreService
 
         $input = array_merge($input, $this->totalsCalculator->calculate(
             $data['products'] ?? [],
-            (float) ($input['discount'] ?? 0),
             $input,
         ));
 

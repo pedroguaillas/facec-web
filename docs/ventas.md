@@ -73,9 +73,9 @@ Todos con cast `float` salvo indicación (`Order.php:70-87`).
 | `base0` / `base5` / `base8` / `base12` / `base15` | Bases imponibles por tarifa |
 | `iva5` / `iva8` / `iva` / `iva15` | IVA por tarifa (`iva` = histórico 12%) |
 | `ice` | Total ICE |
-| `discount` | Descuento global de la orden |
+| `discount` | Σ de los descuentos por ítem, calculado server-side (`OrderTotalsCalculator`); solo informativo (`<totalDescuento>` / RIDE). No hay descuento adicional/global: el valor que envíe el frontend se ignora |
 | `sub_total` | Σ de las bases |
-| `total` | `sub_total + ice + iva_total − discount` |
+| `total` | `sub_total + ice + iva_total` — `sub_total` ya es neto de los descuentos por ítem, así que `discount` **no** se vuelve a restar (antes se restaba dos veces y el SRI rechazaba: "importe total esperado … no coincide con el calculado") |
 | `paid` / `pay_method` | Pago / método de pago SRI |
 | `state` | Estado del ciclo SRI (ver [README](./facturacion-electronica/README.md#1-máquina-de-estados-appstaticclassesvoucherstates)) |
 | `authorization` / `autorized` | Clave de acceso y n° de autorización SRI |

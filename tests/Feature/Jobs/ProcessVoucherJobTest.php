@@ -115,3 +115,48 @@ test('no procesa un comprobante PENDIENTE DE ANULAR', function () {
 
     $job->assertNotReleased();
 });
+
+test('no libera el job si el comprobante queda CREADO y la empresa no puede firmar', function (array $companyAttributes) {
+    $company = Company::factory()->create(['active_voucher' => true, ...$companyAttributes]);
+    $branch = Branch::factory()->for($company)->create();
+    $order = Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::SAVED]);
+
+    // process() guarda el XML pero no firma (sin certificado o firma caducada).
+    $this->mock(OrderLifecycleService::class)
+        ->shouldReceive('process')
+        ->once();
+
+    $job = new ProcessVoucherJob('order', $order->id, $company->id);
+    $job->withFakeQueueInteractions();
+    $job->job->attempts = 1;
+
+    $job->handle();
+
+    $job->assertNotReleased();
+})->with([
+    'firma caducada' => [['cert_dir' => 'empresa.p12', 'sign_valid_to' => now()->subDay()]],
+    'sin certificado' => [['cert_dir' => null]],
+]);
+
+test('libera el job si el comprobante queda CREADO pero la empresa tiene firma vigente', function () {
+    $company = Company::factory()->create([
+        'active_voucher' => true,
+        'cert_dir' => 'empresa.p12',
+        'sign_valid_to' => now()->addMonth(),
+    ]);
+    $branch = Branch::factory()->for($company)->create();
+    $order = Order::factory()->create(['branch_id' => $branch->id, 'state' => VoucherStates::SAVED]);
+
+    // process() no llegó a firmar (p. ej. go-signer caído): sí vale reintentar.
+    $this->mock(OrderLifecycleService::class)
+        ->shouldReceive('process')
+        ->once();
+
+    $job = new ProcessVoucherJob('order', $order->id, $company->id);
+    $job->withFakeQueueInteractions();
+    $job->job->attempts = 1;
+
+    $job->handle();
+
+    $job->assertReleased(30);
+});

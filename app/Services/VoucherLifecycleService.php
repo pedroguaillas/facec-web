@@ -5,16 +5,19 @@ namespace App\Services;
 use App\Models\Company;
 use App\StaticClasses\VoucherStates;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class VoucherLifecycleService
 {
+    /** Detalle que se deja en el comprobante cuando la firma electrónica está caducada. */
+    public const EXPIRED_SIGNATURE_DETAIL = 'FIRMA ELECTRÓNICA CADUCADA. Actualice el certificado de la empresa.';
+
     public function __construct(private XmlSignerService $signer) {}
 
     /**
      * Guarda el XML, lo firma y actualiza el modelo.
      *
-     * @param  mixed  $company
      * @param  Model  $model  Modelo Eloquent a actualizar (Order, Shop, ReferralGuide…)
      * @param  string  $xml  Contenido XML sin firmar
      * @param  string  $dateField  Campo del modelo que contiene la fecha (para la ruta de carpetas)
@@ -67,6 +70,21 @@ class VoucherLifecycleService
         $model->save();
 
         if ($company->cert_dir === null) {
+            return;
+        }
+
+        if ($company->isSignatureExpired()) {
+            Log::warning('Firma electrónica caducada, no se firma el comprobante', [
+                'company_id' => $company->id,
+                'sign_valid_to' => $company->sign_valid_to?->toDateTimeString(),
+                'filename' => $filename,
+            ]);
+
+            if ($extraDetailField) {
+                $model->{$extraDetailField} = self::EXPIRED_SIGNATURE_DETAIL;
+                $model->save();
+            }
+
             return;
         }
 

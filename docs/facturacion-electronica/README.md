@@ -159,6 +159,12 @@ de `VoucherLifecycleService`.
 > y se detiene ahí (nunca llega a `SIGNED`) — es el comportamiento esperado
 > para empresas sin certificado configurado aún, no es un bug.
 
+> Si `company->sign_valid_to` ya pasó (firma caducada), `saveAndSign()` tampoco
+> llama al signer: el comprobante queda en `CREADO`, se loguea un warning y se
+> deja `VoucherLifecycleService::EXPIRED_SIGNATURE_DETAIL` en `extra_detail`
+> (o `extra_detail_retention`) para que el frontend lo muestre. `sign_valid_to`
+> en `null` se trata como vigente (empresas sin fecha cargada siguen firmando).
+
 ### Artesano calificado (`companies.artisan_number`)
 
 El esquema del SRI no tiene etiqueta para artesanos (a diferencia de
@@ -245,6 +251,12 @@ como "reconstruir XML y reenviar" (ver el `match` de estado en cada
 "pendientes" deja de reintentar comprobantes rechazados por el SRI después
 de un solo intento — fue justamente el primer bug encontrado en producción
 de este mecanismo.
+
+Excepción: si tras `process()` el comprobante sigue en `SAVED` y la empresa
+no puede firmar (`Company::canSignVouchers()` — sin `cert_dir` o con
+`sign_valid_to` pasada), el Job termina sin `release()`: reintentar no
+cambiaría nada hasta que se cargue/renueve el certificado. Una vez renovado,
+se reprocesa con el botón "procesar".
 
 Con 8 intentos agotados sin avanzar, el comprobante queda en su último
 estado (visible en el listado) — el mismo botón "procesar" del frontend

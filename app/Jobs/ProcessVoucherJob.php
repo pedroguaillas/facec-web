@@ -77,6 +77,16 @@ class ProcessVoucherJob implements ShouldBeUnique, ShouldQueue
         app($config['service'])->process($model, $company);
         $model->refresh();
 
+        if ($model->{$stateField} === VoucherStates::SAVED && ! $company->canSignVouchers()) {
+            Log::info('ProcessVoucherJob: empresa sin firma vigente, no se reintenta', [
+                'type' => $this->voucherType,
+                'model_id' => $this->modelId,
+                'company_id' => $this->companyId,
+            ]);
+
+            return;
+        }
+
         if ($this->attempts() < $this->tries && $this->stillPending($model->{$stateField})) {
             $this->release(self::BACKOFF[min($this->attempts() - 1, count(self::BACKOFF) - 1)]);
         }

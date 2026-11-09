@@ -79,20 +79,13 @@ class InvoiceBuilder extends BaseVoucherBuilder
             $string .= '<totalImpuestoReembolso>'.number_format($totalIva, 2).'</totalImpuestoReembolso>';
         }
 
-        // totalConImpuestos
-        $aditionalDiscount = $order->discount;
-        foreach ($this->items as $oi) {
-            $aditionalDiscount -= $oi->discount;
-        }
-
+        // totalConImpuestos — sin <descuentoAdicional>: solo hay descuentos por
+        // ítem, ya netos en cada base (ver OrderTotalsCalculator).
         $string .= '<totalConImpuestos>';
         foreach ($this->groupTaxes($this->items, $order) as $tax) {
             $string .= '<totalImpuesto>';
             $string .= "<codigo>{$tax->code}</codigo>";
             $string .= "<codigoPorcentaje>{$tax->percentageCode}</codigoPorcentaje>";
-            $string .= $tax->code === 2 && $aditionalDiscount
-                ? '<descuentoAdicional>'.round($aditionalDiscount, 2).'</descuentoAdicional>'
-                : null;
             $string .= '<baseImponible>'.number_format($tax->base, 2, '.', '').'</baseImponible>';
             $string .= $tax->code === 2 ? "<tarifa>{$tax->percentage}</tarifa>" : null;
             $string .= '<valor>'.$tax->valor.'</valor>';
