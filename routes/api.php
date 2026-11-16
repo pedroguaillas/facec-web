@@ -289,6 +289,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::put('companies/{company}', [AdminCompanyController::class, 'update'])->name('admin.companies.update');
     Route::get('companies/{company}/subscriptions', [AdminCompanyController::class, 'subscriptions'])->name('admin.companies.subscriptions');
     Route::post('companies/{company}/subscription', [AdminCompanyController::class, 'assignSubscription'])->name('admin.companies.subscription');
+    Route::put('companies/{company}/subscriptions/{subscription}', [AdminCompanyController::class, 'updateSubscription'])->scopeBindings()->name('admin.companies.subscriptions.update');
+    Route::delete('companies/{company}/subscriptions/{subscription}', [AdminCompanyController::class, 'destroySubscription'])->scopeBindings()->name('admin.companies.subscriptions.destroy');
 
     Route::get('holidays', [AdminHolidayController::class, 'index'])->name('admin.holidays.index');
     Route::post('holidays', [AdminHolidayController::class, 'store'])->name('admin.holidays.store');

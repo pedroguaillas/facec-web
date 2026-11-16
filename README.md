@@ -92,6 +92,16 @@ docker compose -f compose.prod.yaml --env-file .env.production ps
 docker compose -f compose.prod.yaml --env-file .env.production up -d --build
 ```
 
+### phpMyAdmin (túnel SSH)
+
+`phpmyadmin` solo escucha en `127.0.0.1:8081` del VPS (no expuesto a internet, `PHPMYADMIN_PORT` en `.env.production`). Para usarlo desde local, abrir un túnel SSH:
+
+```bash
+ssh -L 8081:localhost:8081 facec-do
+```
+
+Con la sesión abierta, entrar a http://localhost:8081 (ya autenticado con `DB_USERNAME`/`DB_PASSWORD`). Cerrar la sesión SSH cierra el túnel. Si el `8081` local está ocupado, cambiar el puerto local: `ssh -L 9081:localhost:8081 facec-do` → http://localhost:9081.
+
 ### Ver logs
 
 ```bash

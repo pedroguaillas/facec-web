@@ -40,6 +40,9 @@ Tabla `subscriptions` — **historial**, no un campo en `companies`:
   - `signatures`: `expired` (`sign_valid_to` pasada) y `expiring` (≤ 30 días: `{id, ruc, company, sign_valid_to, days_left}`).
 - `GET /api/admin/companies/{company}/subscriptions` → `{ company: {id, ruc, company}, current, history }` (`history` ordenado del más reciente al más antiguo).
 - `POST /api/admin/companies/{company}/subscription` — `{ plan, ends_at, amount }` (`ends_at` y `amount` opcionales solo para `GRATUITO`) → cambia/renueva el plan, 201 con la nueva suscripción.
+- `PUT /api/admin/companies/{company}/subscriptions/{subscription}` — `{ plan, started_at, ended_at, amount }` (todos obligatorios; `ended_at >= started_at`, se permiten fechas pasadas) → corrección manual de un registro del historial (fechas, plan o monto mal cargados), 200 con la suscripción actualizada. No cierra ni abre otras suscripciones: si las fechas corregidas se solapan con otra, la vigente sigue siendo la de `started_at` más reciente.
+- `DELETE /api/admin/companies/{company}/subscriptions/{subscription}` → 204, borrado físico. Si era la vigente, la empresa puede quedar sin plan (el gate bloquea la emisión hasta reasignar). Borrar una prueba FINANCIERO (`is_trial`) habilita de nuevo la prueba para esa empresa.
+- Ambas usan `scopeBindings()`: una suscripción de otra empresa → 404. El tablero admin (`admin.dashboard`) no se invalida; refleja el cambio en ≤ 5 min.
 
 ### Registro público (prueba gratuita)
 

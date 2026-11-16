@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Company\AssignSubscriptionRequest;
 use App\Http\Requests\Company\CompanyStoreRequest;
 use App\Http\Requests\Company\CompanyUpdateRequest;
+use App\Http\Requests\Company\UpdateSubscriptionRequest;
 use App\Models\Company;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Services\CompanyService;
 use App\Services\SubscriptionService;
@@ -141,5 +143,19 @@ class AdminCompanyController extends Controller
         );
 
         return response()->json($subscription, 201);
+    }
+
+    public function updateSubscription(UpdateSubscriptionRequest $request, Company $company, Subscription $subscription): JsonResponse
+    {
+        $subscription->update($request->validated());
+
+        return response()->json($subscription->fresh());
+    }
+
+    public function destroySubscription(Company $company, Subscription $subscription): JsonResponse
+    {
+        $subscription->delete();
+
+        return response()->json(null, 204);
     }
 }

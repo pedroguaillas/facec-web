@@ -178,3 +178,64 @@ test('el listado admin de empresas incluye el usuario principal o null', functio
     expect($companies[$company->id]['user'])->toBe(['id' => $owner->id, 'user' => 'dueno_empresa', 'email' => $owner->email])
         ->and($companies[$withoutUser->id]['user'])->toBeNull();
 });
+
+test('admin corrige fechas, plan y monto de una suscripción', function () {
+    subscriptionActingAsAdmin();
+    $company = Company::factory()->create();
+    $subscription = $company->currentSubscription();
+
+    $response = test()->putJson(route('admin.companies.subscriptions.update', [$company, $subscription]), [
+        'plan' => PlanTypes::FACTURADOR,
+        'started_at' => now()->subDays(10)->format('Y-m-d'),
+        'ended_at' => now()->addMonths(2)->format('Y-m-d'),
+        'amount' => 25.5,
+    ]);
+
+    $response->assertOk();
+    $subscription->refresh();
+
+    expect($subscription->plan)->toBe(PlanTypes::FACTURADOR)
+        ->and($subscription->ended_at->toDateString())->toBe(now()->addMonths(2)->toDateString())
+        ->and($subscription->amount)->toBe(25.5)
+        ->and(Subscription::where('company_id', $company->id)->count())->toBe(1);
+});
+
+test('editar suscripción exige ended_at posterior o igual a started_at', function () {
+    subscriptionActingAsAdmin();
+    $company = Company::factory()->create();
+
+    test()->putJson(route('admin.companies.subscriptions.update', [$company, $company->currentSubscription()]), [
+        'plan' => PlanTypes::FACTURADOR,
+        'started_at' => now()->format('Y-m-d'),
+        'ended_at' => now()->subDay()->format('Y-m-d'),
+        'amount' => 0,
+    ])->assertUnprocessable()->assertJsonValidationErrors(['ended_at']);
+});
+
+test('admin elimina físicamente una suscripción', function () {
+    subscriptionActingAsAdmin();
+    $company = Company::factory()->create();
+    $subscription = $company->currentSubscription();
+
+    test()->deleteJson(route('admin.companies.subscriptions.destroy', [$company, $subscription]))
+        ->assertNoContent();
+
+    expect(Subscription::find($subscription->id))->toBeNull();
+});
+
+test('no se puede editar ni eliminar la suscripción de otra empresa', function () {
+    subscriptionActingAsAdmin();
+    $company = Company::factory()->create();
+    $other = Company::factory()->create();
+    $foreign = $other->currentSubscription();
+
+    test()->deleteJson(route('admin.companies.subscriptions.destroy', [$company, $foreign]))->assertNotFound();
+    test()->putJson(route('admin.companies.subscriptions.update', [$company, $foreign]), [
+        'plan' => PlanTypes::FACTURADOR,
+        'started_at' => now()->format('Y-m-d'),
+        'ended_at' => now()->addMonth()->format('Y-m-d'),
+        'amount' => 0,
+    ])->assertNotFound();
+
+    expect(Subscription::find($foreign->id))->not->toBeNull();
+});
