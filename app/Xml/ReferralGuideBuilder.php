@@ -44,6 +44,7 @@ class ReferralGuideBuilder extends BaseVoucherBuilder
         $string .= $this->infoTributaria();
 
         $string .= '<infoGuiaRemision>';
+        $string .= $this->establishmentAddress();
         $string .= "<dirPartida>{$guide->address_from}</dirPartida>";
         $string .= '<razonSocialTransportista>'.str_replace('&', 'Y', $guide->ca_name).'</razonSocialTransportista>';
         $string .= '<tipoIdentificacionTransportista>'.(strlen($guide->ca_identication) === 13 ? '04' : '05').'</tipoIdentificacionTransportista>';

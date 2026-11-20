@@ -12,7 +12,10 @@ use App\Models\Product\Product;
 use App\Models\User;
 use App\Models\UserType;
 use App\Models\VoucherType;
+use App\StaticClasses\SriVoucherCode;
 use App\StaticClasses\VoucherTypes;
+use App\Xml\AccessKey;
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -157,6 +160,34 @@ test('orders.lot.store continúa el mismo secuencial que la creación individual
     expect(Order::where('customer_id', $customer->id)->orderBy('id')->pluck('serie')->all())
         ->toBe(['001-100-000000020', '001-100-000000021'])
         ->and(EmisionPointSequence::where('emision_point_id', $emisionPoint->id)->value('next_number'))->toBe(22);
+});
+
+test('orders.lot.store guarda cada factura con su clave de acceso', function () {
+    Queue::fake();
+
+    $userType = UserType::firstOrCreate(['type' => 'client']);
+    $company = Company::factory()->create();
+    $branch = Branch::factory()->for($company)->create(['store' => 1]);
+    $user = User::factory()->create(['user_type_id' => $userType->id]);
+    CompanyUser::create(['user_id' => $user->id, 'level' => 1, 'level_id' => $company->id]);
+    test()->actingAs($user);
+
+    DB::table('iva_taxes')->insertOrIgnore([
+        ['code' => 2, 'percentage' => 12, 'state' => 'active'],
+    ]);
+
+    EmisionPoint::factory()->for($branch)->create(['point' => 100]);
+    $customer = Customer::factory()->create(['branch_id' => $branch->id, 'identication' => '1111111111']);
+    $product = Product::factory()->create(['branch_id' => $branch->id, 'code' => 'PROD-1', 'iva' => 2]);
+
+    $this->post(route('orders.lot.store'), ['lot' => lotUploadFile([
+        [$customer->identication, 'Cliente', $product->code, 1, 5.00],
+    ])])->assertOk();
+
+    $order = Order::where('customer_id', $customer->id)->sole();
+
+    expect($order->authorization)->toBe(AccessKey::generate($company, Carbon::parse($order->date), SriVoucherCode::FACTURA, $order->serie))
+        ->and($order->authorization)->toHaveLength(49);
 });
 
 test('orders.lot.store rechaza motos (productos por unidad)', function () {

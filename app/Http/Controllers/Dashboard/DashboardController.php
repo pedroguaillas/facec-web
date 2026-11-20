@@ -18,6 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -76,25 +77,7 @@ class DashboardController extends Controller
             $expired = $company->expired;
             $certExpiration = $company->sign_valid_to;
 
-            $income = Order::selectRaw(
-                "SUM(total) as total, DATE_FORMAT(date, '%m-%Y') AS name, DATE_FORMAT(date, '%Y%m') AS period"
-            )
-                ->groupBy('name', 'period')
-                ->orderBy('period', 'desc')
-                ->take(5)
-                ->get()
-                ->reverse()
-                ->values();
-
-            $expenses = Shop::selectRaw(
-                "SUM(total) as total, DATE_FORMAT(date, '%m-%Y') AS name, DATE_FORMAT(date, '%Y%m') AS period"
-            )
-                ->groupBy('name', 'period')
-                ->orderBy('period', 'desc')
-                ->take(5)
-                ->get()
-                ->reverse()
-                ->values();
+            [$income, $expenses] = $this->monthlyTotals();
 
             $countOrders = Order::count();
             $countShops = Shop::count();
@@ -157,6 +140,54 @@ class DashboardController extends Controller
         $gate->ensureFinancieroAccess($company);
 
         return response()->json($healthService->summary($company));
+    }
+
+    /**
+     * Ventas y compras netas de los últimos 5 meses.
+     * Ventas: facturas autorizadas - notas de crédito autorizadas + notas de venta
+     * (no son electrónicas, nunca se autorizan) no anuladas. Proformas no cuentan.
+     * Compras: recibidas (sin estado SRI propio) no anuladas + liquidaciones autorizadas.
+     *
+     * @return array{0: Collection<int, Order>, 1: Collection<int, Shop>}
+     */
+    private function monthlyTotals(): array
+    {
+        $voucherTypeIds = VoucherType::pluck('id', 'slug');
+        $typeId = fn (string $slug) => $voucherTypeIds[$slug] ?? null;
+        $notCanceled = fn ($query) => $query->whereNull('state')->orWhere('state', '<>', VoucherStates::CANCELED);
+        $columns = "DATE_FORMAT(date, '%m-%Y') AS name, DATE_FORMAT(date, '%Y%m') AS period";
+
+        $lastMonths = fn (Builder $query) => $query
+            ->groupBy('name', 'period')
+            ->orderBy('period', 'desc')
+            ->take(5)
+            ->get()
+            ->reverse()
+            ->values();
+
+        $income = Order::where(fn ($query) => $query
+            ->where(fn ($query) => $query
+                ->whereIn('voucher_type_id', [$typeId(VoucherTypes::VENTA_FACTURA), $typeId(VoucherTypes::VENTA_NOTA_CREDITO)])
+                ->where('state', VoucherStates::AUTHORIZED))
+            ->orWhere(fn ($query) => $query
+                ->where('voucher_type_id', $typeId(VoucherTypes::VENTA_NOTA_VENTA))
+                ->where($notCanceled)))
+            ->selectRaw("SUM(CASE WHEN voucher_type_id = ? THEN -total ELSE total END) AS total, {$columns}", [$typeId(VoucherTypes::VENTA_NOTA_CREDITO)]);
+
+        $expenses = Shop::where(fn ($query) => $query
+            ->where(fn ($query) => $query
+                ->whereIn('voucher_type_id', [
+                    $typeId(VoucherTypes::COMPRA_FACTURA),
+                    $typeId(VoucherTypes::COMPRA_NOTA_VENTA),
+                    $typeId(VoucherTypes::COMPRA_NOTA_DEBITO),
+                ])
+                ->where($notCanceled))
+            ->orWhere(fn ($query) => $query
+                ->where('voucher_type_id', $typeId(VoucherTypes::COMPRA_LIQUIDACION_COMPRA))
+                ->where('state', VoucherStates::AUTHORIZED)))
+            ->selectRaw("SUM(total) AS total, {$columns}");
+
+        return [$lastMonths($income), $lastMonths($expenses)];
     }
 
     /**

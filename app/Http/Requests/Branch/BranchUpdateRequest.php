@@ -42,6 +42,7 @@ class BranchUpdateRequest extends FormRequest
                 'required',
                 Rule::in(['matriz', 'sucursal']),
             ],
+            'logo' => ['sometimes', 'file', 'image', 'max:2048'],
         ];
     }
 

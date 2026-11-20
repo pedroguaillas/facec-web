@@ -32,12 +32,12 @@
 </head>
 
 <body>
-    @if($company->branches[0]->name !== null)
-    <strong>{{ $company->branches[0]->name }}</strong>
+    @if($branch->name !== null)
+    <strong>{{ $branch->name }}</strong>
     @endif
     <div style="font-style: italic;">{{ $company->company }}</div>
     <div>RUC: {{ $company->ruc }}</div>
-    <div>{{ $company->branches[0]->address }}</div>
+    <div>{{ $branch->address }}</div>
     <div>------------------------------------------------------------------------------------</div>
     <strong>Factura: {{ $movement->serie }}</strong>
     <div>CLAVE DE ACCESO / AUTORIZACION</div>

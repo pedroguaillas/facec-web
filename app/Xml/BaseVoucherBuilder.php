@@ -34,18 +34,12 @@ abstract class BaseVoucherBuilder
      */
     protected function infoTributaria(): string
     {
-        $branch = Branch::where('company_id', $this->company->id)->orderBy('created_at')->first();
+        $branch = $this->establishment();
+        $matrix = $this->company->matrix();
         $voucherType = $this->voucherTypeCode();
         $serie = str_replace('-', '', $this->serieRaw());
 
-        $keyaccess = $this->accessKeyDate()->format('dmY')
-            .$voucherType
-            .$this->company->ruc
-            .$this->company->enviroment_type
-            .$serie
-            .'123456781';
-
-        $checkDigit = $this->generaDigitoModulo11($keyaccess);
+        $accessKey = AccessKey::generate($this->company, $this->accessKeyDate(), $voucherType, $serie);
 
         $string = '<infoTributaria>';
         $string .= "<ambiente>{$this->company->enviroment_type}</ambiente>";
@@ -55,18 +49,35 @@ abstract class BaseVoucherBuilder
             ? '<nombreComercial>'.str_replace('&', '', $branch->name).'</nombreComercial>'
             : null;
         $string .= "<ruc>{$this->company->ruc}</ruc>";
-        $string .= "<claveAcceso>{$keyaccess}{$checkDigit}</claveAcceso>";
+        $string .= "<claveAcceso>{$accessKey}</claveAcceso>";
         $string .= "<codDoc>{$voucherType}</codDoc>";
         $string .= '<estab>'.substr($serie, 0, 3).'</estab>';
         $string .= '<ptoEmi>'.substr($serie, 3, 3).'</ptoEmi>';
         $string .= '<secuencial>'.substr($serie, 6, 9).'</secuencial>';
-        $string .= "<dirMatriz>{$branch->address}</dirMatriz>";
+        $string .= '<dirMatriz>'.htmlspecialchars($matrix->address, ENT_XML1).'</dirMatriz>';
         $string .= (int) $this->company->retention_agent === 1 ? '<agenteRetencion>1</agenteRetencion>' : null;
         $string .= (int) $this->company->rimpe === 1 ? '<contribuyenteRimpe>CONTRIBUYENTE RÉGIMEN RIMPE</contribuyenteRimpe>' : null;
         $string .= (int) $this->company->rimpe === 2 ? '<contribuyenteRimpe>CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE</contribuyenteRimpe>' : null;
         $string .= '</infoTributaria>';
 
         return $string;
+    }
+
+    /**
+     * Establecimiento que emite el comprobante (el `estab` de la serie): da
+     * el nombre comercial y la dirección del establecimiento.
+     */
+    protected function establishment(): Branch
+    {
+        return Branch::forSerie($this->company, $this->serieRaw());
+    }
+
+    /**
+     * Etiqueta <dirEstablecimiento> con la dirección del establecimiento emisor.
+     */
+    protected function establishmentAddress(): string
+    {
+        return '<dirEstablecimiento>'.htmlspecialchars($this->establishment()->address, ENT_XML1).'</dirEstablecimiento>';
     }
 
     /**
@@ -101,31 +112,5 @@ abstract class BaseVoucherBuilder
             ->filter(fn (string $value, string $name) => $value !== '' && ! in_array(mb_strtolower($name), $existingNames, true))
             ->map(fn (string $value, string $name) => "<campoAdicional nombre=\"{$name}\">".htmlspecialchars($value, ENT_XML1).'</campoAdicional>')
             ->implode('');
-    }
-
-    /**
-     * Algoritmo módulo 11 para el dígito verificador de la clave de acceso SRI.
-     */
-    final protected function generaDigitoModulo11(string $cadena): int
-    {
-        $cadena = trim($cadena);
-        $baseMultiplicador = 7;
-        $aux = (new \SplFixedArray(strlen($cadena)))->toArray();
-        $multiplicador = 2;
-        $total = 0;
-
-        for ($i = count($aux) - 1; $i >= 0; $i--) {
-            $aux[$i] = (int) substr($cadena, $i, 1);
-            $aux[$i] *= $multiplicador;
-            if (++$multiplicador > $baseMultiplicador) {
-                $multiplicador = 2;
-            }
-            $total += $aux[$i];
-        }
-
-        $mod = 11 - ($total % 11);
-        $verificador = ($total === 0 || $total === 1) ? 0 : ($mod === 11 ? 0 : $mod);
-
-        return $verificador === 10 ? 1 : $verificador;
     }
 }

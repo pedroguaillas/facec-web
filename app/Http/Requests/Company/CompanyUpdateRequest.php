@@ -20,7 +20,7 @@ class CompanyUpdateRequest extends FormRequest
         $blankable = ['sign_valid_from', 'sign_valid_to', 'pass_cert', 'artisan_number'];
 
         // Desde FormData los booleanos llegan como "true"/"false".
-        $booleans = ['base5', 'base8', 'ice', 'transport', 'repayment', 'printf', 'guia_in_invoice', 'import_in_invoice', 'import_in_invoices'];
+        $booleans = ['base5', 'base8', 'ice', 'transport', 'repayment', 'printf', 'guia_in_invoice', 'import_in_invoice', 'import_in_invoices', 'inventory', 'allow_negative_stock'];
 
         $this->merge(
             collect($this->only($booleans))

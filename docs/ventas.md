@@ -78,7 +78,7 @@ Todos con cast `float` salvo indicación (`Order.php:70-87`).
 | `total` | `sub_total + ice + iva_total` — `sub_total` ya es neto de los descuentos por ítem, así que `discount` **no** se vuelve a restar (antes se restaba dos veces y el SRI rechazaba: "importe total esperado … no coincide con el calculado") |
 | `paid` / `pay_method` | Pago / método de pago SRI |
 | `state` | Estado del ciclo SRI (ver [README](./facturacion-electronica/README.md#1-máquina-de-estados-appstaticclassesvoucherstates)) |
-| `authorization` / `autorized` | Clave de acceso y n° de autorización SRI |
+| `authorization` / `autorized` | Clave de acceso y n° de autorización SRI. La clave se genera al guardar factura/nota de crédito (`App\Xml\AccessKey`) y se recalcula al editar (cambia con la fecha); nota de venta/proforma quedan sin clave |
 | `xml` | Ruta del XML en `storage` |
 | `extra_detail` | Último mensaje de rechazo/estado del SRI |
 | `send_mail` (`bool`) / `expiration_days` / `description` | Correo enviado, crédito, observación |
@@ -101,7 +101,8 @@ Todos con cast `float` salvo indicación (`Order.php:70-87`).
    normaliza `guia` vacío a `null`, genera la `serie` vía
    `VoucherSequenceService::generateSerie()` (reserva atómica del siguiente
    secuencial para ese punto de emisión + tipo) y **recalcula todos los
-   totales server-side** con `OrderTotalsCalculator::calculate()`, cuyos
+   totales server-side (desde 2026-11-20 se guardan los del frontend si llegan; ver
+   `docs/facturacion-electronica/ventas.md` §3.1)** con `OrderTotalsCalculator::calculate()`, cuyos
    valores sobrescriben lo enviado por el frontend.
 3. Crea la `Order` bajo la sucursal, luego `OrderItem`s (y movimientos de
    `Inventory` si aplica), crea `Repayment`s y `OrderAditional`s. (El

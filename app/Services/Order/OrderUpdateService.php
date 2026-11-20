@@ -10,6 +10,8 @@ use App\Services\Product\UnitSaleService;
 use App\Services\Product\VoucherInventoryService;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
+use App\Xml\AccessKey;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -23,14 +25,16 @@ class OrderUpdateService
     public function updateOrder(Order $order, array $data): Order
     {
         if (in_array($order->voucherType->slug, DifferentiatedIvaService::VOUCHER_SLUGS, true)) {
+            $originalProducts = $data['products'] ?? [];
             $data['products'] = $this->differentiatedIvaService
-                ->applyToItems(Auth::user()->company, $order->date, $data['products'] ?? []);
+                ->applyToItems(Auth::user()->company, $order->date, $originalProducts);
+            $data = OrderTotalsCalculator::discardSubmittedIfTaxesChanged($data, $originalProducts);
         }
 
         DB::transaction(function () use ($order, $data) {
             $input = collect($data)->except(['id', 'products', 'send', 'aditionals', 'serie'])->toArray();
 
-            $input = array_merge($input, $this->totalsCalculator->calculate(
+            $input = array_merge($input, $this->totalsCalculator->resolve(
                 $data['products'] ?? [],
                 $input,
                 $order->id,
@@ -40,6 +44,8 @@ class OrderUpdateService
                 ...$input,
                 'state' => VoucherStates::SAVED,
             ]);
+
+            $this->refreshAccessKey($order);
 
             $previousProductIds = $order->orderitems()->pluck('product_id')->all();
 
@@ -54,6 +60,23 @@ class OrderUpdateService
         });
 
         return $order->fresh();
+    }
+
+    /**
+     * La clave de acceso depende de la fecha: si se editó, se recalcula para
+     * que la guardada coincida con la que llevará el XML.
+     */
+    protected function refreshAccessKey(Order $order): void
+    {
+        $voucherType = $order->voucherType;
+
+        if (! $voucherType->requires_electronic || $voucherType->code_sri === null) {
+            return;
+        }
+
+        $order->update([
+            'authorization' => AccessKey::generate(Auth::user()->company, Carbon::parse($order->date), $voucherType->code_sri, $order->serie),
+        ]);
     }
 
     /**

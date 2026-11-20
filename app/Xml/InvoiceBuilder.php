@@ -59,6 +59,7 @@ class InvoiceBuilder extends BaseVoucherBuilder
 
         $date = new \DateTime($order->date);
         $string .= '<fechaEmision>'.$date->format('d/m/Y').'</fechaEmision>';
+        $string .= $this->establishmentAddress();
         $string .= '<obligadoContabilidad>'.($company->accounting ? 'SI' : 'NO').'</obligadoContabilidad>';
         $string .= "<tipoIdentificacionComprador>{$typeId}</tipoIdentificacionComprador>";
         $string .= $order->guia !== null ? "<guiaRemision>{$order->guia}</guiaRemision>" : null;

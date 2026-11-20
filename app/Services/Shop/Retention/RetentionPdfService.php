@@ -18,9 +18,8 @@ class RetentionPdfService
 
         $retention_items = $movement->shopretentionitems;
         $company = $this->company;
-        $company->logo_dir = $company->logo_dir ?: 'default.png';
 
-        $branch = $this->getBranch($movement->serie);
+        $branch = Branch::forSerie($this->company, $movement->serie);
         $comprobante = $movement->voucher_type_name;
         // La retención es siempre el propio comprobante del contribuyente,
         // independiente del tipo de la compra sobre la que se retiene.
@@ -68,13 +67,5 @@ class RetentionPdfService
             )
             ->where('shops.id', $id)
             ->firstOrFail();
-    }
-
-    private function getBranch(string $serie): Branch
-    {
-        $store = (int) substr($serie, 0, 3);
-
-        return Branch::where(['company_id' => $this->company->id, 'store' => $store])->first()
-            ?? Branch::where('company_id', $this->company->id)->orderBy('created_at')->first();
     }
 }

@@ -37,6 +37,7 @@ class BranchStoreRequest extends FormRequest
             'name' => 'nullable|string|max:300',
             'type' => ['required', Rule::in(['matriz', 'sucursal'])],
             'cf' => 'sometimes|boolean',
+            'logo' => ['sometimes', 'file', 'image', 'max:2048'],
         ];
     }
 

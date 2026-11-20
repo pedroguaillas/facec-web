@@ -53,13 +53,14 @@ test('el cliente edita sus permisos desde la configuración', function () {
 });
 
 test('los permisos aceptan "true"/"false" como string (FormData)', function () {
-    $company = clientPermissionsCompany(['base5' => false, 'printf' => true]);
+    $company = clientPermissionsCompany(['base5' => false, 'printf' => true, 'allow_negative_stock' => true]);
 
-    $this->put(route('settings.company.update'), ['base5' => 'true', 'printf' => 'false'], ['Accept' => 'application/json'])
+    $this->put(route('settings.company.update'), ['base5' => 'true', 'printf' => 'false', 'allow_negative_stock' => 'false'], ['Accept' => 'application/json'])
         ->assertOk();
 
     expect($company->fresh()->base5)->toBeTrue()
-        ->and((bool) $company->fresh()->printf)->toBeFalse();
+        ->and((bool) $company->fresh()->printf)->toBeFalse()
+        ->and((bool) $company->fresh()->allow_negative_stock)->toBeFalse();
 });
 
 test('el cliente no puede cambiar campos reservados al admin', function () {

@@ -1,9 +1,7 @@
 <div style="width: 400px;">
-    @if($company->logo_dir)
-        <div class="parent-img">
-            <img src="{{ storage_path('app/public/logos/'.$company->logo_dir) }}" alt="Logo" style="width: auto; height: 125px;" />
-        </div>
-    @endif
+    <div class="parent-img">
+        <img src="{{ storage_path('app/public/logos/'.$branch->logoFile()) }}" alt="Logo" style="width: auto; height: 125px;" />
+    </div>
     <table style="margin-top: .5em;" class="table-bordered">
         <tbody>
             <tr>
@@ -14,10 +12,22 @@
                 <th class="relleno" colspan="3">{{ $branch->name }}</th>
             </tr>
             @endif
+            @php($matrix = $company->matrix())
+            @if($matrix && $matrix->id !== $branch->id)
+            <tr>
+                <td class="relleno">Dir. Matriz</td>
+                <td class="align-middle" colspan="2">{{ $matrix->address }}</td>
+            </tr>
+            <tr>
+                <td class="relleno">Dir. Sucursal</td>
+                <td class="align-middle" colspan="2">{{ $branch->address }}</td>
+            </tr>
+            @else
             <tr>
                 <td class="relleno">Dirección</td>
                 <td class="align-middle" colspan="2">{{ $branch->address }}</td>
             </tr>
+            @endif
             <tr>
                 <td class="relleno" colspan="2">Obligado a llevar contabilidad</td>
                 <td class="align-middle">{{ $company->accounting ? 'SI' : 'NO' }}</td>

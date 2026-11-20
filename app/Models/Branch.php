@@ -13,7 +13,7 @@ class Branch extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['company_id', 'store', 'address', 'name', 'type'];
+    protected $fillable = ['company_id', 'store', 'address', 'name', 'type', 'logo_dir'];
 
     public function emisionPoints()
     {
@@ -68,6 +68,27 @@ class Branch extends Model
     public function unities()
     {
         return $this->hasMany(Unity::class);
+    }
+
+    /**
+     * Logo que va en los PDFs del establecimiento: el propio o, si no tiene,
+     * el de la empresa; `default.png` si ninguno lo cargó.
+     */
+    public function logoFile(): string
+    {
+        return $this->logo_dir ?: $this->company->logo_dir ?: 'default.png';
+    }
+
+    /**
+     * Establecimiento que emitió un comprobante, según el código `estab` de
+     * su serie ("002-001-000000123" → store 2). Las ventas se guardan
+     * siempre en la sucursal más antigua (BranchScope), así que la serie es
+     * la única fuente del establecimiento real; si no existe, la más antigua.
+     */
+    public static function forSerie(Company $company, string $serie): ?self
+    {
+        return self::where(['company_id' => $company->id, 'store' => (int) substr($serie, 0, 3)])->first()
+            ?? self::where('company_id', $company->id)->orderBy('created_at')->first();
     }
 
     // public function chartaccounts()

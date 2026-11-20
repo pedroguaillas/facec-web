@@ -114,12 +114,8 @@ class ReferralGuideController extends Controller
         $movement_items->each(fn (ReferralGuideItem $item) => $item->setAttribute('details', $characteristics[$item->product_id] ?? null));
 
         $company = Auth::user()->company;
-        $company->logo_dir = $company->logo_dir ?: 'default.png';
 
-        $branch = Branch::where('company_id', $company->id)
-            ->where('store', (int) substr($movement->serie, 0, 3))
-            ->first()
-            ?? Branch::where('company_id', $company->id)->orderBy('created_at')->first();
+        $branch = Branch::forSerie($company, $movement->serie);
 
         return app('dompdf.wrapper')
             ->loadView('vouchers.referralguide', compact('movement', 'company', 'branch', 'movement_items', 'voucherTypeSlug', 'isElectronic'))

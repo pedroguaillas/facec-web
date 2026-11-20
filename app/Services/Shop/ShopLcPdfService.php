@@ -45,9 +45,8 @@ class ShopLcPdfService
         $movement_items->each(fn (ShopItem $item) => $item->setAttribute('details', $characteristics[$item->product_id] ?? null));
 
         $company = $this->company;
-        $company->logo_dir = $company->logo_dir ?: 'default.png';
 
-        $branch = $this->getBranch($movement->serie);
+        $branch = Branch::forSerie($this->company, $movement->serie);
         $voucherTypeSlug = $movement->voucherType->slug;
         $isElectronic = $movement->voucherType->requires_electronic;
 
@@ -65,13 +64,5 @@ class ShopLcPdfService
             ->select('shops.*', 'p.identication', 'p.name', 'p.address')
             ->where('shops.id', $id)
             ->firstOrFail();
-    }
-
-    private function getBranch(string $serie): Branch
-    {
-        $store = (int) substr($serie, 0, 3);
-
-        return Branch::where(['company_id' => $this->company->id, 'store' => $store])->first()
-            ?? Branch::where('company_id', $this->company->id)->orderBy('created_at')->first();
     }
 }

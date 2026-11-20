@@ -149,3 +149,39 @@ test('el listado de ventas filtra desde una fecha', function () {
         ->assertOk()
         ->assertJsonCount(1, 'data');
 });
+
+test('facturado y compras del mes solo cuentan comprobantes válidos y restan notas de crédito', function () {
+    $this->travelTo('2026-11-20 10:00');
+    $branch = dashboardBranch();
+    $voucherTypeId = fn (string $slug) => VoucherType::where('slug', $slug)->value('id');
+    $order = fn (string $slug, string $state, float $total) => Order::factory()->create([
+        'branch_id' => $branch->id, 'voucher_type_id' => $voucherTypeId($slug), 'state' => $state, 'total' => $total, 'date' => '2026-11-10',
+    ]);
+    $shop = fn (string $slug, ?string $state, float $total) => Shop::factory()->create([
+        'branch_id' => $branch->id, 'voucher_type_id' => $voucherTypeId($slug), 'state' => $state, 'total' => $total, 'date' => '2026-11-10',
+    ]);
+
+    $order(VoucherTypes::VENTA_FACTURA, VoucherStates::AUTHORIZED, 100);
+    $order(VoucherTypes::VENTA_FACTURA, VoucherStates::AUTHORIZED, 50);
+    $order(VoucherTypes::VENTA_NOTA_CREDITO, VoucherStates::AUTHORIZED, 30);
+    $order(VoucherTypes::VENTA_NOTA_VENTA, VoucherStates::SAVED, 20);
+    // No cuentan: anuladas, pendientes/rechazadas en el SRI y proformas
+    $order(VoucherTypes::VENTA_FACTURA, VoucherStates::CANCELED, 1000);
+    $order(VoucherTypes::VENTA_FACTURA, VoucherStates::SIGNED, 1000);
+    $order(VoucherTypes::VENTA_FACTURA, VoucherStates::RETURNED, 1000);
+    $order(VoucherTypes::VENTA_NOTA_CREDITO, VoucherStates::SAVED, 1000);
+    $order(VoucherTypes::VENTA_NOTA_VENTA, VoucherStates::CANCELED, 1000);
+    $order(VoucherTypes::VENTA_PROFORMA, VoucherStates::SAVED, 1000);
+
+    $shop(VoucherTypes::COMPRA_FACTURA, null, 40);
+    $shop(VoucherTypes::COMPRA_LIQUIDACION_COMPRA, VoucherStates::AUTHORIZED, 10);
+    $shop(VoucherTypes::COMPRA_FACTURA, VoucherStates::CANCELED, 1000);
+    $shop(VoucherTypes::COMPRA_LIQUIDACION_COMPRA, VoucherStates::RETURNED, 1000);
+
+    $this->getJson(route('dashboard'))
+        ->assertOk()
+        ->assertJsonPath('income.0.period', '202611')
+        ->assertJsonPath('income.0.total', fn ($total) => (float) $total === 140.0)
+        ->assertJsonPath('expenses.0.period', '202611')
+        ->assertJsonPath('expenses.0.total', fn ($total) => (float) $total === 50.0);
+});

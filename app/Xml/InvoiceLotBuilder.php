@@ -39,14 +39,6 @@ class InvoiceLotBuilder extends BaseVoucherBuilder
 
     public function getAccessKey(): string
     {
-        $serie = str_replace('-', '', $this->serieRaw());
-        $keyaccess = $this->accessKeyDate()->format('dmY')
-            .$this->voucherTypeCode()
-            .$this->company->ruc
-            .$this->company->enviroment_type
-            .$serie
-            .'123456781';
-
-        return $keyaccess.$this->generaDigitoModulo11($keyaccess);
+        return AccessKey::generate($this->company, $this->accessKeyDate(), $this->voucherTypeCode(), $this->serieRaw());
     }
 }

@@ -16,8 +16,10 @@ use App\Models\Product\Product;
 use App\Models\Product\ProductTemplateField;
 use App\Models\VoucherType;
 use App\Services\VoucherSequenceService;
+use App\StaticClasses\SriVoucherCode;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
+use App\Xml\AccessKey;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\UploadedFile;
@@ -186,10 +188,13 @@ class OrderLotService
 
             $iva = $subTotal * $product->percentage * 0.01;
 
+            $serie = $this->sequenceService->formatSerie($emisionPoint, $number);
+
             $input = [
                 'date' => $date,
                 'sub_total' => $subTotal,
-                'serie' => $this->sequenceService->formatSerie($emisionPoint, $number),
+                'serie' => $serie,
+                'authorization' => AccessKey::generate($this->company, Carbon::parse($date), SriVoucherCode::FACTURA, $serie),
                 'customer_id' => $customer[0]->id,
                 'lot_id' => $lot->id,
                 'total' => $subTotal + $iva,

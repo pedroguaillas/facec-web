@@ -170,3 +170,78 @@ test('ignora el descuento global enviado por el frontend y usa la suma de los it
         ->and($result['iva15'])->toBe(13.5)
         ->and($result['total'])->toBe(103.5);
 });
+
+test('resolve guarda los totales del frontend redondeados a 2 decimales', function () {
+    $result = (new OrderTotalsCalculator)->resolve(
+        products: [
+            ['quantity' => 3, 'price' => 13.043478, 'discount' => 0, 'iva' => 4],
+        ],
+        submitted: ['base15' => 39.130434, 'iva15' => 5.87, 'sub_total' => 39.130434, 'total' => 45.000434],
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['base15'])->toBe(39.13)
+        ->and($result['sub_total'])->toBe(39.13)
+        ->and($result['total'])->toBe(45.0);
+});
+
+test('resolve conserva un total del frontend distinto al recalculado y lo deja en el log', function () {
+    Log::spy();
+
+    $result = (new OrderTotalsCalculator)->resolve(
+        products: [
+            ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
+        ],
+        submitted: ['sub_total' => 100.0, 'total' => 115.02],
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['total'])->toBe(115.02);
+    Log::shouldHaveReceived('warning')->once();
+});
+
+test('resolve completa con el recalculo los campos que el frontend no envia', function () {
+    $result = (new OrderTotalsCalculator)->resolve(
+        products: [
+            ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
+        ],
+        submitted: ['total' => 115.0],
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['base15'])->toBe(100.0)
+        ->and($result['iva15'])->toBe(15.0)
+        ->and($result['total'])->toBe(115.0);
+});
+
+test('resolve recalcula todo cuando el frontend no envia total (recurrente, proforma)', function () {
+    $result = (new OrderTotalsCalculator)->resolve(
+        products: [
+            ['quantity' => 1, 'price' => 100, 'discount' => 0, 'iva' => 4],
+        ],
+        submitted: ['sub_total' => 1.0],
+        percentages: ivaPercentages(),
+    );
+
+    expect($result['sub_total'])->toBe(100.0)
+        ->and($result['total'])->toBe(115.0);
+});
+
+test('si el backend cambia la tarifa de un item se descartan los totales del frontend', function () {
+    $original = [['product_id' => 1, 'iva' => 4]];
+    $data = ['total' => 115.0, 'base15' => 100.0, 'customer_id' => 9, 'products' => [['product_id' => 1, 'iva' => 8]]];
+
+    expect(OrderTotalsCalculator::discardSubmittedIfTaxesChanged($data, $original))
+        ->not->toHaveKeys(['total', 'base15'])
+        ->toHaveKey('customer_id', 9);
+
+    expect(OrderTotalsCalculator::discardSubmittedIfTaxesChanged([...$data, 'products' => $original], $original))
+        ->toHaveKey('total', 115.0);
+});
+
+test('una tarifa enviada como texto no cuenta como cambio de tarifa', function () {
+    $data = ['total' => 115.0, 'products' => [['product_id' => 1, 'iva' => 4]]];
+
+    expect(OrderTotalsCalculator::discardSubmittedIfTaxesChanged($data, [['product_id' => 1, 'iva' => '4']]))
+        ->toHaveKey('total', 115.0);
+});

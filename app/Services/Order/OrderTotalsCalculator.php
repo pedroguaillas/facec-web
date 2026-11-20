@@ -24,6 +24,12 @@ class OrderTotalsCalculator
      */
     private const DEPRECATED_12_CODE = 2;
 
+    /** Campos de dinero de la Orden que devuelven calculate()/resolve(). */
+    private const TOTAL_FIELDS = [
+        'no_iva', 'base0', 'base5', 'base8', 'base12', 'base15',
+        'iva5', 'iva8', 'iva', 'iva15', 'ice', 'discount', 'sub_total', 'total',
+    ];
+
     /**
      * Recalcula subtotales y totales monetarios de una Orden como fuente de
      * verdad server-side, replicando la misma base imponible que arma el XML
@@ -120,6 +126,56 @@ class OrderTotalsCalculator
             'sub_total' => $subTotal,
             'total' => $total,
         ];
+    }
+
+    /**
+     * Totales a persistir. Decisión 2026-11-20: si el frontend manda totales
+     * (`total` presente) se guardan los suyos, redondeados a 2 decimales como
+     * la columna; los campos que no mande salen del recálculo. Sin totales del
+     * frontend (factura recurrente, proforma convertida) se usa el recálculo.
+     * Las diferencias > TOLERANCE siguen quedando en el log para detectar
+     * casos reales (ver docs/facturacion-electronica/ventas.md §3.1).
+     *
+     * @param  array<int, array{quantity: float|int, price: float|int, discount?: float|int, ice?: float|int, iva: int}>  $products
+     * @param  array<string, mixed>  $submitted
+     * @param  Collection<int, float>|null  $percentages
+     * @return array{no_iva: float, base0: float, base5: float, base8: float, base12: float, base15: float, iva5: float, iva8: float, iva: float, iva15: float, ice: float, discount: float, sub_total: float, total: float}
+     */
+    public function resolve(array $products, array $submitted = [], ?int $orderId = null, ?Collection $percentages = null): array
+    {
+        $calculated = $this->calculate($products, $submitted, $orderId, $percentages);
+
+        if (! isset($submitted['total']) || ! is_numeric($submitted['total'])) {
+            return $calculated;
+        }
+
+        foreach ($calculated as $field => $value) {
+            if (isset($submitted[$field]) && is_numeric($submitted[$field])) {
+                $calculated[$field] = round((float) $submitted[$field], 2);
+            }
+        }
+
+        return $calculated;
+    }
+
+    /**
+     * Quita los totales del frontend cuando el backend cambió la tarifa de
+     * algún ítem (IVA diferenciado en feriado): ya no corresponden a los
+     * ítems que se guardan, así que `resolve()` debe recalcular.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $originalProducts
+     * @return array<string, mixed>
+     */
+    public static function discardSubmittedIfTaxesChanged(array $data, array $originalProducts): array
+    {
+        $taxCodes = fn (array $products): array => array_map('intval', array_column($products, 'iva'));
+
+        if ($taxCodes($originalProducts) === $taxCodes($data['products'] ?? [])) {
+            return $data;
+        }
+
+        return array_diff_key($data, array_flip(self::TOTAL_FIELDS));
     }
 
     /**

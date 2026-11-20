@@ -111,6 +111,16 @@ class Company extends Model
     }
 
     /**
+     * Establecimiento matriz (`type = 'matriz'`). Si la empresa no marcó
+     * ninguno, se toma el más antiguo.
+     */
+    public function matrix(): ?Branch
+    {
+        return $this->branches()->where('type', 'matriz')->orderBy('created_at')->first()
+            ?? $this->branches()->orderBy('created_at')->first();
+    }
+
+    /**
      * Usuario principal de la empresa: el primero vinculado en company_users
      * (el que se crea junto con la empresa en el alta del admin).
      *

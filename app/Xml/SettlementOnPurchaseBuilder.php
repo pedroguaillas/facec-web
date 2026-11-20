@@ -52,6 +52,7 @@ class SettlementOnPurchaseBuilder extends BaseVoucherBuilder
 
         $date = new \DateTime($shop->date);
         $string .= '<fechaEmision>'.$date->format('d/m/Y').'</fechaEmision>';
+        $string .= $this->establishmentAddress();
         $string .= '<obligadoContabilidad>'.($company->accounting ? 'SI' : 'NO').'</obligadoContabilidad>';
         $string .= "<tipoIdentificacionProveedor>{$typeId}</tipoIdentificacionProveedor>";
         $string .= "<razonSocialProveedor>{$shop->name}</razonSocialProveedor>";

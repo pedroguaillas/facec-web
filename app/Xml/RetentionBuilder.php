@@ -65,6 +65,7 @@ class RetentionBuilder extends BaseVoucherBuilder
 
         $string .= '<infoCompRetencion>';
         $string .= '<fechaEmision>'.(new \DateTime($shop->date_retention))->format('d/m/Y').'</fechaEmision>';
+        $string .= $this->establishmentAddress();
         $string .= '<obligadoContabilidad>'.($company->accounting ? 'SI' : 'NO').'</obligadoContabilidad>';
         $string .= "<tipoIdentificacionSujetoRetenido>{$typeId}</tipoIdentificacionSujetoRetenido>";
         $string .= $typeId === '06' ? '<tipoSujetoRetenido>01</tipoSujetoRetenido>' : null;  // fix: era === 'pasaporte' (bug)

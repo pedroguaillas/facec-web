@@ -9,6 +9,8 @@ Para lógica de formulario/UI ver `facec-front-next/docs/ventas.md`.
 1. Frontend guarda el Order (OrderStoreService / OrderUpdateService)
    → sub_total, total, base0-15, iva5/8/iva/iva15, ice, discount
      se recalculan server-side antes de persistir (ver §3, OrderTotalsCalculator).
+   → si el tipo es electrónico (factura/N.C.), authorization = claveAcceso
+     (App\Xml\AccessKey, misma que armará el XML; se recalcula al editar).
 
 2. OrderLifecycleService::process($order)
    estado CREADO/DEVUELTA/NO AUTORIZADO
@@ -105,6 +107,19 @@ más los impuestos calculados (48.79) no coincidían con el `importeTotal`
 > Consecuencia adicional: como la firma y el envío ya se ejecutaron con
 > datos inválidos, se "quema" una clave de acceso y hay que corregir y
 > reintentar — no es solo un error cosmético, cuesta un ciclo completo.
+
+> **Cambio 2026-11-20 — se aceptan los totales del frontend.** Por decisión
+> del negocio, mientras no aparezca un caso real de rechazo,
+> `OrderStoreService`/`OrderUpdateService` usan
+> `OrderTotalsCalculator::resolve()`: si la petición trae `total`, se guardan
+> los totales del frontend (redondeados a 2 decimales) y solo los campos que
+> falten salen del recálculo. Se recalcula todo cuando no llegan totales
+> (factura recurrente, proforma convertida) o cuando el backend cambió la
+> tarifa de un ítem (IVA diferenciado en feriado,
+> `discardSubmittedIfTaxesChanged()`). Las diferencias > 0.01 siguen en el
+> log (`Order totals mismatch`) para encontrar el caso y analizarlo. Lo que
+> sigue abajo describe el diseño de recálculo, que se conserva en
+> `calculate()`.
 
 **Estado: IMPLEMENTADO (opción a — recálculo server-side como fuente de
 verdad).** `app/Services/Order/OrderTotalsCalculator::calculate()` recalcula

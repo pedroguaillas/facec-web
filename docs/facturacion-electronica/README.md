@@ -180,6 +180,29 @@ el bloque del emisor y como primera fila de "Información adicional"
 > Límite SRI: 15 campos adicionales por comprobante — con artesano el usuario
 > puede usar 14. La factura normal no valida ese máximo todavía.
 
+### Establecimiento emisor y matriz
+
+Las ventas/compras/guías se guardan siempre en la sucursal más antigua
+(`BranchScope`), así que el establecimiento que emite se saca del `estab`
+de la serie: `Branch::forSerie($company, $serie)` (si ese `store` no existe,
+la más antigua). La matriz es `Company::matrix()`: el `Branch` con
+`type = 'matriz'` o, si no hay ninguno marcado, el más antiguo.
+
+- XML (`BaseVoucherBuilder`): `<nombreComercial>` y `<dirEstablecimiento>`
+  (en el `info*` de los 5 comprobantes) salen del establecimiento de la
+  serie; `<dirMatriz>` de la matriz.
+- RIDE (`vouchers/theme/company.blade.php`): "Dir. Matriz" + "Dir. Sucursal"
+  cuando emite una sucursal; una sola "Dirección" si emite la matriz.
+- Ticket de venta (`vouchers/printf`): nombre/dirección del establecimiento
+  de la serie.
+- Logo de los PDFs: `Branch::logoFile()` — `branches.logo_dir` del
+  establecimiento de la serie; si no tiene, `companies.logo_dir`; si
+  tampoco, `default.png`. Se sube con `logo` (multipart) en
+  `POST/PUT settings/branches`, se guarda como `logos/{ruc}-{estab}.{ext}`
+  en el disco `public` (`BranchService::storeLogo`). `DELETE
+  settings/branches/{branch}/logo` (alias `branches/{branch}/logo`) lo borra
+  y vuelve al logo de la empresa.
+
 ## 2. Procesamiento asíncrono (colas)
 
 Los 4 tipos de comprobante (Ventas, Compras, Guía de Remisión, Retención)

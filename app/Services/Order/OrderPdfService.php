@@ -26,9 +26,8 @@ class OrderPdfService
         $orderaditionals = OrderAditional::where('order_id', $id)->get();
 
         $company = $this->company;
-        $company->logo_dir = $company->logo_dir ?: 'default.png';
 
-        $branch = $this->getBranch($movement->serie);
+        $branch = Branch::forSerie($this->company, $movement->serie);
 
         $enabledDiscount = $movement_items->contains(fn ($item) => $item->discount > 0);
         $enabledCodeAux = $movement_items->contains(fn ($item) => $item->aux_cod !== null);
@@ -49,10 +48,11 @@ class OrderPdfService
         $beforeTaxChange = $this->isBeforeTaxChange($movement);
         $movement_items = $this->getMovementItems($id);
         $company = $this->company;
+        $branch = Branch::forSerie($company, $movement->serie);
 
         $pdf = app('dompdf.wrapper')->loadView(
             'vouchers.printf',
-            compact('movement', 'company', 'movement_items', 'beforeTaxChange')
+            compact('movement', 'company', 'branch', 'movement_items', 'beforeTaxChange')
         );
 
         $height = ($movement_items->count() > 3 ? 12 : 10) / 2.54 * 72;
@@ -89,14 +89,6 @@ class OrderPdfService
             ->selectRaw('COALESCE(order_items.code, products.code) AS code, COALESCE(order_items.description, products.name) AS name')
             ->where('order_id', $id)
             ->get();
-    }
-
-    private function getBranch(string $serie): Branch
-    {
-        $store = (int) substr($serie, 0, 3);
-
-        return Branch::where(['company_id' => $this->company->id, 'store' => $store])->first()
-            ?? Branch::where('company_id', $this->company->id)->orderBy('created_at')->first();
     }
 
     private function generatePdfView($movement, array $data)

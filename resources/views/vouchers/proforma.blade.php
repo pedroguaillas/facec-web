@@ -200,9 +200,7 @@
                                     <table class="header-inner">
                                         <tr>
                                             <td>
-                                                @if($company->logo_dir)
-                                                    <img src="{{ storage_path('app/public/logos/'.$company->logo_dir) }}" alt="Logo" style="height: 70px; width: auto;" />
-                                                @endif
+                                                <img src="{{ storage_path('app/public/logos/'.$branch->logoFile()) }}" alt="Logo" style="height: 70px; width: auto;" />
                                                 <div class="company-name">{{ $company->company }}</div>
                                                 <div class="muted">RUC: {{ $company->ruc }}</div>
                                                 @if($branch->address)

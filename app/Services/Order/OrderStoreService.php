@@ -22,6 +22,7 @@ use App\StaticClasses\MovementTransactionTypes;
 use App\StaticClasses\MovementTypes;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use App\Xml\AccessKey;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -45,8 +46,10 @@ class OrderStoreService
         $voucherType = VoucherType::findOrFail((int) $data['voucher_type_id']);
 
         if (in_array($voucherType->slug, DifferentiatedIvaService::VOUCHER_SLUGS, true)) {
+            $originalProducts = $data['products'] ?? [];
             $data['products'] = app(DifferentiatedIvaService::class)
-                ->applyToItems($this->company, $data['date'], $data['products'] ?? []);
+                ->applyToItems($this->company, $data['date'], $originalProducts);
+            $data = OrderTotalsCalculator::discardSubmittedIfTaxesChanged($data, $originalProducts);
         }
 
         $orderSaved = DB::transaction(function () use ($data, $voucherType) {
@@ -86,7 +89,11 @@ class OrderStoreService
 
         $input['serie'] = $this->sequenceService->generateSerie($emisionPoint, $voucherType->slug);
 
-        $input = array_merge($input, $this->totalsCalculator->calculate(
+        if ($voucherType->requires_electronic && $voucherType->code_sri !== null) {
+            $input['authorization'] = AccessKey::generate($this->company, Carbon::parse($input['date']), $voucherType->code_sri, $input['serie']);
+        }
+
+        $input = array_merge($input, $this->totalsCalculator->resolve(
             $data['products'] ?? [],
             $input,
         ));

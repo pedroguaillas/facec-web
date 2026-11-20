@@ -51,6 +51,7 @@ class CreditNoteBuilder extends BaseVoucherBuilder
 
         $date = new \DateTime($order->date);
         $string .= '<fechaEmision>'.$date->format('d/m/Y').'</fechaEmision>';
+        $string .= $this->establishmentAddress();
         $string .= "<tipoIdentificacionComprador>{$typeId}</tipoIdentificacionComprador>";
         $string .= '<razonSocialComprador>'.str_replace('&', 'Y', $order->name).'</razonSocialComprador>';
         $string .= "<identificacionComprador>{$order->identication}</identificacionComprador>";

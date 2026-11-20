@@ -219,6 +219,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('branches', [SettingsBranchController::class, 'index'])->name('branches.index');
     Route::post('branches', [SettingsBranchController::class, 'store'])->name('branches.store');
     Route::put('branches/{branch}', [SettingsBranchController::class, 'update'])->name('branches.update');
+    Route::delete('branches/{branch}/logo', [SettingsBranchController::class, 'destroyLogo'])->name('branches.logo.destroy');
     Route::get('branches/{branch}/points', [SettingsEmisionPointController::class, 'index'])->name('branches.points.index');
 
     Route::get('points/branch/{branch}', [SettingsEmisionPointController::class, 'index'])->name('points.branch');
@@ -230,6 +231,7 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('settings/branches', [SettingsBranchController::class, 'index'])->name('settings.branches.index');
     Route::post('settings/branches', [SettingsBranchController::class, 'store'])->name('settings.branches.store');
     Route::put('settings/branches/{branch}', [SettingsBranchController::class, 'update'])->name('settings.branches.update');
+    Route::delete('settings/branches/{branch}/logo', [SettingsBranchController::class, 'destroyLogo'])->name('settings.branches.logo.destroy');
 
     Route::get('settings/branches/{branch}/points', [SettingsEmisionPointController::class, 'index'])->name('settings.points.index');
     Route::post('settings/points', [SettingsEmisionPointController::class, 'store'])->name('settings.points.store');
