@@ -251,3 +251,18 @@ test('editar una venta con una sola forma de pago ajusta su monto al nuevo total
 
     expect($order->payments()->sole()->amount)->toBe(120.0);
 });
+
+test('el listado no muestra saldo pendiente en ventas de contado antiguas (paid = 0)', function () {
+    $setup = multiPaymentSetup();
+
+    Order::factory()->create([
+        'branch_id' => $setup['branch']->id,
+        'customer_id' => $setup['customer']->id,
+        'voucher_type_id' => VoucherType::where('slug', VoucherTypes::VENTA_FACTURA)->value('id'),
+        'total' => 100,
+        'paid' => 0,
+        'payment_type' => PaymentTypes::CONTADO,
+    ]);
+
+    test()->getJson(route('orders.index'))->assertOk()->assertJsonPath('data.0.atts.pending', 0);
+});

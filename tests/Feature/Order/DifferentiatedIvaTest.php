@@ -9,10 +9,14 @@ use App\Models\Holiday;
 use App\Models\Order\Order;
 use App\Models\Order\OrderItem;
 use App\Models\Product\Product;
+use App\Models\Treasury\BankAccount;
 use App\Models\User;
 use App\Models\UserType;
 use App\Models\VoucherType;
+use App\StaticClasses\MovementPartyRegistry;
+use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
+use Database\Seeders\MethodOfPaymentSeeder;
 use Illuminate\Support\Facades\DB;
 
 function differentiatedIvaBranch(bool $base8 = true): Branch
@@ -217,3 +221,39 @@ test('solo una empresa con base8 puede marcar productos con IVA diferenciado', f
     'con base8' => [true, 201],
     'sin base8' => [false, 422],
 ]);
+
+test('en feriado, si el total recalculado no cuadra con varias formas de pago, la venta se rechaza', function () {
+    $this->seed(MethodOfPaymentSeeder::class);
+    $branch = differentiatedIvaBranch();
+    Holiday::factory()->create(['starts_at' => '2026-11-01', 'ends_at' => '2026-11-03']);
+    $bank = BankAccount::factory()->create(['branch_id' => $branch->id, 'balance' => 0]);
+    $contado = fn (int $payMethod, float $amount) => [
+        'pay_method' => $payMethod,
+        'payment_type' => PaymentTypes::CONTADO,
+        'amount' => $amount,
+        'source_type' => MovementPartyRegistry::BANK_ACCOUNT,
+        'source_id' => $bank->id,
+    ];
+
+    // El front manda 115 (15%) pero el backend graba 108 (8%).
+    $this->postJson(route('orders.store'), [
+        ...differentiatedIvaPayload($branch, [['product' => differentiatedIvaProduct($branch), 'iva' => 4]], '2026-11-03'),
+        'total' => 115,
+        'payments' => [$contado(1, 15), $contado(20, 100)],
+    ])->assertUnprocessable()->assertJsonPath('message', 'El total de la venta se recalculó a 108 (IVA diferenciado): ajuste las formas de pago a ese total.');
+
+    expect(Order::count())->toBe(0)
+        ->and($bank->fresh()->balance)->toBe(0.0);
+});
+
+test('en feriado, el payload con una sola forma de pago toma el total recalculado', function () {
+    $branch = differentiatedIvaBranch();
+    Holiday::factory()->create(['starts_at' => '2026-11-01', 'ends_at' => '2026-11-03']);
+
+    $this->postJson(route('orders.store'), [
+        ...differentiatedIvaPayload($branch, [['product' => differentiatedIvaProduct($branch), 'iva' => 4]], '2026-11-03'),
+        'total' => 115,
+    ])->assertSuccessful();
+
+    expect(Order::firstOrFail()->payments()->sole()->amount)->toBe(108.0);
+});

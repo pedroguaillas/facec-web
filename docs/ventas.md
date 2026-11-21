@@ -344,7 +344,11 @@ pago, p. ej. efectivo + transferencia. Cada fila de `order_payments` es un
     sigue siendo de toda la venta: con `payment_type=ANTICIPO` no se acepta `payments`.
   - Línea `CONTADO` con plan financiero: `source_type`/`source_id` obligatorios
     (caja/banco por línea); `receipt_*` solo con banco. Línea `CREDITO`: sin caja/banco.
-  - Σ `amount` = `total` (±0.01) — si no, 422 en `payments`.
+  - Σ `amount` = `total` (±0.01) — si no, 422 en `payments`. Si el backend
+    recalcula el total (IVA diferenciado en feriado) y deja de cuadrar, la
+    venta se rechaza con 422 `message` antes de crear cobros
+    (`OrderStoreService::ensurePaymentsMatchTotal`); sin `payments` la única
+    línea ya toma el total recalculado. Al editar con varias líneas, igual.
   - Alguna línea `CREDITO` → `due_date` obligatorio; el `<plazo>` del XML va
     solo en las líneas a crédito.
 - **Sin `payments`** (payload anterior, factura recurrente, proforma → factura):
@@ -402,7 +406,8 @@ total) y **siempre se registra después de la venta**, solo sobre facturas
 - **Eliminar** (`DELETE`): borra líneas y campos y revierte el abono con un
   `RETENCION` en el debe.
 - Listado (`GET orders`): cada fila trae `atts.retained` (total retenido, 0
-  si no hay) y `atts.pending` (`pendingBalance()`).
+  si no hay) y `atts.pending` (`pendingBalance()` solo en CREDITO/ANTICIPO; 0 en
+  contado, porque las ventas de contado anteriores a §3.2 tienen `paid = 0`).
 - Respuesta y detalle (`GET orders/{id}` → `retention`, `null` si no hay):
   `{serie, date, authorization, iva, renta, total, pending, items[]}`.
 

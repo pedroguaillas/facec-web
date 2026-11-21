@@ -15,6 +15,7 @@ use App\Xml\AccessKey;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class OrderUpdateService
 {
@@ -66,12 +67,22 @@ class OrderUpdateService
 
     /**
      * Con una sola forma de pago, su monto sigue al total editado (el <pago>
-     * del XML debe sumar el importe total). Varias líneas: el request ya
-     * impide cambiar el total.
+     * del XML debe sumar el importe total). Varias líneas: el total no puede
+     * cambiar (lo valida el request y, si el backend lo recalculó, se aborta).
      */
     protected function syncSinglePayment(Order $order): void
     {
         $payments = $order->payments()->get();
+
+        if ($payments->count() > 1) {
+            // El request ya validó contra el total enviado, pero el backend
+            // pudo recalcularlo (IVA diferenciado): los <pago> deben cuadrar.
+            if (abs(round($payments->sum('amount'), 2) - round((float) $order->total, 2)) > 0.01) {
+                throw new RuntimeException("El total de la venta se recalculó a {$order->total}: con varias formas de pago el total no puede cambiar.");
+            }
+
+            return;
+        }
 
         if ($payments->count() !== 1) {
             return;

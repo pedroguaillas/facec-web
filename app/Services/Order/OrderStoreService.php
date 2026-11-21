@@ -25,6 +25,7 @@ use App\Xml\AccessKey;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class OrderStoreService
 {
@@ -155,6 +156,8 @@ class OrderStoreService
             'receipt_number' => $data['receipt_number'] ?? null,
         ]];
 
+        $this->ensurePaymentsMatchTotal($lines, (float) $orderData['total']);
+
         return array_map(fn (array $line) => [
             'pay_method' => (int) $line['pay_method'],
             'payment_type' => $line['payment_type'] ?? PaymentTypes::CONTADO,
@@ -164,6 +167,26 @@ class OrderStoreService
             'receipt_id' => $line['receipt_id'] ?? null,
             'receipt_number' => $line['receipt_number'] ?? null,
         ], array_values($lines));
+    }
+
+    /**
+     * El backend puede recalcular el total (IVA diferenciado en feriado) y
+     * dejarlo distinto del que se validó en el request: los <pago> del XML
+     * deben sumar el total guardado o el SRI rechaza la factura. Se corta
+     * antes de crear cobros; la transacción revierte la venta.
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     *
+     * @throws RuntimeException
+     */
+    protected function ensurePaymentsMatchTotal(array $lines, float $total): void
+    {
+        $total = round($total, 2);
+        $paymentsTotal = round(array_sum(array_map(fn (array $line) => (float) $line['amount'], $lines)), 2);
+
+        if (abs($paymentsTotal - $total) > 0.01) {
+            throw new RuntimeException("El total de la venta se recalculó a {$total} (IVA diferenciado): ajuste las formas de pago a ese total.");
+        }
     }
 
     /**

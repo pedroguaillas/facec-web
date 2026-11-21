@@ -132,7 +132,11 @@ class OrderController extends Controller
 
     public function update(OrderUpdateRequest $request, Order $order, OrderUpdateService $service): JsonResponse
     {
-        $service->updateOrder($order, $request->validated());
+        try {
+            $service->updateOrder($order, $request->validated());
+        } catch (RuntimeException $e) {
+            return response()->json(['succes' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json($order->fresh());
     }

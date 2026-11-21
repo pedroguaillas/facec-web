@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Order\Order;
+use App\StaticClasses\PaymentTypes;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,7 +27,8 @@ class OrderResources extends JsonResource
                 'paid' => $this->paid,
                 // Retención recibida del cliente; pending = total - paid - retained.
                 'retained' => $this->retentionTotal(),
-                'pending' => $this->pendingBalance(),
+                // Solo crédito/anticipo tienen saldo por cobrar (ventas de contado antiguas tienen paid = 0).
+                'pending' => in_array($this->payment_type, [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO], true) ? $this->pendingBalance() : 0.0,
                 'payment_type' => $this->payment_type,
                 'xml' => $this->xml,
                 'send_mail' => $this->send_mail,
