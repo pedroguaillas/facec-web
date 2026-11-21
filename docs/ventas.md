@@ -43,7 +43,7 @@ guía de remisión y retención. `OrderStoreRequest` acepta cualquier slug
 | `OrderAditional` | `app/Models/Order/OrderAditional.php` | Campos adicionales (`name`/`description`) del comprobante |
 | `Repayment` / `RepaymentTax` | `app/Models/Order/Repayment/` | Reembolsos (facturas de intermediación/reembolso de gastos) |
 | `OrderPayment` | `app/Models/Order/OrderPayment.php` | Formas de pago de la venta (un `<pago>` del XML por fila) — ver §3.2 |
-| `OrderRetentionItem` | `app/Models/Order/OrderRetentionItem.php` | Ítems de retención asociados |
+| `OrderRetentionItem` | `app/Models/Order/OrderRetentionItem.php` | Líneas de la retención recibida del cliente (§3.3) |
 | `Lot` | `app/Models/Order/Lot.php` | Agrupa órdenes cargadas por lote (Excel) |
 
 ### Relaciones (`Order.php:89-107`)
@@ -365,6 +365,45 @@ pago, p. ej. efectivo + transferencia. Cada fila de `order_payments` es un
   `total` (422 en `total`). Igual que antes, editar no ajusta los movimientos
   de tesorería ya generados.
 
+### 3.3 Retención recibida del cliente (`OrderRetentionService`)
+
+La retención la emite el cliente (agente de retención) sobre nuestra
+factura. **No cambia el XML de la factura** (los `<pagos>` siguen sumando el
+total) y **siempre se registra después de la venta**, solo sobre facturas
+(`venta_factura`) no anuladas, una por factura.
+
+- **Manual** (`POST orders/{id}/retention`): `serie` (`001-001-000000001`),
+  `date` (Y-m-d, ≥ fecha de la factura), `authorization` (10–49 dígitos),
+  `items[]`: `code` (1 renta / 2 IVA), `tax_code` (debe existir en `taxes`
+  con el `type` que corresponde: `renta`/`iva`), `base`, `porcentage`, `value`.
+- **Importando el XML** (`POST orders/{id}/retention/import`, multipart
+  `xml`): `App\Xml\ReceivedRetentionParser` lee el XML autorizado
+  (`<autorizacion>` con el comprobante en CDATA; exige `estado` AUTORIZADO) o
+  el `<comprobanteRetencion>` suelto, versión 1.0.0 (`<impuestos>`) o 2.0.0
+  (`<docsSustento>`). Valida que `identificacionSujetoRetenido` = RUC de la
+  empresa y que lo haya emitido el cliente de la venta (`ruc` = su
+  identificación, o su cédula + 001). En v2 toma solo las líneas cuyo
+  `numDocSustento` es esta factura (una retención puede cubrir varias). Serie
+  = `estab-ptoEmi-secuencial`, autorización = `numeroAutorizacion` (o
+  `claveAcceso`). **El archivo no se guarda**: solo se leen los datos.
+  ISD (código 6) no se soporta.
+- **Qué guarda**: `order_retention_items` + en `orders`: `serie_retencion`,
+  `date_retention`, `authorization_retention`, `iva_retention`, `rent_retention`.
+- **Cartera**: si la factura tiene movimientos de cartera (crédito/anticipo),
+  se abona un `RETENCION` (haber) y el valor no puede superar el saldo de la
+  factura en cartera. Venta de contado: solo se registra el dato fiscal.
+- **Saldo pendiente**: `Order::pendingBalance()` = `total - paid - retención`;
+  lo usan los abonos (`AccountsReceivablePaymentService`), cartera vencida
+  (`customers/overdue`, excluye las facturas saldadas por retención) y el
+  dashboard.
+- **Cliente que paga neto al contado**: registrar la venta con dos formas de
+  pago (§3.2): CONTADO por lo recibido + CREDITO por lo que retendrá; al
+  registrar la retención la factura queda saldada.
+- **Eliminar** (`DELETE`): borra líneas y campos y revierte el abono con un
+  `RETENCION` en el debe.
+- Respuesta y detalle (`GET orders/{id}` → `retention`, `null` si no hay):
+  `{serie, date, authorization, iva, renta, total, pending, items[]}`.
+
 ### `OrderStoreRequest` (`app/Http/Requests/Order/OrderStoreRequest.php`)
 
 - `authorize()` retorna `true` sin comprobar propiedad del recurso (`:11`).
@@ -427,6 +466,9 @@ Todas bajo el grupo autenticado de `routes/api.php:34-45`.
 | POST | `orders/{order}/cancel` | Anular | `OrderLifecycleController::cancel` |
 | GET | `orders/{order}/mail` | Reenviar correo | `OrderLifecycleController::mail` |
 | GET | `orders/{order}/xml` | Descargar XML | `OrderLifecycleController::download` |
+| POST | `orders/{order}/retention` | Registrar a mano la retención recibida (§3.3) | `OrderRetentionController::store` |
+| POST | `orders/{order}/retention/import` | Registrar la retención leyendo el XML del cliente (§3.3) | `OrderRetentionController::import` |
+| DELETE | `orders/{order}/retention` | Eliminar la retención registrada (revierte cartera) | `OrderRetentionController::destroy` |
 
 ## 5. Puntos de mejora
 

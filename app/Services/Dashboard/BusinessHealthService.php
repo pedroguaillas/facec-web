@@ -81,11 +81,11 @@ class BusinessHealthService
         $documents = Order::whereIn('payment_type', [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO])
             ->where(fn ($query) => $query->whereNull('state')->orWhere('state', '<>', VoucherStates::CANCELED))
             ->whereColumn('paid', '<', 'total')
-            ->get(['id', 'customer_id', 'total', 'paid', 'due_date'])
+            ->get(['id', 'customer_id', 'total', 'paid', 'iva_retention', 'rent_retention', 'due_date'])
             ->toBase()
             ->map(fn (Order $order) => [
                 'customer_id' => (int) $order->customer_id,
-                'amount' => round((float) $order->total - (float) $order->paid - (float) ($creditNotes[$order->id] ?? 0), 2),
+                'amount' => round($order->pendingBalance() - (float) ($creditNotes[$order->id] ?? 0), 2),
                 'due_date' => $order->due_date ? CarbonImmutable::parse($order->due_date)->startOfDay() : null,
             ]);
 

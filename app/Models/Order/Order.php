@@ -110,6 +110,8 @@ class Order extends BaseModel
         'iva' => 'float',
         'iva15' => 'float',
         'sub_total' => 'float',
+        'iva_retention' => 'float',
+        'rent_retention' => 'float',
         'total' => 'float',
         'voucher_type_id' => 'integer',
         'send_mail' => 'boolean',
@@ -170,6 +172,47 @@ class Order extends BaseModel
     public function payments(): HasMany
     {
         return $this->hasMany(OrderPayment::class);
+    }
+
+    /** @return HasMany<OrderRetentionItem, $this> */
+    public function retentionItems(): HasMany
+    {
+        return $this->hasMany(OrderRetentionItem::class);
+    }
+
+    /**
+     * Total retenido por el cliente (retención recibida, renta + IVA).
+     */
+    public function retentionTotal(): float
+    {
+        return round((float) $this->iva_retention + (float) $this->rent_retention, 2);
+    }
+
+    /**
+     * Saldo pendiente de cobro al cliente: total - cobrado - retención.
+     */
+    public function pendingBalance(): float
+    {
+        return round((float) $this->total - (float) $this->paid - $this->retentionTotal(), 2);
+    }
+
+    /**
+     * Retención recibida del cliente, para el detalle de la venta.
+     *
+     * @return array{serie: string|null, date: string|null, authorization: string|null, iva: float, renta: float, total: float, pending: float, items: array<int, array<string, mixed>>}
+     */
+    public function retentionSummary(): array
+    {
+        return [
+            'serie' => $this->serie_retencion,
+            'date' => $this->date_retention,
+            'authorization' => $this->authorization_retention,
+            'iva' => (float) $this->iva_retention,
+            'renta' => (float) $this->rent_retention,
+            'total' => $this->retentionTotal(),
+            'pending' => $this->pendingBalance(),
+            'items' => $this->retentionItems()->get(['code', 'tax_code', 'base', 'porcentage', 'value'])->toArray(),
+        ];
     }
 
     public function repayments()

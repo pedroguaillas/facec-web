@@ -18,6 +18,7 @@ class OrderShowService
             'order_items' => $this->getOrderItems($order->id),
             'order_aditionals' => $this->getOrderAditionals($order->id),
             'order_payments' => $this->getOrderPayments($order),
+            'retention' => $order->serie_retencion !== null ? $order->retentionSummary() : null,
             'products' => $this->getProducts($order->id),
             'customers' => $this->getCustomers($order->customer_id),
         ];

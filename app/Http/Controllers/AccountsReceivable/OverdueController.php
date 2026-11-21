@@ -23,7 +23,9 @@ class OverdueController extends Controller
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', $today)
             ->whereColumn('paid', '<', 'total')
-            ->get();
+            ->get()
+            // Una retención puede cubrir el resto de la factura.
+            ->filter(fn (Order $order) => $order->pendingBalance() > 0);
 
         $parties = $orders->groupBy('customer_id')->map(function ($group) use ($today) {
             $customer = $group->first()->customer;
@@ -33,7 +35,7 @@ class OverdueController extends Controller
                 'serie' => $order->serie,
                 'due_date' => $order->due_date->format('Y-m-d'),
                 'days_overdue' => (int) $order->due_date->diffInDays($today),
-                'pending' => round((float) $order->total - (float) $order->paid, 2),
+                'pending' => $order->pendingBalance(),
             ])->values();
 
             return [

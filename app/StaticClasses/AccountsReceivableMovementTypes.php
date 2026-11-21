@@ -13,6 +13,9 @@ class AccountsReceivableMovementTypes
 
     const PAGO = 'PAGO';
 
+    /** Retención que el cliente emitió sobre la factura (abona; con debe = reverso). */
+    const RETENCION = 'RETENCION';
+
     const SALDO_INICIAL = 'SALDO_INICIAL';
 
     const ANTICIPO = 'ANTICIPO';

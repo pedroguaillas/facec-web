@@ -25,6 +25,7 @@ use App\Http\Controllers\Inventory\InventoryReportController;
 use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Order\OrderLifecycleController;
+use App\Http\Controllers\Order\OrderRetentionController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductLookupController;
 use App\Http\Controllers\Product\ProductPresentationController;
@@ -92,6 +93,9 @@ Route::middleware(['auth:sanctum', 'role:client'])->group(function () {
     Route::get('orders/{order}/mail', [OrderLifecycleController::class, 'mail'])->name('orders.mail');
     Route::get('orders/{order}/xml', [OrderLifecycleController::class, 'download'])->name('orders.xml');
     Route::post('orders/{order}/payments', [AccountReceivablePaymentController::class, 'store'])->name('orders.payments.store');
+    Route::post('orders/{order}/retention', [OrderRetentionController::class, 'store'])->name('orders.retention.store');
+    Route::post('orders/{order}/retention/import', [OrderRetentionController::class, 'import'])->name('orders.retention.import');
+    Route::delete('orders/{order}/retention', [OrderRetentionController::class, 'destroy'])->name('orders.retention.destroy');
 
     Route::get('recurring-invoices', [RecurringInvoiceController::class, 'index'])->name('recurring-invoices.index');
     Route::post('recurring-invoices', [RecurringInvoiceController::class, 'store'])->name('recurring-invoices.store');

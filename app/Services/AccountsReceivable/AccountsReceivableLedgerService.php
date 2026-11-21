@@ -167,6 +167,41 @@ class AccountsReceivableLedgerService
     }
 
     /**
+     * Abona a la factura la retención que emitió el cliente.
+     * Invocado por OrderRetentionService, ya dentro de su transacción.
+     */
+    public function registerRetention(Order $order, float $amount, string $date): AccountReceivableMovement
+    {
+        return $this->createMovement(
+            $order->branch_id,
+            $order->customer_id,
+            $order->id,
+            AccountsReceivableMovementTypes::RETENCION,
+            debe: 0,
+            haber: $amount,
+            description: "Retención {$order->serie_retencion} aplicada a factura {$order->serie} — {$amount}",
+            date: $date,
+        );
+    }
+
+    /**
+     * Revierte el abono de una retención eliminada (vuelve a cargar el valor).
+     */
+    public function reverseRetention(Order $order, float $amount): AccountReceivableMovement
+    {
+        return $this->createMovement(
+            $order->branch_id,
+            $order->customer_id,
+            $order->id,
+            AccountsReceivableMovementTypes::RETENCION,
+            debe: $amount,
+            haber: 0,
+            description: "Reverso de retención {$order->serie_retencion} de factura {$order->serie} — {$amount}",
+            date: now()->format('Y-m-d'),
+        );
+    }
+
+    /**
      * Registra el saldo que un cliente ya arrastraba antes de migrar a facec
      * (sin factura real detrás). Rechaza si ya existe uno para ese cliente.
      */

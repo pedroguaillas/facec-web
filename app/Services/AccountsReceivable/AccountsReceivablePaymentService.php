@@ -30,7 +30,7 @@ class AccountsReceivablePaymentService
             throw new \RuntimeException('Esta venta no está a crédito, no admite abonos.');
         }
 
-        $pendiente = (float) $order->total - (float) $order->paid;
+        $pendiente = $order->pendingBalance();
 
         if ($amount <= 0 || $amount > $pendiente) {
             throw new \RuntimeException('El abono no puede ser mayor al saldo pendiente de la factura.');
