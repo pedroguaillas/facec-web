@@ -3,6 +3,7 @@
 namespace App\Xml;
 
 use App\Models\Order\OrderAditional;
+use App\Models\Order\OrderPayment;
 use App\Models\Order\Repayment\Repayment;
 use App\Models\Order\Repayment\RepaymentTax;
 use App\StaticClasses\PaymentTypes;
@@ -99,18 +100,7 @@ class InvoiceBuilder extends BaseVoucherBuilder
         $string .= '<moneda>DOLAR</moneda>';
         $string .= $order->plate !== null ? "<placa>{$order->plate}</placa>" : null;
 
-        $string .= '<pagos>';
-        $string .= '<pago>';
-        $string .= '<formaPago>'.str_pad($order->pay_method, 2, '0', STR_PAD_LEFT).'</formaPago>';
-        $string .= "<total>{$order->total}</total>";
-
-        if ($order->payment_type === PaymentTypes::CREDITO && $order->expiration_days > 0) {
-            $string .= "<plazo>{$order->expiration_days}</plazo>";
-            $string .= '<unidadTiempo>dias</unidadTiempo>';
-        }
-
-        $string .= '</pago>';
-        $string .= '</pagos>';
+        $string .= $this->buildPagos($order);
 
         $string .= '</infoFactura>';
 
@@ -139,6 +129,40 @@ class InvoiceBuilder extends BaseVoucherBuilder
         $string .= '</factura>';
 
         return $string;
+    }
+
+    /**
+     * Un <pago> por cada forma de pago (order_payments). Ventas anteriores a
+     * las formas de pago múltiples no tienen filas: un solo pago por el total.
+     */
+    private function buildPagos($order): string
+    {
+        $payments = OrderPayment::where('order_id', $order->id)->orderBy('id')->get(['pay_method', 'payment_type', 'amount']);
+
+        if ($payments->isEmpty()) {
+            $payments = collect([(object) [
+                'pay_method' => $order->pay_method,
+                'payment_type' => $order->payment_type,
+                'amount' => $order->total,
+            ]]);
+        }
+
+        $string = '<pagos>';
+
+        foreach ($payments as $payment) {
+            $string .= '<pago>';
+            $string .= '<formaPago>'.str_pad((string) $payment->pay_method, 2, '0', STR_PAD_LEFT).'</formaPago>';
+            $string .= '<total>'.number_format((float) $payment->amount, 2, '.', '').'</total>';
+
+            if ($payment->payment_type === PaymentTypes::CREDITO && $order->expiration_days > 0) {
+                $string .= "<plazo>{$order->expiration_days}</plazo>";
+                $string .= '<unidadTiempo>dias</unidadTiempo>';
+            }
+
+            $string .= '</pago>';
+        }
+
+        return $string.'</pagos>';
     }
 
     private function loadRepayments()

@@ -42,6 +42,7 @@ guía de remisión y retención. `OrderStoreRequest` acepta cualquier slug
 | `OrderItem` | `app/Models/Order/OrderItem.php` | Línea de detalle (`quantity`, `price`, `discount`, `ice`, `iva`) |
 | `OrderAditional` | `app/Models/Order/OrderAditional.php` | Campos adicionales (`name`/`description`) del comprobante |
 | `Repayment` / `RepaymentTax` | `app/Models/Order/Repayment/` | Reembolsos (facturas de intermediación/reembolso de gastos) |
+| `OrderPayment` | `app/Models/Order/OrderPayment.php` | Formas de pago de la venta (un `<pago>` del XML por fila) — ver §3.2 |
 | `OrderRetentionItem` | `app/Models/Order/OrderRetentionItem.php` | Ítems de retención asociados |
 | `Lot` | `app/Models/Order/Lot.php` | Agrupa órdenes cargadas por lote (Excel) |
 
@@ -49,6 +50,7 @@ guía de remisión y retención. `OrderStoreRequest` acepta cualquier slug
 
 - `orderitems()` → `hasMany(OrderItem)`
 - `repayments()` → `hasMany(Repayment)`
+- `payments()` → `hasMany(OrderPayment)`
 - `orderaditionals()` → `hasMany(OrderAditional)`
 - `inventories()` → `morphMany(Inventory, 'model')` — movimientos de
   stock generados si `company->inventory` está activo (ver `docs/inventario.md`).
@@ -76,7 +78,7 @@ Todos con cast `float` salvo indicación (`Order.php:70-87`).
 | `discount` | Σ de los descuentos por ítem, calculado server-side (`OrderTotalsCalculator`); solo informativo (`<totalDescuento>` / RIDE). No hay descuento adicional/global: el valor que envíe el frontend se ignora |
 | `sub_total` | Σ de las bases |
 | `total` | `sub_total + ice + iva_total` — `sub_total` ya es neto de los descuentos por ítem, así que `discount` **no** se vuelve a restar (antes se restaba dos veces y el SRI rechazaba: "importe total esperado … no coincide con el calculado") |
-| `paid` / `pay_method` | Pago / método de pago SRI |
+| `paid` / `pay_method` | `paid` = lo cobrado de contado (Σ líneas CONTADO de `order_payments`; en ANTICIPO lo fija la aplicación del anticipo). `pay_method` = código SRI de la **primera** forma de pago (compatibilidad: listados, ventas antiguas) |
 | `state` | Estado del ciclo SRI (ver [README](./facturacion-electronica/README.md#1-máquina-de-estados-appstaticclassesvoucherstates)) |
 | `authorization` / `autorized` | Clave de acceso y n° de autorización SRI. La clave se genera al guardar factura/nota de crédito (`App\Xml\AccessKey`) y se recalcula al editar (cambia con la fecha); nota de venta/proforma quedan sin clave |
 | `xml` | Ruta del XML en `storage` |
@@ -329,6 +331,39 @@ lo que mande el front no cuenta.
   Los ítems de `orders/{id}` traen `differentiated_iva` y `products/create|edit`
   trae `base8`.
 - `OrderExport` agrega columnas "Gra 8%" / "IVA 8%" si la empresa tiene `base8`.
+
+### 3.2 Varias formas de pago (`order_payments`)
+
+Una venta (factura o nota de venta) puede cobrarse con varias formas de
+pago, p. ej. efectivo + transferencia. Cada fila de `order_payments` es un
+`<pago>` del XML; deben sumar el `total` (el SRI exige Σ pagos = `importeTotal`).
+
+- **Request** (`payments`, opcional): `[{pay_method, payment_type, amount, source_type?, source_id?, receipt_id?, receipt_number?}]`.
+  - `pay_method`: código SRI Tabla 24 (`method_of_payments.code`).
+  - `payment_type`: `CONTADO` o `CREDITO` (se pueden mezclar). `ANTICIPO`
+    sigue siendo de toda la venta: con `payment_type=ANTICIPO` no se acepta `payments`.
+  - Línea `CONTADO` con plan financiero: `source_type`/`source_id` obligatorios
+    (caja/banco por línea); `receipt_*` solo con banco. Línea `CREDITO`: sin caja/banco.
+  - Σ `amount` = `total` (±0.01) — si no, 422 en `payments`.
+  - Alguna línea `CREDITO` → `due_date` obligatorio; el `<plazo>` del XML va
+    solo en las líneas a crédito.
+- **Sin `payments`** (payload anterior, factura recurrente, proforma → factura):
+  `OrderStoreService::resolvePaymentLines` arma una línea por el total con
+  `pay_method` / `payment_type` / `source_*` de nivel venta. Un solo camino.
+- **Al guardar** (`OrderStoreService::createPayments`): un `Movement`
+  `COBRO_VENTA` por cada línea de contado con caja/banco (origen = la venta),
+  `order_payments.movement_id` apunta a él y `orders.movement_id` al primero
+  (compatibilidad). `payment_type` de la venta = `CREDITO` si alguna línea lo
+  es, si no `CONTADO`. `paid` = Σ contado → la cartera carga solo `total - paid`.
+- Proforma y nota de crédito no llevan formas de pago ni generan cobro.
+- **XML / RIDE**: un `<pago>` y una fila de "Forma de pago" por línea. Ventas
+  anteriores (sin filas en `order_payments`, p. ej. carga por lote) siguen con
+  un solo pago `pay_method` por el total.
+- **Detalle** (`GET orders/{id}`): `order_payments` con `source_type`/`source_id` del cobro.
+- **Editar**: las formas de pago no se editan. Con una sola línea su monto
+  sigue al nuevo total; con varias, `OrderUpdateRequest` rechaza cambiar el
+  `total` (422 en `total`). Igual que antes, editar no ajusta los movimientos
+  de tesorería ya generados.
 
 ### `OrderStoreRequest` (`app/Http/Requests/Order/OrderStoreRequest.php`)
 

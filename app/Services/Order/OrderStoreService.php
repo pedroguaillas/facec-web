@@ -8,7 +8,6 @@ use App\Models\Company;
 use App\Models\EmisionPoint;
 use App\Models\Order\Order;
 use App\Models\Product\IvaTax;
-use App\Models\Treasury\Movement;
 use App\Models\VoucherType;
 use App\Services\AccountsReceivable\AccountsReceivableLedgerService;
 use App\Services\Product\PresentationLineResolver;
@@ -29,6 +28,9 @@ use Illuminate\Support\Facades\DB;
 
 class OrderStoreService
 {
+    /** Comprobantes que se cobran: llevan formas de pago y generan el ingreso en tesorería. */
+    private const PAYMENT_SLUGS = [VoucherTypes::VENTA_FACTURA, VoucherTypes::VENTA_NOTA_VENTA];
+
     private Company $company;
 
     private Branch $branch;
@@ -56,12 +58,10 @@ class OrderStoreService
             $emisionPoint = EmisionPoint::find($data['point_id']);
 
             $orderData = $this->prepareOrderData($data, $emisionPoint, $voucherType);
+            $paymentLines = $this->resolvePaymentLines($data, $orderData, $voucherType);
             $order = $this->branch->orders()->create($orderData);
 
-            if ($order->movement_id) {
-                Movement::whereKey($order->movement_id)
-                    ->update(['origin_type' => MovementPartyRegistry::ORDER, 'origin_id' => $order->id]);
-            }
+            $this->createPayments($order, $paymentLines);
 
             $this->createOrderItems($order, $data['products'], $voucherType);
             $this->createRepayments($order, $data['repayments'] ?? []);
@@ -81,7 +81,7 @@ class OrderStoreService
 
     protected function prepareOrderData(array $data, EmisionPoint $emisionPoint, VoucherType $voucherType): array
     {
-        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id', 'receipt_id', 'receipt_number', 'without_source'])->toArray();
+        $input = collect($data)->except(['products', 'send', 'aditionals', 'point_id', 'source_type', 'source_id', 'receipt_id', 'receipt_number', 'without_source', 'payments'])->toArray();
 
         if (array_key_exists('guia', $input) && trim($input['guia']) === '') {
             $input['guia'] = null;
@@ -98,6 +98,11 @@ class OrderStoreService
             $input,
         ));
 
+        if (! empty($data['payments'])) {
+            $input['payment_type'] = $this->derivePaymentType($data['payments']);
+            $input['pay_method'] = (int) $data['payments'][0]['pay_method'];
+        }
+
         if (in_array($input['payment_type'] ?? null, [PaymentTypes::CREDITO, PaymentTypes::ANTICIPO], true)) {
             app(SubscriptionGate::class)->ensureFinancieroAccess($this->company);
         }
@@ -109,26 +114,115 @@ class OrderStoreService
             $input['due_date'] = $dueDate;
         }
 
-        if (($input['payment_type'] ?? null) === PaymentTypes::CONTADO && ! empty($data['source_type']) && ! empty($data['source_id'])
-            && app(SubscriptionGate::class)->hasFinancieroAccess($this->company)) {
-            $movement = app(MovementService::class)->create([
-                'branch_id' => $this->branch->id,
-                'date' => $input['date'],
-                'type' => MovementTypes::INCOME,
-                'transaction_type' => MovementTransactionTypes::SALE_COLLECTION,
-                'source_type' => $data['source_type'],
-                'source_id' => $data['source_id'],
-                'receipt_id' => $data['receipt_id'] ?? null,
-                'receipt_number' => $data['receipt_number'] ?? null,
-                'amount' => $input['total'],
-                'description' => "Cobro venta {$input['serie']}",
-                'user_id' => Auth::id(),
-            ]);
+        return $input;
+    }
 
-            $input['movement_id'] = $movement->id;
+    /**
+     * Una venta con varias formas de pago es a CREDITO si alguna línea lo es.
+     *
+     * @param  array<int, array{payment_type: string}>  $payments
+     */
+    protected function derivePaymentType(array $payments): string
+    {
+        return collect($payments)->contains(fn (array $line) => $line['payment_type'] === PaymentTypes::CREDITO)
+            ? PaymentTypes::CREDITO
+            : PaymentTypes::CONTADO;
+    }
+
+    /**
+     * Líneas de pago de la venta. Sin `payments` (payload anterior) se arma
+     * una sola línea por el total con `pay_method`/`payment_type` y la
+     * caja/banco de nivel venta, así todo pasa por el mismo camino. Solo
+     * factura y nota de venta cobran (proforma/nota de crédito no).
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $orderData
+     * @return array<int, array{pay_method: int, payment_type: string, amount: float, source_type: ?string, source_id: ?int, receipt_id: ?int, receipt_number: ?string}>
+     */
+    protected function resolvePaymentLines(array $data, array $orderData, VoucherType $voucherType): array
+    {
+        if (! in_array($voucherType->slug, self::PAYMENT_SLUGS, true)) {
+            return [];
         }
 
-        return $input;
+        $lines = ! empty($data['payments']) ? $data['payments'] : [[
+            'pay_method' => $orderData['pay_method'] ?? 20,
+            'payment_type' => $orderData['payment_type'] ?? PaymentTypes::CONTADO,
+            'amount' => $orderData['total'],
+            'source_type' => $data['source_type'] ?? null,
+            'source_id' => $data['source_id'] ?? null,
+            'receipt_id' => $data['receipt_id'] ?? null,
+            'receipt_number' => $data['receipt_number'] ?? null,
+        ]];
+
+        return array_map(fn (array $line) => [
+            'pay_method' => (int) $line['pay_method'],
+            'payment_type' => $line['payment_type'] ?? PaymentTypes::CONTADO,
+            'amount' => round((float) $line['amount'], 2),
+            'source_type' => $line['source_type'] ?? null,
+            'source_id' => isset($line['source_id']) ? (int) $line['source_id'] : null,
+            'receipt_id' => $line['receipt_id'] ?? null,
+            'receipt_number' => $line['receipt_number'] ?? null,
+        ], array_values($lines));
+    }
+
+    /**
+     * Crea las formas de pago y, por cada línea de contado con caja/banco
+     * (solo con plan financiero), su ingreso en tesorería. `paid` = lo cobrado
+     * de contado; lo que queda a crédito lo carga la cartera.
+     *
+     * @param  array<int, array{pay_method: int, payment_type: string, amount: float, source_type: ?string, source_id: ?int, receipt_id: ?int, receipt_number: ?string}>  $lines
+     */
+    protected function createPayments(Order $order, array $lines): void
+    {
+        if ($lines === []) {
+            return;
+        }
+
+        $collectsInTreasury = app(SubscriptionGate::class)->hasFinancieroAccess($this->company);
+        $firstMovementId = null;
+        $paidInCash = 0.0;
+
+        foreach ($lines as $line) {
+            $movementId = null;
+
+            if ($line['payment_type'] === PaymentTypes::CONTADO) {
+                $paidInCash += $line['amount'];
+
+                if ($collectsInTreasury && $line['source_type'] && $line['source_id']) {
+                    $movementId = app(MovementService::class)->create([
+                        'branch_id' => $this->branch->id,
+                        'date' => $order->date,
+                        'type' => MovementTypes::INCOME,
+                        'transaction_type' => MovementTransactionTypes::SALE_COLLECTION,
+                        'source_type' => $line['source_type'],
+                        'source_id' => $line['source_id'],
+                        'receipt_id' => $line['receipt_id'],
+                        'receipt_number' => $line['receipt_number'],
+                        'origin_type' => MovementPartyRegistry::ORDER,
+                        'origin_id' => $order->id,
+                        'amount' => $line['amount'],
+                        'description' => "Cobro venta {$order->serie}",
+                        'user_id' => Auth::id(),
+                    ])->id;
+
+                    $firstMovementId ??= $movementId;
+                }
+            }
+
+            $order->payments()->create([
+                'pay_method' => $line['pay_method'],
+                'payment_type' => $line['payment_type'],
+                'amount' => $line['amount'],
+                'movement_id' => $movementId,
+            ]);
+        }
+
+        // ANTICIPO: `paid` lo fija la aplicación del anticipo en la cartera.
+        $order->update([
+            'movement_id' => $firstMovementId,
+            ...($order->payment_type === PaymentTypes::ANTICIPO ? [] : ['paid' => round($paidInCash, 2)]),
+        ]);
     }
 
     protected function createOrderItems(Order $order, array $products, VoucherType $voucherType): void

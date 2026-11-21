@@ -32,14 +32,16 @@
                 <th style="width: 70px; background-color: #e6e6e6;">Vence</th>
                 @endif
             </tr>
+            @foreach($payments ?? [['label' => $payMethod, 'amount' => $movement->total, 'is_credit' => $isCredito ?? false]] as $payment)
             <tr>
-                <td>{{ $payMethod }}</td>
-                <td style="padding-right: .5em; text-align: right;">{{ number_format($movement->total, 2) }}</td>
+                <td>{{ $payment['label'] }}</td>
+                <td style="padding-right: .5em; text-align: right;">{{ number_format($payment['amount'], 2) }}</td>
                 @if($isCredito ?? false)
-                <td style="text-align: center;">{{ $movement->expiration_days }}</td>
-                <td style="text-align: center;">{{ $dueDate }}</td>
+                <td style="text-align: center;">{{ $payment['is_credit'] ? $movement->expiration_days : '' }}</td>
+                <td style="text-align: center;">{{ $payment['is_credit'] ? $dueDate : '' }}</td>
                 @endif
             </tr>
+            @endforeach
         </tbody>
     </table>
     @endisset

@@ -63,6 +63,13 @@ class OrderUpdateRequest extends FormRequest
                     $validator->errors()->add('customer_id', 'No se puede emitir una nota de crédito a consumidor final');
                 }
 
+                // Las formas de pago no se editan: con una sola línea su monto sigue
+                // al nuevo total; con varias, el total no puede cambiar.
+                if ($order instanceof Order && $order->payments()->count() > 1
+                    && abs(round((float) $order->payments()->sum('amount'), 2) - round((float) $this->input('total'), 2)) > 0.01) {
+                    $validator->errors()->add('total', 'La venta tiene varias formas de pago: el total no puede cambiar al editarla.');
+                }
+
                 if ($order instanceof Order && is_array($this->input('products'))) {
                     $unitErrors = app(UnitSaleService::class)->lineErrors(
                         $this->input('products'),

@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
+use App\Models\Order\OrderPayment;
 use App\Models\Product\Product;
 
 class OrderShowService
@@ -16,6 +17,7 @@ class OrderShowService
             'order' => $this->getFilteredOrder($order),
             'order_items' => $this->getOrderItems($order->id),
             'order_aditionals' => $this->getOrderAditionals($order->id),
+            'order_payments' => $this->getOrderPayments($order),
             'products' => $this->getProducts($order->id),
             'customers' => $this->getCustomers($order->customer_id),
         ];
@@ -54,6 +56,25 @@ class OrderShowService
             ->where('order_id', $orderId)
             ->where('name', '!=', Order::requiredAditional()['name'])
             ->get();
+    }
+
+    /**
+     * Formas de pago con la caja/banco del cobro (si generó movimiento).
+     *
+     * @return array<int, array{id: int, pay_method: int, payment_type: string, amount: float, movement_id: int|null, source_type: string|null, source_id: int|null}>
+     */
+    protected function getOrderPayments(Order $order): array
+    {
+        return $order->payments()->with('movement:id,source_type,source_id')->orderBy('id')->get()
+            ->map(fn (OrderPayment $payment) => [
+                'id' => $payment->id,
+                'pay_method' => $payment->pay_method,
+                'payment_type' => $payment->payment_type,
+                'amount' => $payment->amount,
+                'movement_id' => $payment->movement_id,
+                'source_type' => $payment->movement?->source_type,
+                'source_id' => $payment->movement?->source_id,
+            ])->all();
     }
 
     protected function getProducts(int $orderId)

@@ -59,7 +59,7 @@ nada, solo formatea:
 | `totalImpuesto[].valor` (ICE, code 3) | `$order->ice` (sin columna de base persistida para ICE, esa sí se sigue sumando desde `$items`) |
 | `descuentoAdicional` (solo tax code 2 / IVA) | `$order->discount - Σ(item.discount)` (línea 82-85) |
 | `importeTotal` | `$order->total` (línea 105) |
-| `pago.total` | `$order->total` (línea 111) |
+| `pagos.pago[]` | Una por fila de `order_payments` (`formaPago`, `total`, y `plazo`/`unidadTiempo` solo en líneas a crédito); sin filas, un solo pago `$order->pay_method` por `$order->total` (`InvoiceBuilder::buildPagos`, ver `docs/ventas.md` §3.2) |
 | `detalle.precioTotalSinImpuesto` (por línea) | `quantity * price + ice - discount` recalculado por línea (línea 120-121) — este sí se calcula aquí: es el desglose por ítem exigido por el esquema SRI, no existe columna persistida equivalente por línea |
 | `detalle.impuestos.valor` (por línea, IVA) | `HasItemTaxes::itemImpuestos()`: `percentage * (subTotal + ice - discount) * .01` calculado **sobre la base sin redondear** para evitar doble redondeo (ver §3.1) |
 

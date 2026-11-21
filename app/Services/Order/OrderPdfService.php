@@ -8,6 +8,7 @@ use App\Models\MethodOfPayment;
 use App\Models\Order\Order;
 use App\Models\Order\OrderAditional;
 use App\Models\Order\OrderItem;
+use App\Models\Order\OrderPayment;
 use App\Models\Order\Repayment\Repayment;
 use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherTypes;
@@ -103,8 +104,18 @@ class OrderPdfService
 
     private function withPayMethodData($movement, array $data): array
     {
-        $payMethodDescription = MethodOfPayment::where('code', $movement->pay_method)->value('description');
-        $data['payMethod'] = str_pad($movement->pay_method, 2, '0', STR_PAD_LEFT)." - {$payMethodDescription}";
+        $descriptions = MethodOfPayment::pluck('description', 'code');
+        $label = fn ($code): string => str_pad((string) $code, 2, '0', STR_PAD_LEFT).' - '.($descriptions[$code] ?? '');
+        $data['payMethod'] = $label($movement->pay_method);
+        // Una fila por forma de pago; ventas anteriores (sin order_payments) muestran una sola.
+        $payments = OrderPayment::where('order_id', $movement->id)->orderBy('id')->get(['pay_method', 'payment_type', 'amount']);
+        $data['payments'] = $payments->isEmpty()
+            ? [['label' => $data['payMethod'], 'amount' => (float) $movement->total, 'is_credit' => $movement->payment_type === PaymentTypes::CREDITO]]
+            : $payments->map(fn (OrderPayment $payment) => [
+                'label' => $label($payment->pay_method),
+                'amount' => $payment->amount,
+                'is_credit' => $payment->payment_type === PaymentTypes::CREDITO,
+            ])->all();
         // Columnas de plazo solo en factura, no en nota de venta (comparten esta partial).
         $data['isCredito'] = $movement->voucherType->slug === VoucherTypes::VENTA_FACTURA
             && $movement->payment_type === PaymentTypes::CREDITO;

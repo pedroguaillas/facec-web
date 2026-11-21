@@ -34,8 +34,11 @@ class OrderStoreRequest extends FormRequest
         $paymentTypeContado = PaymentTypes::CONTADO;
         // Caja/banco solo con plan financiero: con FACTURADOR la venta/compra al
         // contado no toca tesorería (lo decide el plan, no el front).
+        $hasFinancieroAccess = app(SubscriptionGate::class)->hasFinancieroAccess($this->user()->company);
+        // Con `payments` la caja/banco va por línea, no a nivel venta.
         $sourceRequired = $this->input('payment_type') === $paymentTypeContado
-            && app(SubscriptionGate::class)->hasFinancieroAccess($this->user()->company);
+            && ! $this->has('payments')
+            && $hasFinancieroAccess;
         $paymentTypeCredito = PaymentTypes::CREDITO;
         $paymentTypeAnticipo = PaymentTypes::ANTICIPO;
 
@@ -89,6 +92,7 @@ class OrderStoreRequest extends FormRequest
             // expiration_days (días de plazo) se deriva de esta, no se pide por separado.
             'due_date' => [
                 "required_if:payment_type,{$paymentTypeCredito},{$paymentTypeAnticipo}",
+                Rule::requiredIf($this->hasCreditPaymentLine()),
                 'nullable',
                 'date',
                 'after_or_equal:date',
@@ -109,6 +113,7 @@ class OrderStoreRequest extends FormRequest
             // Comprobante subido antes (POST payment-receipts), solo con banco.
             'receipt_id' => PaymentReceipt::idRules($this->input('source_type')),
             'receipt_number' => PaymentReceipt::numberRules($this->input('source_type')),
+            ...$this->paymentLineRules($hasFinancieroAccess),
             'date_order' => 'sometimes|nullable|date',
             'serie_order' => 'sometimes|nullable|string',
             'reason' => 'sometimes|nullable|string',
@@ -140,6 +145,14 @@ class OrderStoreRequest extends FormRequest
                     $validator->errors()->add('plate', 'La placa es obligatoria cuando la venta incluye un servicio de transporte.');
                 }
 
+                if ($this->has('payments')) {
+                    $paymentsTotal = round(collect((array) $this->input('payments', []))->sum(fn ($line) => (float) ($line['amount'] ?? 0)), 2);
+
+                    if (abs($paymentsTotal - round((float) $this->total, 2)) > 0.01) {
+                        $validator->errors()->add('payments', "La suma de las formas de pago ({$paymentsTotal}) debe ser igual al total de la venta ({$this->total}).");
+                    }
+                }
+
                 $voucherSlug = VoucherType::whereKey($this->voucher_type_id)->value('slug');
                 $unitErrors = app(UnitSaleService::class)->lineErrors(
                     $this->input('products', []),
@@ -152,6 +165,57 @@ class OrderStoreRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * Reglas de `payments` (varias formas de pago). Cada línea es un <pago>
+     * del XML; las de contado entran a su propia caja/banco.
+     *
+     * @return array<string, mixed>
+     */
+    private function paymentLineRules(bool $hasFinancieroAccess): array
+    {
+        $rules = [
+            'payments' => [
+                'sometimes',
+                'array',
+                'min:1',
+                Rule::prohibitedIf($this->input('payment_type') === PaymentTypes::ANTICIPO),
+            ],
+            'payments.*.pay_method' => 'required|integer|exists:method_of_payments,code',
+            'payments.*.amount' => 'required|numeric|gt:0',
+            'payments.*.payment_type' => ['required', 'string', Rule::in([PaymentTypes::CONTADO, PaymentTypes::CREDITO])],
+        ];
+
+        foreach ((array) $this->input('payments', []) as $index => $line) {
+            $lineSourceType = is_array($line) ? ($line['source_type'] ?? null) : null;
+            $isContado = is_array($line) && ($line['payment_type'] ?? null) === PaymentTypes::CONTADO;
+            $sourceRequired = $isContado && $hasFinancieroAccess;
+
+            $rules["payments.{$index}.source_type"] = [
+                Rule::requiredIf($sourceRequired),
+                Rule::prohibitedIf(! $isContado),
+                'nullable',
+                Rule::in([MovementPartyRegistry::BANK_ACCOUNT, MovementPartyRegistry::CASH_REGISTER_SESSION]),
+            ];
+            $rules["payments.{$index}.source_id"] = [
+                Rule::requiredIf($sourceRequired),
+                Rule::prohibitedIf(! $isContado),
+                'nullable',
+                'integer',
+                Rule::exists($lineSourceType === MovementPartyRegistry::BANK_ACCOUNT ? 'bank_accounts' : 'cash_register_sessions', 'id'),
+            ];
+            $rules["payments.{$index}.receipt_id"] = PaymentReceipt::idRules($lineSourceType);
+            $rules["payments.{$index}.receipt_number"] = PaymentReceipt::numberRules($lineSourceType);
+        }
+
+        return $rules;
+    }
+
+    private function hasCreditPaymentLine(): bool
+    {
+        return collect((array) $this->input('payments', []))
+            ->contains(fn ($line) => is_array($line) && ($line['payment_type'] ?? null) === PaymentTypes::CREDITO);
     }
 
     private function hasTransportService(): bool
@@ -173,6 +237,8 @@ class OrderStoreRequest extends FormRequest
     {
         return [
             'products.*.iva.in' => 'Como contribuyente RIMPE Negocio Popular solo puede usar IVA 0%.',
+            'payments.prohibited' => 'Una venta con anticipo no admite varias formas de pago.',
+            'due_date.required' => 'La fecha de vencimiento es obligatoria cuando una forma de pago es a crédito.',
         ];
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Order\OrderItem;
 use App\Services\Product\PresentationLineResolver;
 use App\Services\Product\UnitSaleService;
 use App\Services\Product\VoucherInventoryService;
+use App\StaticClasses\PaymentTypes;
 use App\StaticClasses\VoucherStates;
 use App\StaticClasses\VoucherTypes;
 use App\Xml\AccessKey;
@@ -46,6 +47,7 @@ class OrderUpdateService
             ]);
 
             $this->refreshAccessKey($order);
+            $this->syncSinglePayment($order);
 
             $previousProductIds = $order->orderitems()->pluck('product_id')->all();
 
@@ -60,6 +62,27 @@ class OrderUpdateService
         });
 
         return $order->fresh();
+    }
+
+    /**
+     * Con una sola forma de pago, su monto sigue al total editado (el <pago>
+     * del XML debe sumar el importe total). Varias líneas: el request ya
+     * impide cambiar el total.
+     */
+    protected function syncSinglePayment(Order $order): void
+    {
+        $payments = $order->payments()->get();
+
+        if ($payments->count() !== 1) {
+            return;
+        }
+
+        $payment = $payments->first();
+        $payment->update(['amount' => $order->total]);
+
+        if ($payment->payment_type === PaymentTypes::CONTADO) {
+            $order->update(['paid' => $order->total]);
+        }
     }
 
     /**
