@@ -275,3 +275,14 @@ test('el detalle de la venta incluye la retención registrada', function () {
         ->assertJsonPath('retention.serie', '001-002-000000123')
         ->assertJsonCount(2, 'retention.items');
 });
+
+test('el listado de ventas trae lo retenido y el pendiente descontada la retención', function () {
+    ['order' => $order] = retentionSale();
+
+    test()->postJson(route('orders.retention.store', $order), manualRetentionPayload())->assertCreated();
+
+    test()->getJson(route('orders.index'))
+        ->assertOk()
+        ->assertJsonPath('data.0.atts.retained', 5.35)
+        ->assertJsonPath('data.0.atts.pending', 94.65);
+});

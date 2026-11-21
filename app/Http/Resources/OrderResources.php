@@ -24,6 +24,9 @@ class OrderResources extends JsonResource
                 'state' => $this->state,
                 'total' => $this->total,
                 'paid' => $this->paid,
+                // Retención recibida del cliente; pending = total - paid - retained.
+                'retained' => $this->retentionTotal(),
+                'pending' => $this->pendingBalance(),
                 'payment_type' => $this->payment_type,
                 'xml' => $this->xml,
                 'send_mail' => $this->send_mail,

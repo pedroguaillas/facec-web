@@ -401,6 +401,8 @@ total) y **siempre se registra después de la venta**, solo sobre facturas
   registrar la retención la factura queda saldada.
 - **Eliminar** (`DELETE`): borra líneas y campos y revierte el abono con un
   `RETENCION` en el debe.
+- Listado (`GET orders`): cada fila trae `atts.retained` (total retenido, 0
+  si no hay) y `atts.pending` (`pendingBalance()`).
 - Respuesta y detalle (`GET orders/{id}` → `retention`, `null` si no hay):
   `{serie, date, authorization, iva, renta, total, pending, items[]}`.
 
